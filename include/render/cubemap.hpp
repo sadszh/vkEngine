@@ -1,6 +1,7 @@
 #ifndef CUBEMAP_H
 #define CUBEMAP_H
 
+#include <render/vulkan_resource_manager.hpp>
 #include <render/buffer.hpp>
 #include <logger.hpp>
 
@@ -61,7 +62,7 @@ namespace vke_render
 
             imageView = createCubeImageView(format, 0, mipLevelCnt);
             createMipImageViews(format);
-            createSampler(minFilter, magFilter, addressMode, anisotropyEnable);
+            sampler = VulkanResourceManager::GetSampler(minFilter, magFilter, addressMode, anisotropyEnable);
         }
 
         CubeMap(const vke_common::AssetHandle hdl, const std::array<void *, 6> &pixels, int faceWidth, int faceHeight,
@@ -100,7 +101,7 @@ namespace vke_render
 
             imageView = createCubeImageView(format, 0, mipLevelCnt);
             createMipImageViews(format);
-            createSampler(minFilter, magFilter, addressMode, anisotropyEnable);
+            sampler = VulkanResourceManager::GetSampler(minFilter, magFilter, addressMode, anisotropyEnable);
         }
 
         VkImageView GetMipImageView(uint32_t mipLevel)
@@ -113,7 +114,6 @@ namespace vke_render
         {
             for (VkImageView mipImageView : mipImageViews)
                 vkDestroyImageView(globalLogicalDevice, mipImageView, nullptr);
-            vkDestroySampler(globalLogicalDevice, sampler, nullptr);
             vkDestroyImageView(globalLogicalDevice, imageView, nullptr);
             vmaDestroyImage(RenderEnvironment::GetInstance()->vmaAllocator, image, imageAllocation);
         }
@@ -310,31 +310,6 @@ namespace vke_render
                                  0, nullptr,
                                  0, nullptr,
                                  1, &barrier);
-        }
-
-        void createSampler(VkFilter minFilter = VK_FILTER_LINEAR, VkFilter magFilter = VK_FILTER_LINEAR,
-                           VkSamplerAddressMode addressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-                           bool anisotropyEnable = VK_TRUE)
-        {
-            VkSamplerCreateInfo samplerInfo{};
-            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            samplerInfo.magFilter = magFilter;
-            samplerInfo.minFilter = minFilter;
-            samplerInfo.addressModeU = addressMode;
-            samplerInfo.addressModeV = addressMode;
-            samplerInfo.addressModeW = addressMode;
-            samplerInfo.anisotropyEnable = anisotropyEnable;
-            samplerInfo.maxAnisotropy = RenderEnvironment::GetInstance()->physicalDeviceProperties.limits.maxSamplerAnisotropy;
-            samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-            samplerInfo.unnormalizedCoordinates = VK_FALSE;
-            samplerInfo.compareEnable = VK_FALSE;
-            samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            samplerInfo.mipLodBias = 0.0f;
-            samplerInfo.minLod = 0.0f;
-            samplerInfo.maxLod = mipLevelCnt;
-
-            VKE_VK_CHECK(vkCreateSampler(globalLogicalDevice, &samplerInfo, nullptr, &sampler), "Failed to create cube map sampler!")
         }
 
         static size_t GetBytesPerPixel(VkFormat format)

@@ -218,8 +218,8 @@ namespace vke_render
     {
         for (uint32_t frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame)
         {
-            DescriptorSetAllocator::FreeDescriptorSet(imageDescriptorSets[frame]);
-            DescriptorSetAllocator::FreeDescriptorSet(rendererDescriptorSets[frame]);
+            VulkanResourceManager::FreeDescriptorSet(imageDescriptorSets[frame]);
+            VulkanResourceManager::FreeDescriptorSet(rendererDescriptorSets[frame]);
         }
     }
 

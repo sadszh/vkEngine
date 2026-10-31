@@ -2,7 +2,6 @@
 #define SHADOW_MANAGER_H
 
 #include <render/buffer.hpp>
-#include <render/descriptor.hpp>
 #include <render/frame_graph.hpp>
 #include <render/camera.hpp>
 #include <render/render_config.hpp>

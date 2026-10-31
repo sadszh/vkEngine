@@ -1,5 +1,4 @@
 #include <render/environment.hpp>
-#include <render/descriptor.hpp>
 #include <logger.hpp>
 #include <string>
 #include <algorithm>
@@ -9,7 +8,6 @@ namespace vke_render
 
     VkDevice globalLogicalDevice = nullptr;
 
-    DescriptorSetAllocator *DescriptorSetAllocator::instance = nullptr;
     RenderEnvironment *RenderEnvironment::instance = nullptr;
     // using QueueFamilyIndices = RenderEnvironment::QueueFamilyIndices;
     // using SwapChainSupportDetails = RenderEnvironment::SwapChainSupportDetails;

@@ -53,8 +53,8 @@ namespace vke_render
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            globalDescriptorSets[GLOBAL_DESCRIPTOR_SET_NO_LIGHT][i] = DescriptorSetAllocator::AllocateDescriptorSet(globalDescriptorSetInfos[GLOBAL_DESCRIPTOR_SET_NO_LIGHT]);
-            globalDescriptorSets[GLOBAL_DESCRIPTOR_SET_LIGHT][i] = DescriptorSetAllocator::AllocateDescriptorSet(globalDescriptorSetInfos[GLOBAL_DESCRIPTOR_SET_LIGHT]);
+            globalDescriptorSets[GLOBAL_DESCRIPTOR_SET_NO_LIGHT][i] = VulkanResourceManager::AllocateDescriptorSet(globalDescriptorSetInfos[GLOBAL_DESCRIPTOR_SET_NO_LIGHT]);
+            globalDescriptorSets[GLOBAL_DESCRIPTOR_SET_LIGHT][i] = VulkanResourceManager::AllocateDescriptorSet(globalDescriptorSetInfos[GLOBAL_DESCRIPTOR_SET_LIGHT]);
         }
 
         // write descriptor set

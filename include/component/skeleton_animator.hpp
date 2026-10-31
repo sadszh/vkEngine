@@ -320,7 +320,7 @@ namespace vke_component
 
             descriptorSets.resize(vke_render::MAX_FRAMES_IN_FLIGHT);
             for (int i = 0; i < vke_render::MAX_FRAMES_IN_FLIGHT; ++i)
-                descriptorSets[i] = vke_render::DescriptorSetAllocator::AllocateDescriptorSet(descriptorSetInfo);
+                descriptorSets[i] = vke_render::VulkanResourceManager::AllocateDescriptorSet(descriptorSetInfo);
 
             VkWriteDescriptorSet descriptorSetWrite{};
             for (int i = 0; i < vke_render::MAX_FRAMES_IN_FLIGHT; ++i)
@@ -521,7 +521,7 @@ namespace vke_component
         void releaseDescriptorSets()
         {
             for (auto set : descriptorSets)
-                vke_render::DescriptorSetAllocator::FreeDescriptorSet(set);
+                vke_render::VulkanResourceManager::FreeDescriptorSet(set);
             descriptorSets.clear();
         }
 

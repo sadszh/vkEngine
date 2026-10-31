@@ -34,7 +34,7 @@ namespace vke_render
         ~RenderUnit()
         {
             if (ownsDescriptorSet)
-                DescriptorSetAllocator::FreeDescriptorSet(perUnitDescriptorSet);
+                VulkanResourceManager::FreeDescriptorSet(perUnitDescriptorSet);
         }
 
         bool IsVisible(const Frustum &frustum) const
@@ -112,7 +112,7 @@ namespace vke_render
 
         ~RenderInfo()
         {
-            DescriptorSetAllocator::FreeDescriptorSet(commonDescriptorSet);
+            VulkanResourceManager::FreeDescriptorSet(commonDescriptorSet);
         }
 
         void CreatePipeline(const std::vector<uint32_t> &vertexAttributeSizes,

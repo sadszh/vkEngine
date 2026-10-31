@@ -41,9 +41,9 @@ namespace vke_render
         {
             ~MaterialState()
             {
-                DescriptorSetAllocator::FreeDescriptorSet(commonDescriptorSet);
+                VulkanResourceManager::FreeDescriptorSet(commonDescriptorSet);
                 for (auto set : environmentDescriptorSets)
-                    DescriptorSetAllocator::FreeDescriptorSet(set);
+                    VulkanResourceManager::FreeDescriptorSet(set);
             }
 
             std::shared_ptr<Material> material;

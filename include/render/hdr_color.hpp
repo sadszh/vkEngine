@@ -1,6 +1,7 @@
 #ifndef HDR_COLOR_H
 #define HDR_COLOR_H
 
+#include <render/vulkan_resource_manager.hpp>
 #include <render/frame_graph.hpp>
 
 namespace vke_render
@@ -21,7 +22,9 @@ namespace vke_render
                 for (int frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame)
                     imageViews[imageIndex][frame] = VK_NULL_HANDLE;
             }
-            createSampler();
+            sampler = VulkanResourceManager::GetSampler(
+                VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                false, VK_SAMPLER_MIPMAP_MODE_NEAREST, 0.0f);
             imageCreateInfo = VkImageCreateInfo{};
             imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
             imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -41,8 +44,6 @@ namespace vke_render
         ~HDRColorManager()
         {
             cleanupImageViews();
-            if (sampler != VK_NULL_HANDLE)
-                vkDestroySampler(globalLogicalDevice, sampler, nullptr);
         }
 
         HDRColorManager(const HDRColorManager &) = delete;
@@ -115,24 +116,6 @@ namespace vke_render
                         vkDestroyImageView(globalLogicalDevice, imageView, nullptr);
                         imageView = VK_NULL_HANDLE;
                     }
-        }
-
-        void createSampler()
-        {
-            VkSamplerCreateInfo samplerInfo{};
-            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            samplerInfo.magFilter = VK_FILTER_LINEAR;
-            samplerInfo.minFilter = VK_FILTER_LINEAR;
-            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-            samplerInfo.compareEnable = VK_FALSE;
-            samplerInfo.unnormalizedCoordinates = VK_FALSE;
-            samplerInfo.maxAnisotropy = 1.0f;
-
-            VKE_VK_CHECK(vkCreateSampler(globalLogicalDevice, &samplerInfo, nullptr, &sampler), "failed to create hdr color sampler!")
         }
     };
 }

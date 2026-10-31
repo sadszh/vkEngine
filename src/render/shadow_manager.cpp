@@ -157,8 +157,6 @@ namespace vke_render
                     vkDestroyImageView(globalLogicalDevice, spotShadowMapLayerViews[i][slot], nullptr);
             }
         }
-
-        vkDestroySampler(globalLogicalDevice, shadowMapSampler, nullptr);
     }
 
     void ShadowManager::createDescriptorSets()
@@ -265,21 +263,16 @@ namespace vke_render
 
     void ShadowManager::createSampler()
     {
-        VkSamplerCreateInfo samplerInfo{};
-        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter = VK_FILTER_LINEAR;
-        samplerInfo.minFilter = VK_FILTER_LINEAR;
-        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-        samplerInfo.compareEnable = VK_TRUE;
-        samplerInfo.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerInfo.maxAnisotropy = 1.0f;
-
-        VKE_VK_CHECK(vkCreateSampler(globalLogicalDevice, &samplerInfo, nullptr, &shadowMapSampler), "failed to create shadow map sampler!")
+        SamplerDesc desc;
+        desc.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        desc.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        desc.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        desc.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        desc.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        desc.compareEnable = true;
+        desc.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        desc.maxLod = 0.0f;
+        shadowMapSampler = VulkanResourceManager::GetSampler(desc);
     }
 
     void ShadowManager::updateDeferredLightingDescriptorSet(uint32_t currentFrame)
