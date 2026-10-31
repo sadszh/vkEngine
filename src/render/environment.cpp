@@ -1,4 +1,5 @@
 #include <render/environment.hpp>
+#include <render/vulkan_resource_manager.hpp>
 #include <logger.hpp>
 #include <string>
 #include <algorithm>
@@ -582,15 +583,15 @@ namespace vke_render
         depthFormat = findDepthFormat();
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-            CreateImage(extent.width, extent.height, depthFormat,
-                        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1,
-                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &depthImages[i], &depthImageVmaAllocations[i], nullptr);
+            VulkanResourceManager::CreateImage(extent.width, extent.height, depthFormat,
+                                               VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1,
+                                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &depthImages[i], &depthImageVmaAllocations[i], nullptr);
 
         VkCommandBuffer tmpCmdBuffer = BeginSingleTimeCommands(commandPool);
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-            MakeLayoutTransition(tmpCmdBuffer, VK_ACCESS_NONE, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                                 VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, depthImages[i], VK_IMAGE_ASPECT_DEPTH_BIT, 1,
-                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+            VulkanResourceManager::MakeLayoutTransition(tmpCmdBuffer, VK_ACCESS_NONE, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                                                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, depthImages[i], VK_IMAGE_ASPECT_DEPTH_BIT, 1,
+                                                        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
         EndSingleTimeCommands(GetGraphicsQueue(), commandPool, tmpCmdBuffer);
     }
 
@@ -666,12 +667,12 @@ namespace vke_render
 
         for (size_t i = 0; i < imageCnt; i++)
         {
-            swapChainImageViews[i] = RenderEnvironment::CreateImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+            swapChainImageViews[i] = VulkanResourceManager::CreateImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
         }
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
-            depthImageViews[i] = RenderEnvironment::CreateImageView(depthImages[i], depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+            depthImageViews[i] = VulkanResourceManager::CreateImageView(depthImages[i], depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
         }
     }
 

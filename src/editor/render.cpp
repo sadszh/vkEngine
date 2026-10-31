@@ -1,5 +1,6 @@
 #include <editor/render.hpp>
 #include <editor/editor_state.hpp>
+#include <render/vulkan_resource_manager.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <imgui_impl_glfw.h>
@@ -226,22 +227,22 @@ namespace vke_editor
 
         for (int i = 0; i < vke_render::MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            vke_render::RenderEnvironment::CreateImage(
+            vke_render::VulkanResourceManager::CreateImage(
                 width, height, context->colorFormat,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 1, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 &sceneColorImages[i], &sceneColorImageVmaAllocations[i], nullptr);
-            sceneColorImageViews[i] = vke_render::RenderEnvironment::CreateImageView(
+            sceneColorImageViews[i] = vke_render::VulkanResourceManager::CreateImageView(
                 sceneColorImages[i], context->colorFormat, VK_IMAGE_ASPECT_COLOR_BIT);
             VKE_LOG_INFO("createSceneRenderContext {}", (void *)sceneColorImages[i])
 
-            vke_render::RenderEnvironment::CreateImage(
+            vke_render::VulkanResourceManager::CreateImage(
                 width, height, env->depthFormat,
                 VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 &sceneDepthImages[i], &sceneDepthImageVmaAllocations[i], nullptr);
-            sceneDepthImageViews[i] = vke_render::RenderEnvironment::CreateImageView(
+            sceneDepthImageViews[i] = vke_render::VulkanResourceManager::CreateImageView(
                 sceneDepthImages[i], env->depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
             colorImages[i] = sceneColorImages[i];

@@ -32,7 +32,7 @@ namespace vke_render
                                                 height(static_cast<uint32_t>(texHeight)),
                                                 mipLevelCnt(generateMipMap ? (static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1) : 1)
         {
-            RenderEnvironment::CreateImage(
+            VulkanResourceManager::CreateImage(
                 texWidth, texHeight, format,
                 VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | usage,
@@ -46,23 +46,23 @@ namespace vke_render
 
             RenderEnvironment *instance = RenderEnvironment::GetInstance();
             VkCommandBuffer commandBuffer = RenderEnvironment::BeginSingleTimeCommands(instance->commandPool);
-            RenderEnvironment::MakeLayoutTransition(commandBuffer, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VulkanResourceManager::MakeLayoutTransition(commandBuffer, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
                                                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                                     textureImage, VK_IMAGE_ASPECT_COLOR_BIT, mipLevelCnt,
                                                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-            RenderEnvironment::CopyBufferToImage(commandBuffer, stagingBuffer.buffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+            VulkanResourceManager::CopyBufferToImage(commandBuffer, stagingBuffer.buffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
             if (generateMipMap)
                 generateMipmaps(commandBuffer, texWidth, texHeight);
             else
-                RenderEnvironment::MakeLayoutTransition(commandBuffer, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                VulkanResourceManager::MakeLayoutTransition(commandBuffer, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
                                                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                                                         textureImage, VK_IMAGE_ASPECT_COLOR_BIT, mipLevelCnt,
                                                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
             RenderEnvironment::EndSingleTimeCommands(RenderEnvironment::GetGraphicsQueue(), instance->commandPool, commandBuffer);
 
-            textureImageView = RenderEnvironment::CreateImageView(textureImage, format, VK_IMAGE_ASPECT_COLOR_BIT, mipLevelCnt);
+            textureImageView = VulkanResourceManager::CreateImageView(textureImage, format, VK_IMAGE_ASPECT_COLOR_BIT, mipLevelCnt);
             textureSampler = VulkanResourceManager::GetSampler(minFilter, magFilter, addressMode, anisotropyEnable);
         }
 
@@ -75,7 +75,7 @@ namespace vke_render
                   VkSamplerAddressMode addressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT,
                   bool anisotropyEnable = VK_TRUE) : handle(0), width(static_cast<uint32_t>(texWidth)), height(static_cast<uint32_t>(texHeight)), mipLevelCnt(1)
         {
-            RenderEnvironment::CreateImage(
+            VulkanResourceManager::CreateImage(
                 texWidth, texHeight, format,
                 VK_IMAGE_TILING_OPTIMAL,
                 usage,
@@ -84,12 +84,12 @@ namespace vke_render
                 &textureImageAllocation, nullptr);
             RenderEnvironment *instance = RenderEnvironment::GetInstance();
             VkCommandBuffer commandBuffer = RenderEnvironment::BeginSingleTimeCommands(instance->commandPool);
-            RenderEnvironment::MakeLayoutTransition(commandBuffer, VK_ACCESS_NONE, VK_ACCESS_NONE,
+            VulkanResourceManager::MakeLayoutTransition(commandBuffer, VK_ACCESS_NONE, VK_ACCESS_NONE,
                                                     VK_IMAGE_LAYOUT_UNDEFINED, initialLayout,
                                                     textureImage, VK_IMAGE_ASPECT_COLOR_BIT, mipLevelCnt,
                                                     VK_PIPELINE_STAGE_NONE, VK_PIPELINE_STAGE_NONE);
             RenderEnvironment::EndSingleTimeCommands(RenderEnvironment::GetGraphicsQueue(), instance->commandPool, commandBuffer);
-            textureImageView = RenderEnvironment::CreateImageView(textureImage, format, VK_IMAGE_ASPECT_COLOR_BIT);
+            textureImageView = VulkanResourceManager::CreateImageView(textureImage, format, VK_IMAGE_ASPECT_COLOR_BIT);
             textureSampler = VulkanResourceManager::GetSampler(minFilter, magFilter, addressMode, anisotropyEnable);
         }
 
@@ -104,7 +104,7 @@ namespace vke_render
                   VkSamplerAddressMode addressModeW,
                   bool anisotropyEnable = VK_TRUE) : handle(0), width(static_cast<uint32_t>(texWidth)), height(static_cast<uint32_t>(texHeight)), mipLevelCnt(1)
         {
-            RenderEnvironment::CreateImage(
+            VulkanResourceManager::CreateImage(
                 texWidth, texHeight, format,
                 VK_IMAGE_TILING_OPTIMAL,
                 usage,
@@ -113,12 +113,12 @@ namespace vke_render
                 &textureImageAllocation, nullptr);
             RenderEnvironment *instance = RenderEnvironment::GetInstance();
             VkCommandBuffer commandBuffer = RenderEnvironment::BeginSingleTimeCommands(instance->commandPool);
-            RenderEnvironment::MakeLayoutTransition(commandBuffer, VK_ACCESS_NONE, VK_ACCESS_NONE,
+            VulkanResourceManager::MakeLayoutTransition(commandBuffer, VK_ACCESS_NONE, VK_ACCESS_NONE,
                                                     VK_IMAGE_LAYOUT_UNDEFINED, initialLayout,
                                                     textureImage, VK_IMAGE_ASPECT_COLOR_BIT, mipLevelCnt,
                                                     VK_PIPELINE_STAGE_NONE, VK_PIPELINE_STAGE_NONE);
             RenderEnvironment::EndSingleTimeCommands(RenderEnvironment::GetGraphicsQueue(), instance->commandPool, commandBuffer);
-            textureImageView = RenderEnvironment::CreateImageView(textureImage, format, VK_IMAGE_ASPECT_COLOR_BIT);
+            textureImageView = VulkanResourceManager::CreateImageView(textureImage, format, VK_IMAGE_ASPECT_COLOR_BIT);
             textureSampler = VulkanResourceManager::GetSampler(minFilter, magFilter, addressModeU, addressModeV, addressModeW, anisotropyEnable);
         }
 

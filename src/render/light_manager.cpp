@@ -153,7 +153,7 @@ namespace vke_render
             if (lightUpdateCnts[i] > 0)
             {
                 --lightUpdateCnts[i];
-                RenderEnvironment::CopyBuffer(cpuLightBuffers[i]->buffer, lightBuffers[i][currentFrame]->buffer,
+                VulkanResourceManager::CopyBuffer(cpuLightBuffers[i]->buffer, lightBuffers[i][currentFrame]->buffer,
                                               cpuLightBuffers[i]->bufferSize);
             }
         }

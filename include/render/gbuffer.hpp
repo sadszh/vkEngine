@@ -69,7 +69,7 @@ namespace vke_render
                 if (imageViews[i][currentFrame] != VK_NULL_HANDLE)
                     vkDestroyImageView(globalLogicalDevice, imageViews[i][currentFrame], nullptr);
                 VkImage image = frameGraph.GetImageResource(resourceIDs[i]).images[currentFrame];
-                imageViews[i][currentFrame] = RenderEnvironment::CreateImageView(image, gbufferFormats[i], VK_IMAGE_ASPECT_COLOR_BIT);
+                imageViews[i][currentFrame] = VulkanResourceManager::CreateImageView(image, gbufferFormats[i], VK_IMAGE_ASPECT_COLOR_BIT);
             }
         }
 

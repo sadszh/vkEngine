@@ -2,6 +2,7 @@
 #define BUFFER_H
 
 #include <render/environment.hpp>
+#include <render/vulkan_resource_manager.hpp>
 #include <ds/mem_with_len.hpp>
 
 namespace vke_render
@@ -25,7 +26,7 @@ namespace vke_render
             : bufferSize(size), usage(usage),
               vmaFlags(vmaFlags), vmaUsage(vmaUsage), buffer(nullptr), vmaAllocation(nullptr), vmaAllocationInfo{}
         {
-            vke_render::RenderEnvironment::CreateBuffer(
+            vke_render::VulkanResourceManager::CreateBuffer(
                 size, usage, vmaFlags, vmaUsage,
                 &buffer, &vmaAllocation, &vmaAllocationInfo);
         }
@@ -101,13 +102,13 @@ namespace vke_render
         {
             HostCoherentBuffer stagingBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
             memcpy((char *)stagingBuffer.data, src, size);
-            RenderEnvironment::CopyBuffer(stagingBuffer.buffer, buffer, size, 0, dstOffset);
+            VulkanResourceManager::CopyBuffer(stagingBuffer.buffer, buffer, size, 0, dstOffset);
         }
 
         void FromBuffer(size_t srcOffset, void *dst, size_t size)
         {
             HostCoherentBuffer stagingBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-            RenderEnvironment::CopyBuffer(buffer, stagingBuffer.buffer, size, srcOffset, 0);
+            VulkanResourceManager::CopyBuffer(buffer, stagingBuffer.buffer, size, srcOffset, 0);
             memcpy(dst, (char *)stagingBuffer.data, size);
         }
     };
@@ -131,12 +132,12 @@ namespace vke_render
 
         void ToBuffer(size_t offset = 0)
         {
-            RenderEnvironment::CopyBuffer(stagingBuffer.buffer, buffer, bufferSize, offset, offset);
+            VulkanResourceManager::CopyBuffer(stagingBuffer.buffer, buffer, bufferSize, offset, offset);
         }
 
         void ToBuffer(size_t offset, size_t size)
         {
-            RenderEnvironment::CopyBuffer(stagingBuffer.buffer, buffer, size, offset, offset);
+            VulkanResourceManager::CopyBuffer(stagingBuffer.buffer, buffer, size, offset, offset);
         }
 
         void ToBufferAsync(VkCommandBuffer commandBuffer, size_t offset, size_t size)
@@ -166,7 +167,7 @@ namespace vke_render
 
         void FromBuffer(size_t offset, size_t size)
         {
-            RenderEnvironment::CopyBuffer(buffer, stagingBuffer.buffer, size, offset, offset);
+            VulkanResourceManager::CopyBuffer(buffer, stagingBuffer.buffer, size, offset, offset);
         }
 
         void FromBufferAsync(VkCommandBuffer commandBuffer, size_t offset, size_t size)

@@ -52,7 +52,7 @@ namespace vke_render
                     continue;
                 --updateCnts[bufferIndex];
                 const VkDeviceSize offset = GetQuadBufferOffset(bufferIndex);
-                RenderEnvironment::CopyBuffer(cpuQuads.buffer, deviceBuffers[currentFrame]->buffer,
+                VulkanResourceManager::CopyBuffer(cpuQuads.buffer, deviceBuffers[currentFrame]->buffer,
                                               QUAD_BUFFER_SIZE, offset, offset);
             }
         }

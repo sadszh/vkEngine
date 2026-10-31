@@ -225,13 +225,13 @@ namespace vke_render
             commandBuffer, std::vector<VkDescriptorSet>{descriptorSet}, &pass,
             glm::ivec3((SCATTERING_LUT_SIZE + 7) / 8, (SCATTERING_LUT_SIZE + 7) / 8, 1));
 
-        RenderEnvironment::MakeLayoutTransition(
+        VulkanResourceManager::MakeLayoutTransition(
             commandBuffer, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             transmittanceLUT->textureImage, VK_IMAGE_ASPECT_COLOR_BIT, 1,
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        RenderEnvironment::MakeLayoutTransition(
+        VulkanResourceManager::MakeLayoutTransition(
             commandBuffer, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             scatteringLUT->textureImage, VK_IMAGE_ASPECT_COLOR_BIT, 1,

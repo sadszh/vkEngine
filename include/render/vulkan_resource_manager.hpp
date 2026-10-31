@@ -2,6 +2,7 @@
 #define VULKAN_RESOURCE_MANAGER_H
 
 #include <render/descriptor.hpp>
+#include <vma/vk_mem_alloc.h>
 #include <compare>
 
 namespace vke_render
@@ -74,6 +75,34 @@ namespace vke_render
                 vkDestroySampler(globalLogicalDevice, sampler, nullptr);
             delete instance;
         }
+
+        static void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                                 VmaAllocationCreateFlags vmaFlags, VmaMemoryUsage vmaUsage,
+                                 VkBuffer *buffer, VmaAllocation *vmaAllocation, VmaAllocationInfo *vmaAllocationInfo);
+
+        static void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
+
+        static void CreateImage(uint32_t width, uint32_t height, VkFormat format,
+                                VkImageTiling tiling, VkImageUsageFlags usage, uint32_t mipLevelCnt,
+                                VkMemoryPropertyFlags properties, VkImage *image,
+                                VmaAllocation *vmaAllocation, VmaAllocationInfo *vmaAllocationInfo);
+
+        static VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags,
+                                           uint32_t mipLevelCnt = 1, uint32_t baseArrayLayer = 0,
+                                           uint32_t layerCnt = 1, VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D);
+
+        static void MakeLayoutTransition(VkCommandBuffer commandBuffer,
+                                         VkAccessFlags srcAccessMask,
+                                         VkAccessFlags dstAccessMask,
+                                         VkImageLayout oldLayout,
+                                         VkImageLayout newLayout,
+                                         VkImage image,
+                                         VkImageAspectFlags aspectMask,
+                                         uint32_t mipLevelCnt,
+                                         VkPipelineStageFlags sourceStage,
+                                         VkPipelineStageFlags destinationStage);
+
+        static void CopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
         static VkSampler GetSampler(const SamplerDesc &desc);
 
