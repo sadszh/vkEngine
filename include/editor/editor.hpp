@@ -2,6 +2,7 @@
 #define EDITOR_H
 
 #include <editor/assets.hpp>
+#include <editor/camera.hpp>
 #include <editor/render.hpp>
 #include <editor/editor_config.hpp>
 #include <editor/editor_state.hpp>
@@ -29,6 +30,7 @@ namespace vke_editor
         Editor(const Editor &);
         Editor &operator=(const Editor &);
 
+        EditorCamera editorCamera;
         float fixedUpdateAccumulator;
         std::optional<vke_common::SceneData> editSnapshot;
         bool toggleRunRequested = false;

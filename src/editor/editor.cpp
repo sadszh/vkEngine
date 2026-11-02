@@ -76,6 +76,7 @@ namespace vke_editor
 
     void Editor::Dispose()
     {
+        instance->editorCamera.Deactivate();
         instance->disposeTexturePreviewDescriptorSets();
         instance->editSnapshot.reset();
         vke_ui::UIManager::Dispose();
@@ -110,6 +111,7 @@ namespace vke_editor
         if (!snapshot)
             return std::unexpected(snapshot.error());
         editSnapshot.emplace(std::move(*snapshot));
+        editorCamera.Deactivate();
         fixedUpdateAccumulator = 0.0f;
         vke_common::InputManager::Reset();
         vke_common::TimeManager::Reset();
@@ -173,6 +175,12 @@ namespace vke_editor
         auto *editorRenderer = EditorRenderer::GetInstance();
         vke_ui::UIPointerInput pointer;
         editorRenderer->BeginFrame(pointer);
+        if (EditorStateManager::GetState() == EditorState::Edit)
+        {
+            const auto *sceneContext = editorRenderer->GetSceneRenderContext();
+            editorCamera.Update(sceneContext->width, sceneContext->height, pointer.inside,
+                                vke_common::TimeManager::GetDeltaTime());
+        }
         using vke_common::InputManager;
         auto *window = vke_render::RenderEnvironment::GetInstance()->window;
         pointer.active = EditorStateManager::GetState() == EditorState::Run &&

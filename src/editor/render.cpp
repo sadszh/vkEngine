@@ -377,7 +377,8 @@ namespace vke_editor
             const auto origin = ImGui::GetItemRectMin();
             // Give the scene image an input item so pointer presses cannot start dragging its window.
             ImGui::SetCursorScreenPos(origin);
-            ImGui::InvisibleButton("ScenePointer", viewportSize, ImGuiButtonFlags_MouseButtonLeft);
+            ImGui::InvisibleButton("ScenePointer", viewportSize,
+                                   ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
             const auto mouse = ImGui::GetMousePos();
             pointer.position = glm::vec2(mouse.x - origin.x, mouse.y - origin.y) *
                                glm::vec2(sceneRenderContext.width, sceneRenderContext.height) / glm::vec2(viewportSize.x, viewportSize.y);
