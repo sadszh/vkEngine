@@ -135,6 +135,49 @@ namespace vke_interop
         return 1;
     }
 
+    int32_t VKE_INTEROP_CDECL GetUISelfLayout(uint32_t entity, uint64_t handle, UISelfLayoutOptions *value)
+    {
+        auto *node = getNode(entity, handle);
+        if (!node || !value) return 0;
+        const auto &options = node->GetSelfLayout();
+        *value = {static_cast<int32_t>(options.width), static_cast<int32_t>(options.height), options.ignoreLayout ? 1 : 0};
+        return 1;
+    }
+
+    int32_t VKE_INTEROP_CDECL SetUISelfLayout(uint32_t entity, uint64_t handle, const UISelfLayoutOptions *value)
+    {
+        auto *node = getNode(entity, handle);
+        if (!node || !value) return 0;
+        vke_ui::UISelfLayoutOptions options;
+        options.width = static_cast<vke_ui::SizeMode>(value->width);
+        options.height = static_cast<vke_ui::SizeMode>(value->height);
+        options.ignoreLayout = value->ignoreLayout != 0;
+        return node->SetSelfLayout(options).has_value();
+    }
+
+    int32_t VKE_INTEROP_CDECL GetUIGroupLayout(uint32_t entity, uint64_t handle, UIGroupLayoutOptions *value)
+    {
+        auto *node = getNode(entity, handle);
+        if (!node || !value) return 0;
+        const auto &options = node->GetGroupLayout();
+        *value = {static_cast<int32_t>(options.direction), {options.padding.x, options.padding.y, options.padding.z, options.padding.w},
+            options.spacing, static_cast<int32_t>(options.mainAlignment), static_cast<int32_t>(options.crossAlignment)};
+        return 1;
+    }
+
+    int32_t VKE_INTEROP_CDECL SetUIGroupLayout(uint32_t entity, uint64_t handle, const UIGroupLayoutOptions *value)
+    {
+        auto *node = getNode(entity, handle);
+        if (!node || !value) return 0;
+        vke_ui::UIGroupLayoutOptions options;
+        options.direction = static_cast<vke_ui::LayoutDirection>(value->direction);
+        options.padding = {value->padding.x, value->padding.y, value->padding.z, value->padding.w};
+        options.spacing = value->spacing;
+        options.mainAlignment = static_cast<vke_ui::LayoutAlignment>(value->mainAlignment);
+        options.crossAlignment = static_cast<vke_ui::LayoutAlignment>(value->crossAlignment);
+        return node->SetGroupLayout(options).has_value();
+    }
+
     int32_t VKE_INTEROP_CDECL GetCanvasReferenceResolution(uint32_t entity, Vector2<float> *value)
     {
         auto *canvas = getCanvas(entity);

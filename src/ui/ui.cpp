@@ -1,16 +1,5 @@
-#include <component/canvas.hpp>
-#include <script.hpp>
-
-namespace vke_component
-{
-    void Canvas::unloadSubtree(vke_ui::UIComponent &node)
-    {
-        for (auto &child : node.children) unloadSubtree(*child);
-        node.unload();
-        nodes.erase(node.handle);
-        vke_common::ScriptManager::GetUIFunctions().unregisterNodeCallbacks(node.handle);
-    }
-}
+#include <ui/text.hpp>
+#include <ui/button.hpp>
 
 namespace vke_ui
 {

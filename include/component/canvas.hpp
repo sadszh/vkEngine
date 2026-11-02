@@ -163,6 +163,7 @@ namespace vke_component
             auto &list = siblings(*node);
             unloadSubtree(*node);
             std::erase_if(list, [node](const auto &child) { return child.get() == node; });
+            layoutDirty = true;
             return {};
         }
 
@@ -194,6 +195,7 @@ namespace vke_component
             auto owned = std::move(*it);
             list.erase(it);
             list.insert(list.begin() + index, std::move(owned));
+            layoutDirty = true;
             return {};
         }
 
@@ -212,13 +214,30 @@ namespace vke_component
         void Update(const glm::vec2 &viewportSize, uint32_t &drawOrder)
         {
             if (viewportSize.x <= 0 || viewportSize.y <= 0) return;
-            const bool changed = layoutDirty || viewportSize != layoutViewportSize;
+            const bool changed = layoutDirty || viewportSize != layoutViewportSize ||
+                std::any_of(children.begin(), children.end(), [](const auto &child) { return needsLayout(*child); });
             layoutViewportSize = viewportSize;
             const auto ratio = viewportSize / referenceResolution;
             const float scale = glm::min(ratio.x, ratio.y);
             resolvedSize = viewportSize / scale;
             const auto matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, 1.0f));
-            for (auto &child : children) updateSubtree(*child, resolvedSize, glm::vec2(0), matrix, changed, drawOrder);
+            if (changed)
+            {
+                for (auto &child : children)
+                {
+                    measureAxis(*child, 0);
+                    resolveWidths(*child, resolvedSize.x, nullptr);
+                    measureAxis(*child, 1);
+                    const auto &rect = child->rectTransform;
+                    auto size = child->measuredSize;
+                    if (child->selfLayout.height == vke_ui::SizeMode::Rect)
+                        size.y = glm::max((rect.anchorMax.y - rect.anchorMin.y) * resolvedSize.y +
+                            rect.offsetMax.y - rect.offsetMin.y, 0.0f);
+                    arrangeSubtree(*child, rect.anchorMin * resolvedSize + rect.offsetMin,
+                        size, resolvedSize, glm::vec2(0), matrix);
+                }
+            }
+            for (auto &child : children) updateRenderSubtree(*child, drawOrder);
             layoutDirty = false;
         }
 
@@ -274,34 +293,12 @@ namespace vke_component
 
         void unloadSubtree(vke_ui::UIComponent &node);
 
-        void updateSubtree(vke_ui::UIComponent &node, const glm::vec2 &parentSize, const glm::vec2 &parentPivot,
-                           const glm::mat4 &parentMatrix, bool parentChanged, uint32_t &drawOrder)
-        {
-            const bool changed = parentChanged || node.layoutDirty;
-            const auto &rect = node.rectTransform;
-            if (changed)
-            {
-                const auto minimum = rect.anchorMin * parentSize + rect.offsetMin;
-                const auto maximum = rect.anchorMax * parentSize + rect.offsetMax;
-                const auto size = glm::max(maximum - minimum, glm::vec2(0));
-                if (size != node.resolvedSize)
-                {
-                    node.resolvedSize = size;
-                    node.onSizeChanged();
-                }
-                const auto position = minimum + rect.pivot * node.resolvedSize - parentPivot * parentSize;
-                node.layoutMatrix = glm::translate(parentMatrix, glm::vec3(position, 0)) *
-                    glm::rotate(glm::mat4(1), rect.rotation, glm::vec3(0, 0, 1)) *
-                    glm::scale(glm::mat4(1), glm::vec3(rect.scale, 1));
-                node.layoutDirty = false;
-            }
-
-            // The existing 2D renderer sorts by matrix translation Z. UI geometry stays in the XY plane.
-            node.updateRenderTransform(glm::translate(node.layoutMatrix, glm::vec3(-rect.pivot * node.resolvedSize, 0)),
-                                      static_cast<float>(drawOrder++));
-            for (auto &child : node.children)
-                updateSubtree(*child, node.resolvedSize, rect.pivot, node.layoutMatrix, changed, drawOrder);
-        }
+        static bool needsLayout(const vke_ui::UIComponent &node);
+        static void measureAxis(vke_ui::UIComponent &node, int axis);
+        static void resolveWidths(vke_ui::UIComponent &node, float parentWidth, const vke_ui::UIGroupLayoutOptions *group);
+        static void arrangeSubtree(vke_ui::UIComponent &node, const glm::vec2 &minimum, const glm::vec2 &size,
+                                   const glm::vec2 &parentSize, const glm::vec2 &parentPivot, const glm::mat4 &parentMatrix);
+        static void updateRenderSubtree(vke_ui::UIComponent &node, uint32_t &drawOrder);
 
         std::vector<std::unique_ptr<vke_ui::UIComponent>> &siblings(vke_ui::UIComponent &node) { return node.parent ? node.parent->children : children; }
     };

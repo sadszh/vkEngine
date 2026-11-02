@@ -111,7 +111,7 @@ Or launch the editor with your project's config:
   - [x] basic widgets: text, image, panel, button
   - [x] mouse input/events: hover, press, release, click
   - [x] text layout: font size, alignment, wrapping, measurement
-  - [ ] automatic layout and content sizing
+  - [x] automatic layout and content sizing
   - [ ] nested clipping and hit test integration
 - **Scene / ECS**:
   - [x] scene loading and saving

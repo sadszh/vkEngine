@@ -130,6 +130,7 @@ namespace vke_ui
             if (quad.atlasInfo.x != UINT32_MAX)
                 renderer->UnregisterImageTexture(quad.atlasInfo.x);
             texture.SetAsset(std::move(loaded));
+            invalidateLayout();
             quad.atlasInfo.x = *registered;
             updateGeometry(quad);
             return {};
@@ -148,6 +149,7 @@ namespace vke_ui
             if (quadIDs.empty()) return std::unexpected("image quad is not allocated");
             auto quad = getQuad();
             quad.uvRect = value;
+            invalidateLayout();
             updateGeometry(quad);
             return {};
         }
@@ -176,6 +178,14 @@ namespace vke_ui
     private:
         vke_common::AssetRef<vke_render::Texture2D> texture;
         bool preserveAspect;
+
+        glm::vec2 measureContent(std::optional<float> width) const override
+        {
+            const auto &asset = texture.Get();
+            if (!asset) return glm::vec2(0);
+            const auto uv = GetUVRect();
+            return glm::vec2(asset->width, asset->height) * glm::vec2(uv.z - uv.x, uv.w - uv.y);
+        }
 
         void unload() override
         {

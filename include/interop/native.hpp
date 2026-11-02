@@ -234,6 +234,10 @@ namespace vke_interop
         SetUITextLayoutOptionsFn SetUITextLayoutOptions;
         MeasureUITextFn MeasureUIText;
         GetUITextSizeFn GetUITextSize;
+        GetUISelfLayoutFn GetUISelfLayout;
+        SetUISelfLayoutFn SetUISelfLayout;
+        GetUIGroupLayoutFn GetUIGroupLayout;
+        SetUIGroupLayoutFn SetUIGroupLayout;
     };
 }
 

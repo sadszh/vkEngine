@@ -23,6 +23,25 @@ namespace vke_interop
         float fontSize;
         int32_t horizontalAlignment, verticalAlignment, wordWrap;
     };
+    struct UISelfLayoutOptions
+    {
+        int32_t width, height, ignoreLayout;
+    };
+    struct UIGroupLayoutOptions
+    {
+        int32_t direction;
+        Vector4<float> padding;
+        float spacing;
+        int32_t mainAlignment, crossAlignment;
+    };
+    using GetUISelfLayoutFn = int32_t(VKE_INTEROP_CDECL *)(uint32_t, uint64_t, UISelfLayoutOptions *);
+    using SetUISelfLayoutFn = int32_t(VKE_INTEROP_CDECL *)(uint32_t, uint64_t, const UISelfLayoutOptions *);
+    int32_t VKE_INTEROP_CDECL GetUISelfLayout(uint32_t, uint64_t, UISelfLayoutOptions *);
+    int32_t VKE_INTEROP_CDECL SetUISelfLayout(uint32_t, uint64_t, const UISelfLayoutOptions *);
+    using GetUIGroupLayoutFn = int32_t(VKE_INTEROP_CDECL *)(uint32_t, uint64_t, UIGroupLayoutOptions *);
+    using SetUIGroupLayoutFn = int32_t(VKE_INTEROP_CDECL *)(uint32_t, uint64_t, const UIGroupLayoutOptions *);
+    int32_t VKE_INTEROP_CDECL GetUIGroupLayout(uint32_t, uint64_t, UIGroupLayoutOptions *);
+    int32_t VKE_INTEROP_CDECL SetUIGroupLayout(uint32_t, uint64_t, const UIGroupLayoutOptions *);
     using GetUITextLayoutOptionsFn = int32_t(VKE_INTEROP_CDECL *)(uint32_t, uint64_t, UITextLayoutOptions *);
     using SetUITextLayoutOptionsFn = int32_t(VKE_INTEROP_CDECL *)(uint32_t, uint64_t, const UITextLayoutOptions *);
     using MeasureUITextFn = int32_t(VKE_INTEROP_CDECL *)(uint32_t, uint64_t, float, Vector2<float> *);

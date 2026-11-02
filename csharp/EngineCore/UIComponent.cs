@@ -4,6 +4,27 @@ using System.Runtime.InteropServices;
 
 namespace vkEngine.EngineCore
 {
+    public enum LayoutDirection { None, Horizontal, Vertical }
+    public enum SizeMode { Rect, Content }
+    public enum LayoutAlignment { Start, Center, End, Stretch }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct UISelfLayoutOptions
+    {
+        public SizeMode Width, Height;
+        private int ignoreLayout;
+        public bool IgnoreLayout { readonly get => ignoreLayout != 0; set => ignoreLayout = value ? 1 : 0; }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct UIGroupLayoutOptions
+    {
+        public LayoutDirection Direction;
+        public NVec4 Padding; // Left, top, right, bottom.
+        public float Spacing;
+        public LayoutAlignment MainAlignment, CrossAlignment;
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct RectTransform
     {
@@ -97,6 +118,28 @@ namespace vkEngine.EngineCore
                 RequireSuccess(NativeFunctionRegistry.Functions.GetUIResolvedSize(Canvas.Entity, Handle, &value));
                 return value;
             }
+        }
+
+        public UISelfLayoutOptions SelfLayout
+        {
+            get
+            {
+                UISelfLayoutOptions value = default;
+                RequireSuccess(NativeFunctionRegistry.Functions.GetUISelfLayout(Canvas.Entity, Handle, &value));
+                return value;
+            }
+            set { RequireSuccess(NativeFunctionRegistry.Functions.SetUISelfLayout(Canvas.Entity, Handle, &value)); }
+        }
+
+        public UIGroupLayoutOptions GroupLayout
+        {
+            get
+            {
+                UIGroupLayoutOptions value = default;
+                RequireSuccess(NativeFunctionRegistry.Functions.GetUIGroupLayout(Canvas.Entity, Handle, &value));
+                return value;
+            }
+            set { RequireSuccess(NativeFunctionRegistry.Functions.SetUIGroupLayout(Canvas.Entity, Handle, &value)); }
         }
 
         public void SetParent(UIComponent? parent) =>

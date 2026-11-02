@@ -577,7 +577,11 @@ namespace vke_common
             &vke_interop::GetUITextLayoutOptions,
             &vke_interop::SetUITextLayoutOptions,
             &vke_interop::MeasureUIText,
-            &vke_interop::GetUITextSize};
+            &vke_interop::GetUITextSize,
+            &vke_interop::GetUISelfLayout,
+            &vke_interop::SetUISelfLayout,
+            &vke_interop::GetUIGroupLayout,
+            &vke_interop::SetUIGroupLayout};
         csharpExports.registerNativeFunctions(&nativeFunctions);
     }
 }

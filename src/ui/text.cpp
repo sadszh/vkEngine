@@ -52,6 +52,7 @@ namespace vke_ui
             return;
         text.assign(newText);
         prepareCharacters();
+        invalidateLayout();
         updateLayout();
     }
 
@@ -64,7 +65,10 @@ namespace vke_ui
         const bool reflow = options.fontSize != value.fontSize || options.wordWrap != value.wordWrap;
         options = value;
         if (reflow)
+        {
+            invalidateLayout();
             updateLayout();
+        }
         else if (!rebuildGeometry(GetColor()))
             VKE_LOG_ERROR("Cannot allocate UIText geometry for {}", name);
         return {};
@@ -83,6 +87,13 @@ namespace vke_ui
         const auto result = LayoutText(characters, options.fontSize / font->pixelSize,
                                        static_cast<float>(font->lineHeight), maxWidth);
         return glm::vec2(result.width, result.height);
+    }
+
+    glm::vec2 UIText::measureContent(std::optional<float> width) const
+    {
+        const auto result = LayoutText(characters, options.fontSize / font->pixelSize,
+            static_cast<float>(font->lineHeight), options.wordWrap ? width : std::nullopt);
+        return {result.width, result.height};
     }
 
     void UIText::updateLayout()

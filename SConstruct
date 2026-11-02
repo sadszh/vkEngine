@@ -172,6 +172,7 @@ commonsrc = (
         "./src/scene.cpp",
         "./src/scene_data.cpp",
         "./src/ui/ui.cpp",
+        "./src/ui/canvas.cpp",
         "./src/ui/text.cpp",
         "./src/ui/ui_manager.cpp",
         "./src/scene_transform_system.cpp",

@@ -183,6 +183,10 @@ namespace vkEngine.EngineCore
         public delegate* unmanaged[Cdecl]<UInt32, UInt64, TextLayoutOptions*, Int32> SetUITextLayoutOptions;
         public delegate* unmanaged[Cdecl]<UInt32, UInt64, float, NVec2*, Int32> MeasureUIText;
         public delegate* unmanaged[Cdecl]<UInt32, UInt64, NVec2*, Int32> GetUITextSize;
+        public delegate* unmanaged[Cdecl]<UInt32, UInt64, UISelfLayoutOptions*, Int32> GetUISelfLayout;
+        public delegate* unmanaged[Cdecl]<UInt32, UInt64, UISelfLayoutOptions*, Int32> SetUISelfLayout;
+        public delegate* unmanaged[Cdecl]<UInt32, UInt64, UIGroupLayoutOptions*, Int32> GetUIGroupLayout;
+        public delegate* unmanaged[Cdecl]<UInt32, UInt64, UIGroupLayoutOptions*, Int32> SetUIGroupLayout;
     }
 
     public static class NativeFunctionRegistry

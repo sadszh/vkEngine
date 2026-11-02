@@ -33,7 +33,7 @@ UIComponent（节点基类）
 
 `UIComponent` 保存名称、RectTransform、父子关系、交互状态和最近一次布局结果。所有节点均可包含子节点，`UIContainer` 只提供布局和交互区域。节点创建后地址稳定，Canvas 在 EnTT 存储中移动不会移动内部节点。
 
-原生节点的 `name` 可直接修改。层级修改使用 Canvas 操作函数，以维护所有权和句柄索引；布局修改使用 `SetRectTransform` 校验并标脏，直接赋值 `rectTransform` 不会触发布局重算。`handle` 由 Canvas 分配，`resolvedSize` 由布局系统写入。
+原生节点的 `name` 可直接修改。层级修改使用 Canvas 操作函数，以维护所有权和句柄索引；布局修改使用 `SetRectTransform`、`SetSelfLayout` 或 `SetGroupLayout` 校验并标脏，直接赋值 `rectTransform` 不会触发布局重算。`handle` 由 Canvas 分配，`resolvedSize` 由布局系统写入。
 
 Canvas 通过哈希表将 `UIHandle` 映射到节点指针，查找平均 O(1)。句柄为进程内单调分配的 64 位编号，父句柄 0 表示 Canvas 根。节点销毁后句柄失效，原生指针也随之失效；场景恢复后需重新查询节点。
 
@@ -70,7 +70,7 @@ layoutMatrix = parentMatrix * Translate(position) * Rotate(rotation) * Scale(sca
 geometryMatrix = layoutMatrix * Translate(-pivot * size)
 ```
 
-Canvas 的父 pivot 为 `(0, 0)`。子节点按父节点未缩放的逻辑尺寸布局，视觉变换沿 UI 层级组合。零尺寸合法，负尺寸收敛为零。布局矩形不裁剪文字，也不随文字内容自动调整大小。
+Canvas 的父 pivot 为 `(0, 0)`。子节点按父节点未缩放的逻辑尺寸布局，视觉变换沿 UI 层级组合。零尺寸合法，负尺寸收敛为零。布局矩形不裁剪文字；尺寸来源由 `selfLayout` 逐轴指定。
 
 `SetRectTransform` 标记节点布局为脏，`Canvas::SetReferenceResolution` 标记整棵树为脏。`Engine::UpdatePresentation()` 在编辑、暂停和运行状态下均执行以下流程：
 
@@ -80,11 +80,49 @@ Canvas 的父 pivot 为 `(0, 0)`。子节点按父节点未缩放的逻辑尺寸
 
 交换链在渲染阶段重建时，布局在下一帧适配新尺寸；零尺寸目标保留上次布局结果。
 
-每次布局更新先排序 Canvas，再以 O(n) 遍历节点，仅重算脏节点及受父节点变化影响的子树。`resolvedSize` 保存最近一次求解结果，首次求解前为零。需要提前读取布局时，可调用 `UIManager::GetInstance()->Update(viewportSize)`。
+每次布局更新先排序 Canvas，再检查节点脏标记。任一布局输入、文字度量、图片纹理／UV 或层级变化会触发所在 Canvas 的完整布局计算；没有变化时只同步绘制顺序与渲染变换。布局进行常数次树遍历，节点处理为 O(n)，文字测量另外按字符数线性计算。`resolvedSize` 保存最近一次求解结果，首次求解前为零。需要提前读取布局时，可调用 `UIManager::GetInstance()->Update(viewportSize)`。
+
+## 自动布局与内容自适应
+
+每个节点分别配置自身布局和子节点布局组，两组配置可独立读取和更新：
+
+| 配置 | 原生类型与接口 | C# 属性 | JSON 字段 / Inspector 分组 |
+| --- | --- | --- | --- |
+| 自身尺寸及参与父布局的方式 | `UISelfLayoutOptions`；`GetSelfLayout()` / `SetSelfLayout()` | `UIComponent.SelfLayout` | `selfLayout` / **Self layout** |
+| 直接子节点的测量和排列 | `UIGroupLayoutOptions`；`GetGroupLayout()` / `SetGroupLayout()` | `UIComponent.GroupLayout` | `groupLayout` / **Group layout** |
+
+JSON 中两组对象均可省略；默认自身使用 RectTransform 尺寸并参与父布局，子节点使用锚点布局。修改任一配置均校验输入并标记布局为脏。
+
+| 配置 | 属性 | 值与含义 |
+| --- | --- | --- |
+| `selfLayout` | `width` / `height` | `rect`（默认）或 `content`，分别指定自身尺寸来源 |
+| `selfLayout` | `ignoreLayout` | 默认 false；true 时自身使用锚点布局，不参与父布局组测量及排列 |
+| `groupLayout` | `direction` | `none`（默认）、`horizontal`、`vertical`；按兄弟顺序排列直接子节点 |
+| `groupLayout` | `padding` | `[left, top, right, bottom]`，布局组内边距，默认全零 |
+| `groupLayout` | `spacing` | 相邻参与布局的子节点间距，默认 0 |
+| `groupLayout` | `mainAlignment` | `start`（默认）、`center`、`end`，整组子节点沿排列方向对齐 |
+| `groupLayout` | `crossAlignment` | `start`（默认）、`center`、`end`、`stretch`，子节点沿垂直于排列方向的轴对齐 |
+
+间距和内边距必须是有限非负数。`mainAlignment` 不接受 `stretch`。枚举、数字和 JSON 字段类型在输入边界校验；无效设置失败并保留原配置。
+
+布局组控制参与子节点的位置，忽略其锚点与偏移位置；`rect` 尺寸取 `max(offsetMax - offsetMin, 0)`，`content` 尺寸取内容测量值。`crossAlignment=stretch` 优先于子节点的尺寸模式，填满父节点扣除内边距后的交叉轴空间。旋转、缩放和 pivot 保留为视觉变换，不参与空间分配。内容超出可用空间时从起始边排列，保持间距并允许溢出。
+
+未被父布局组控制的节点使用 RectTransform 锚点定位；`content` 轴替换对应的计算尺寸，左上边界仍由 `anchorMin * parentSize + offsetMin` 决定，`pivot` 负责旋转和缩放中心。`selfLayout.ignoreLayout` 只影响与父组的关系，该节点仍按 `groupLayout` 排列自己的子节点。自身使用 `content` 尺寸时，测量结果由固有内容和布局组共同决定。
+
+内容尺寸的来源如下：
+
+- 文字：宽度为未自动换行的自然宽度，高度按最终分配的宽度及 `wordWrap` 测量。固定宽度配合内容高度可实现段落自动撑高。
+- 图片／按钮：纹理 UV 区域的像素尺寸作为逻辑尺寸；无纹理时固有内容尺寸为零。`preserveAspect` 影响矩形内绘制，不改变布局测量。
+- 布局组：主轴累加子节点尺寸与间距，交叉轴取子节点最大尺寸，再加内边距；有固有内容时逐轴取二者最大值。空组的内容尺寸为内边距之和。
+- `direction=none` 的容器：没有固有内容，内容尺寸为零；锚点子节点不撑大父节点。需要由子节点撑大面板或按钮时，为其配置布局方向。
+
+求解顺序为自然宽度自底向上测量、实际宽度自顶向下分配、内容高度自底向上测量、位置及高度自顶向下排列。内容宽度父组依据子节点的自然宽度决定自身宽度，随后执行交叉轴拉伸；内容高度父组同理依据子节点首选高度决定高度，避免父子尺寸互相依赖。所有结果在一次 `Canvas::Update` 内完成，尺寸变化同步通知几何与命中区域。运行时新增、删除、换父级或重排，以及修改文本、字号、换行选项或布局配置，均在下一次更新重算。
+
+布局输入随节点复制、场景保存和预制体保留；实际尺寸及排列位置为运行时结果，不覆盖 RectTransform。
 
 ## UIText
 
-`UIText` 使用内置 Arial 字体，将 UTF-8 文本转换为字形 Quad，支持字号、水平与垂直对齐、显式换行和按矩形宽度自动换行。`fontSize` 使用 Canvas 逻辑单位，默认 48；RectTransform 的缩放作用于整个节点。布局矩形不随文字内容自动调整大小。
+`UIText` 使用内置 Arial 字体，将 UTF-8 文本转换为字形 Quad，支持字号、水平与垂直对齐、显式换行和按矩形宽度自动换行。`fontSize` 使用 Canvas 逻辑单位，默认 48；RectTransform 的缩放作用于整个节点。`selfLayout.width` / `height` 设为 `content` 时，矩形对应轴使用文字测量尺寸。
 
 `UITextData` 保存 `text`、`color`、材质引用和 `layout` 排版属性。JSON 使用 `fontSize`、`horizontalAlignment`（`left/center/right`）、`verticalAlignment`（`top/middle/bottom`）和 `wordWrap` 字段，默认左上对齐且关闭自动换行。材质句柄 0 使用默认文字材质。
 
@@ -197,7 +235,7 @@ Canvas 按 `sortOrder` 从小到大排列，相同值按运行时实体 ID 排�
 
 ## 保存与预制体
 
-`CanvasData` 保存参考分辨率、排序值和有序根节点列表。节点数据以 `unique_ptr<UINodeData>` 组成树，公共字段为名称、RectTransform、`hitTestEnabled`、`interactable` 和子节点；具体类型增加各自的内容属性。
+`CanvasData` 保存参考分辨率、排序值和有序根节点列表。节点数据以 `unique_ptr<UINodeData>` 组成树，公共字段为名称、RectTransform、`selfLayout`、`groupLayout`、`hitTestEnabled`、`interactable` 和子节点；具体类型增加各自的内容属性。
 
 JSON 输入先校验，再按 `type` 构造具体节点数据；`CanvasData::ValidateJSON` 和 JSON 构造函数分别通过 `UINodeData::ValidateJSON`、`UINodeData::FromJSON` 递归处理子树。原生代码可直接构造各类节点数据，`Validate()` 检查布局、类型专有约束和子树，`ValidateAssets()` / `LoadAssets()` 负责资源预检和加载。
 
@@ -272,7 +310,7 @@ canvas.Remove(panel); // 同时删除 panel 下的 background；已移到画布�
 
 ## 未实现功能
 
-世界空间 Canvas、键盘焦点、事件冒泡、拖拽和滚轮控件尚未实现。
+世界空间 Canvas、键盘焦点、事件冒泡、拖拽、滚轮控件、网格布局、弹性空间分配、尺寸上下限和嵌套裁剪尚未实现。
 
 ## 综合示例
 
@@ -283,7 +321,7 @@ scons
 .\out\engine.exe .\tests\cfg\test_ui.json
 ```
 
-示例使用仓库自带字体和图片，参考分辨率为 1600 × 1320，初始窗口为 1200 × 990。调整窗口大小可以观察居中的展示板、四角锚点和等比适配。场景位于 [test_ui_scene.json](../tests/scene/test_ui_scene.json)，资源表位于 [test_ui_desc.json](../tests/scene/test_ui_desc.json)。九个分区覆盖以下能力：
+示例使用仓库自带字体和图片，参考分辨率为 1600 × 1320，初始窗口为 1200 × 990。调整窗口大小可以观察居中的展示板、四角锚点和等比适配。场景位于 [test_ui_scene.json](../tests/scene/test_ui_scene.json)，资源表位于 [test_ui_desc.json](../tests/scene/test_ui_desc.json)。默认综合展示页的九个分区覆盖以下能力：
 
 | 分区 | 展示内容 |
 | --- | --- |
@@ -297,6 +335,19 @@ scons
 | Hit Test + Pass Through | 前景图片依次切换透传、禁用遮挡、透明遮挡、可点击四种模式，分别统计前后层点击次数 |
 | Pause + Lifecycle | 暂停模拟后的模态菜单、子节点独立交互、可点击关闭的纹理按钮预制体 |
 
+右上角的 **Auto layout / F1** 打开自动布局展示页，**Back to overview / F1** 返回综合展示；也可按 F1 切换。两个页面共用 `test_ui.json` 和场景节点树，切换时保留文本、列表及布局配置。自动布局页覆盖其他 Canvas 并阻挡底层鼠标输入；页面打开期间，综合展示的动画和字母快捷键停止更新，Esc 仍可退出。
+
+自动布局页包含四个区域，操作均通过鼠标按钮完成：
+
+| 分区 | 操作与观察 |
+| --- | --- |
+| Text that sizes its panel | Text 切换三段文字，Width 切换 638 / 380 面板宽度，Font 切换 22 / 26 字号；观察换行、父面板高度、后续标记与尺寸读数一起移动 |
+| Buttons that fit their labels | Label 切换 Publish 标签，Padding 切换按钮内边距，Spacing 切换组间距；按钮和外层横向组均按内容宽高测量，点击 Save / Cancel / Publish 也会修改标签 |
+| A list that repacks itself | Add 新增一行，Remove 删除末行，Reorder 把首行移到末尾；纵向列表按内容撑高，允许 0–5 行，操作按钮在达到边界时禁用 |
+| Alignment + an independent badge | Axis 切换横纵方向，Main 循环主轴起始／居中／末端对齐，Cross 循环交叉轴起始／居中／末端／拉伸，Badge 切换角标的 `ignoreLayout`；观察浮动角标加入排列或恢复右上角锚点定位 |
+
+自动布局页的尺寸读数每 0.2 秒刷新。窗口缩放展示 Canvas 等比适配，Width 单独改变文字面板逻辑宽度以展示重新换行。列表初始三行来自 JSON，后续行通过 C# 创建；布局系统处理行的位置和尺寸，脚本只修改内容、布局参数与层级顺序。
+
 鼠标左键操作界面按钮。事件探针上按下后拖到外部释放可观察 Up，按住时按 D 禁用或切换窗口可观察 Cancel。事件区的 Hover / Press 显示最近事件目标的状态，Clicks 统计探针点击。
 
 文字区点击预览框可依次查看普通段落、超长单词和含显式换行的 UTF-8 文本。下方按钮切换字号、预览框宽度、水平/垂直对齐和自动换行；尺寸读数每 0.25 秒刷新，`Natural` 来自 `Measure()`，`Layout` 来自 `TextSize`，`Box` 是文字矩形的逻辑尺寸。关闭换行后可以观察文字溢出，重新开启后按当前宽度分行。按钮标签使用拉伸锚点与居中对齐，动态卡片和暂停菜单也使用字号及排版属性。
@@ -305,4 +356,4 @@ scons
 
 暂停菜单使用 `EngineState.Paused`，脚本 Update 和快捷键处理停止，鼠标事件继续分发。菜单的全屏容器设置 `HitTestEnabled=true`、`Interactable=false`，阻挡背景；子按钮仍可点击恢复运行或退出。预制体在三秒模拟时间后请求销毁，暂停期间计时停止；点击其中的图片按钮也会请求销毁实体，由下一帧的销毁队列处理。
 
-[UIShowcaseScript.cs](../tests/csharp/TestProj/UIShowcaseScript.cs) 负责基础展示、可点击控件和预制体生命周期；[UIInteractionScript.cs](../tests/csharp/TestProj/UIInteractionScript.cs) 负责事件记录、命中模式与暂停菜单。固定节点在 Start 中查询并缓存，事件订阅在 Unload 中解除；动态子树销毁时由 UI 系统释放其订阅。静态节点支持编辑器预览，事件和动态节点需要进入 Run 模式。
+[UIShowcaseScript.cs](../tests/csharp/TestProj/UIShowcaseScript.cs) 负责基础展示、可点击控件、预制体生命周期和页面切换，其中的 `UIAutoLayoutDemo` 管理自动布局页的交互；[UIInteractionScript.cs](../tests/csharp/TestProj/UIInteractionScript.cs) 负责事件记录、命中模式与暂停菜单。固定节点在 Start 中查询并缓存，事件订阅在 Unload 中解除；动态子树销毁时由 UI 系统释放其订阅。静态节点支持编辑器预览，事件和动态节点需要进入 Run 模式。

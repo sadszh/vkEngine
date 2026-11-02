@@ -182,6 +182,7 @@ namespace vke_ui
         void updateLayout();
         bool rebuildGeometry(glm::vec4 color);
         void onSizeChanged() override;
+        glm::vec2 measureContent(std::optional<float> width) const override;
     };
 }
 

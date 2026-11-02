@@ -155,7 +155,7 @@
                     "offsetMax": [34, 87],
                     "pivot": [0, 0]
                   },
-                  "text": "Screen-space Canvas / text layout + measurement / images / pointer events",
+                  "text": "Screen-space Canvas / text + automatic layout / images / pointer events",
                   "color": [0.53, 0.65, 0.76, 1],
                   "children": [],
                   "fontSize": 20.16
@@ -298,7 +298,7 @@
                             "offsetMin": [8, 4],
                             "offsetMax": [-8, -4]
                           },
-                      "text": "Align: C/M",
+                          "text": "Align: C/M",
                           "fontSize": 16,
                           "color": [0.9, 0.94, 1, 1],
                           "children": [],
@@ -1626,10 +1626,1501 @@
                     "offsetMax": [1532, 1330],
                     "pivot": [0, 0]
                   },
-                  "text": "Clipping, automatic container layout, keyboard focus and world-space Canvas are not implemented.",
+                  "text": "Clipping, keyboard focus and world-space Canvas are not implemented.",
                   "color": [0.15, 0.82, 0.85, 1],
                   "children": [],
                   "fontSize": 15.36
+                },
+                {
+                  "type": "uiButton",
+                  "name": "OpenAutoLayout",
+                  "rectTransform": {
+                    "offsetMin": [1280, 32],
+                    "offsetMax": [1280, 32]
+                  },
+                  "selfLayout": {
+                    "height": "content",
+                    "width": "content"
+                  },
+                  "groupLayout": {
+                    "direction": "horizontal",
+                    "padding": [8, 8, 8, 8],
+                    "spacing": 0,
+                    "crossAlignment": "start"
+                  },
+                  "children": [
+                    {
+                      "type": "uiText",
+                      "name": "Label",
+                      "text": "Auto layout  /  F1",
+                      "fontSize": 22,
+                      "color": [0.9, 0.94, 1, 1],
+                      "wordWrap": false,
+                      "rectTransform": {
+                        "offsetMax": [0, 0]
+                      },
+                      "selfLayout": {
+                        "width": "content",
+                        "height": "content"
+                      }
+                    }
+                  ],
+                  "color": [0.12, 0.25, 0.39, 1],
+                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                }
+              ]
+            },
+            {
+              "type": "uiImage",
+              "name": "AutoLayoutPage",
+              "color": [0.018, 0.027, 0.046, 1],
+              "hitTestEnabled": true,
+              "interactable": false,
+              "rectTransform": {
+                "anchorMax": [1, 1],
+                "offsetMin": [20000, 0],
+                "offsetMax": [20000, 0],
+                "pivot": [0, 0]
+              },
+              "children": [
+                {
+                  "type": "uiContainer",
+                  "name": "AutoLayoutBoard",
+                  "rectTransform": {
+                    "anchorMin": [0.5, 0.5],
+                    "anchorMax": [0.5, 0.5],
+                    "offsetMin": [-688, -476],
+                    "offsetMax": [688, 476]
+                  },
+                  "selfLayout": {
+                    "height": "rect"
+                  },
+                  "groupLayout": {
+                    "direction": "vertical",
+                    "padding": [0, 0, 0, 0],
+                    "spacing": 16,
+                    "crossAlignment": "stretch"
+                  },
+                  "children": [
+                    {
+                      "type": "uiContainer",
+                      "name": "Header",
+                      "rectTransform": {
+                        "offsetMax": [0, 0]
+                      },
+                      "selfLayout": {
+                        "height": "content"
+                      },
+                      "groupLayout": {
+                        "direction": "vertical",
+                        "padding": [0, 0, 0, 0],
+                        "spacing": 6,
+                        "crossAlignment": "stretch"
+                      },
+                      "children": [
+                        {
+                          "type": "uiText",
+                          "name": "Title",
+                          "text": "UI / AUTOMATIC LAYOUT",
+                          "fontSize": 38,
+                          "color": [0.9, 0.94, 1, 1],
+                          "wordWrap": true,
+                          "rectTransform": {
+                            "offsetMax": [0, 0]
+                          },
+                          "selfLayout": {
+                            "height": "content"
+                          }
+                        },
+                        {
+                          "type": "uiText",
+                          "name": "Subtitle",
+                          "text": "Change content. Watch the hierarchy respond.   /   Click the controls below.",
+                          "fontSize": 18,
+                          "color": [0.48, 0.61, 0.74, 1],
+                          "wordWrap": true,
+                          "rectTransform": {
+                            "offsetMax": [0, 0]
+                          },
+                          "selfLayout": {
+                            "height": "content"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "uiContainer",
+                      "name": "TopRow",
+                      "rectTransform": {
+                        "offsetMax": [0, 400]
+                      },
+                      "selfLayout": {
+                        "height": "rect"
+                      },
+                      "groupLayout": {
+                        "direction": "horizontal",
+                        "padding": [0, 0, 0, 0],
+                        "spacing": 20,
+                        "crossAlignment": "start"
+                      },
+                      "children": [
+                        {
+                          "type": "uiImage",
+                          "name": "TextSection",
+                          "rectTransform": {
+                            "offsetMax": [678, 400]
+                          },
+                          "selfLayout": {
+                            "height": "rect"
+                          },
+                          "groupLayout": {
+                            "direction": "vertical",
+                            "padding": [20, 20, 20, 20],
+                            "spacing": 12,
+                            "crossAlignment": "stretch"
+                          },
+                          "children": [
+                            {
+                              "type": "uiText",
+                              "name": "Title",
+                              "text": "01  TEXT THAT SIZES ITS PANEL",
+                              "fontSize": 23,
+                              "color": [0.22, 0.83, 0.79, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            },
+                            {
+                              "type": "uiText",
+                              "name": "Description",
+                              "text": "Fixed width + content height. All rows below reflow together.",
+                              "fontSize": 16,
+                              "color": [0.48, 0.61, 0.74, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            },
+                            {
+                              "type": "uiContainer",
+                              "name": "Controls",
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              },
+                              "groupLayout": {
+                                "direction": "horizontal",
+                                "padding": [0, 0, 0, 0],
+                                "spacing": 8,
+                                "crossAlignment": "start"
+                              },
+                              "children": [
+                                {
+                                  "type": "uiButton",
+                                  "name": "Text",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Text",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                },
+                                {
+                                  "type": "uiButton",
+                                  "name": "Width",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Width",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                },
+                                {
+                                  "type": "uiButton",
+                                  "name": "Font",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Font",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "uiContainer",
+                              "name": "PreviewHost",
+                              "rectTransform": {
+                                "offsetMax": [638, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              },
+                              "groupLayout": {
+                                "direction": "vertical",
+                                "padding": [0, 0, 0, 0],
+                                "spacing": 12,
+                                "crossAlignment": "start"
+                              },
+                              "children": [
+                                {
+                                  "type": "uiImage",
+                                  "name": "Preview",
+                                  "rectTransform": {
+                                    "offsetMax": [638, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "ignoreLayout": false
+                                  },
+                                  "groupLayout": {
+                                    "direction": "vertical",
+                                    "padding": [12, 12, 12, 12],
+                                    "spacing": 10,
+                                    "crossAlignment": "stretch"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Paragraph",
+                                      "text": "Change the width or text. This paragraph wraps, the panel grows, and the marker below moves with it.",
+                                      "fontSize": 22,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": true,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "height": "content"
+                                      }
+                                    },
+                                    {
+                                      "type": "uiText",
+                                      "name": "Marker",
+                                      "text": "THIS ROW FOLLOWS THE PARAGRAPH",
+                                      "fontSize": 14,
+                                      "color": [0.22, 0.83, 0.79, 1],
+                                      "wordWrap": true,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.024, 0.038, 0.062, 1]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "uiText",
+                              "name": "Metrics",
+                              "text": "Waiting for layout...",
+                              "fontSize": 16,
+                              "color": [0.48, 0.61, 0.74, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            }
+                          ],
+                          "color": [0.045, 0.064, 0.097, 1]
+                        },
+                        {
+                          "type": "uiImage",
+                          "name": "ButtonSection",
+                          "rectTransform": {
+                            "offsetMax": [678, 400]
+                          },
+                          "selfLayout": {
+                            "height": "rect"
+                          },
+                          "groupLayout": {
+                            "direction": "vertical",
+                            "padding": [20, 20, 20, 20],
+                            "spacing": 12,
+                            "crossAlignment": "stretch"
+                          },
+                          "children": [
+                            {
+                              "type": "uiText",
+                              "name": "Title",
+                              "text": "02  BUTTONS THAT FIT THEIR LABELS",
+                              "fontSize": 23,
+                              "color": [0.22, 0.83, 0.79, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            },
+                            {
+                              "type": "uiText",
+                              "name": "Description",
+                              "text": "Nested horizontal groups measure labels, padding and gaps.",
+                              "fontSize": 16,
+                              "color": [0.48, 0.61, 0.74, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            },
+                            {
+                              "type": "uiContainer",
+                              "name": "Controls",
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              },
+                              "groupLayout": {
+                                "direction": "horizontal",
+                                "padding": [0, 0, 0, 0],
+                                "spacing": 8,
+                                "crossAlignment": "start"
+                              },
+                              "children": [
+                                {
+                                  "type": "uiButton",
+                                  "name": "Label",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Label",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                },
+                                {
+                                  "type": "uiButton",
+                                  "name": "Padding",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Padding",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                },
+                                {
+                                  "type": "uiButton",
+                                  "name": "Spacing",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Spacing",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "uiContainer",
+                              "name": "ButtonsHost",
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              },
+                              "groupLayout": {
+                                "direction": "vertical",
+                                "padding": [0, 0, 0, 0],
+                                "spacing": 12,
+                                "crossAlignment": "start"
+                              },
+                              "children": [
+                                {
+                                  "type": "uiImage",
+                                  "name": "Buttons",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [12, 12, 12, 12],
+                                    "spacing": 10,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiButton",
+                                      "name": "Save",
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "height": "content",
+                                        "width": "content"
+                                      },
+                                      "groupLayout": {
+                                        "direction": "horizontal",
+                                        "padding": [8, 8, 8, 8],
+                                        "spacing": 0,
+                                        "crossAlignment": "start"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "uiText",
+                                          "name": "Label",
+                                          "text": "Save",
+                                          "fontSize": 16,
+                                          "color": [0.9, 0.94, 1, 1],
+                                          "wordWrap": false,
+                                          "rectTransform": {
+                                            "offsetMax": [0, 0]
+                                          },
+                                          "selfLayout": {
+                                            "width": "content",
+                                            "height": "content"
+                                          }
+                                        }
+                                      ],
+                                      "color": [0.12, 0.25, 0.39, 1],
+                                      "hoverColor": [0.17, 0.39, 0.53, 1],
+                                      "pressedColor": [0.1, 0.57, 0.57, 1],
+                                      "disabledColor": [0.08, 0.11, 0.15, 1]
+                                    },
+                                    {
+                                      "type": "uiButton",
+                                      "name": "Cancel",
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "height": "content",
+                                        "width": "content"
+                                      },
+                                      "groupLayout": {
+                                        "direction": "horizontal",
+                                        "padding": [8, 8, 8, 8],
+                                        "spacing": 0,
+                                        "crossAlignment": "start"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "uiText",
+                                          "name": "Label",
+                                          "text": "Cancel",
+                                          "fontSize": 16,
+                                          "color": [0.9, 0.94, 1, 1],
+                                          "wordWrap": false,
+                                          "rectTransform": {
+                                            "offsetMax": [0, 0]
+                                          },
+                                          "selfLayout": {
+                                            "width": "content",
+                                            "height": "content"
+                                          }
+                                        }
+                                      ],
+                                      "color": [0.12, 0.25, 0.39, 1],
+                                      "hoverColor": [0.17, 0.39, 0.53, 1],
+                                      "pressedColor": [0.1, 0.57, 0.57, 1],
+                                      "disabledColor": [0.08, 0.11, 0.15, 1]
+                                    },
+                                    {
+                                      "type": "uiButton",
+                                      "name": "Publish",
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "height": "content",
+                                        "width": "content"
+                                      },
+                                      "groupLayout": {
+                                        "direction": "horizontal",
+                                        "padding": [8, 8, 8, 8],
+                                        "spacing": 0,
+                                        "crossAlignment": "start"
+                                      },
+                                      "children": [
+                                        {
+                                          "type": "uiText",
+                                          "name": "Label",
+                                          "text": "Publish changes",
+                                          "fontSize": 16,
+                                          "color": [0.9, 0.94, 1, 1],
+                                          "wordWrap": false,
+                                          "rectTransform": {
+                                            "offsetMax": [0, 0]
+                                          },
+                                          "selfLayout": {
+                                            "width": "content",
+                                            "height": "content"
+                                          }
+                                        }
+                                      ],
+                                      "color": [0.12, 0.25, 0.39, 1],
+                                      "hoverColor": [0.17, 0.39, 0.53, 1],
+                                      "pressedColor": [0.1, 0.57, 0.57, 1],
+                                      "disabledColor": [0.08, 0.11, 0.15, 1]
+                                    }
+                                  ],
+                                  "color": [0.024, 0.038, 0.062, 1]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "uiText",
+                              "name": "Explanation",
+                              "text": "The dark group fits its children. Click Save, Cancel or Publish to change a label; neighboring buttons move automatically.",
+                              "fontSize": 18,
+                              "color": [0.48, 0.61, 0.74, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            },
+                            {
+                              "type": "uiText",
+                              "name": "Metrics",
+                              "text": "Waiting for layout...",
+                              "fontSize": 16,
+                              "color": [0.48, 0.61, 0.74, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            }
+                          ],
+                          "color": [0.045, 0.064, 0.097, 1]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "uiContainer",
+                      "name": "BottomRow",
+                      "rectTransform": {
+                        "offsetMax": [0, 386]
+                      },
+                      "selfLayout": {
+                        "height": "rect"
+                      },
+                      "groupLayout": {
+                        "direction": "horizontal",
+                        "padding": [0, 0, 0, 0],
+                        "spacing": 20,
+                        "crossAlignment": "start"
+                      },
+                      "children": [
+                        {
+                          "type": "uiImage",
+                          "name": "TreeSection",
+                          "rectTransform": {
+                            "offsetMax": [678, 386]
+                          },
+                          "selfLayout": {
+                            "height": "rect"
+                          },
+                          "groupLayout": {
+                            "direction": "vertical",
+                            "padding": [20, 20, 20, 20],
+                            "spacing": 12,
+                            "crossAlignment": "stretch"
+                          },
+                          "children": [
+                            {
+                              "type": "uiText",
+                              "name": "Title",
+                              "text": "03  A LIST THAT REPACKS ITSELF",
+                              "fontSize": 23,
+                              "color": [0.22, 0.83, 0.79, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            },
+                            {
+                              "type": "uiText",
+                              "name": "Description",
+                              "text": "Add, remove or reorder children. Up to five rows fit this demo.",
+                              "fontSize": 16,
+                              "color": [0.48, 0.61, 0.74, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            },
+                            {
+                              "type": "uiContainer",
+                              "name": "Controls",
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              },
+                              "groupLayout": {
+                                "direction": "horizontal",
+                                "padding": [0, 0, 0, 0],
+                                "spacing": 8,
+                                "crossAlignment": "start"
+                              },
+                              "children": [
+                                {
+                                  "type": "uiButton",
+                                  "name": "Add",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Add",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                },
+                                {
+                                  "type": "uiButton",
+                                  "name": "Remove",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Remove",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                },
+                                {
+                                  "type": "uiButton",
+                                  "name": "Reorder",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Reorder",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "uiContainer",
+                              "name": "Items",
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              },
+                              "groupLayout": {
+                                "direction": "vertical",
+                                "padding": [0, 0, 0, 0],
+                                "spacing": 7,
+                                "crossAlignment": "stretch"
+                              },
+                              "children": [
+                                {
+                                  "type": "uiImage",
+                                  "name": "Item1",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [6, 6, 6, 6],
+                                    "spacing": 0,
+                                    "crossAlignment": "center"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Item 01   /   content-sized row",
+                                      "fontSize": 18,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "height": "content",
+                                        "width": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.024, 0.038, 0.062, 1]
+                                },
+                                {
+                                  "type": "uiImage",
+                                  "name": "Item2",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [6, 6, 6, 6],
+                                    "spacing": 0,
+                                    "crossAlignment": "center"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Item 02   /   content-sized row",
+                                      "fontSize": 18,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "height": "content",
+                                        "width": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.024, 0.038, 0.062, 1]
+                                },
+                                {
+                                  "type": "uiImage",
+                                  "name": "Item3",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [6, 6, 6, 6],
+                                    "spacing": 0,
+                                    "crossAlignment": "center"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Item 03   /   content-sized row",
+                                      "fontSize": 18,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "height": "content",
+                                        "width": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.024, 0.038, 0.062, 1]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "uiText",
+                              "name": "Metrics",
+                              "text": "3 / 5 items",
+                              "fontSize": 16,
+                              "color": [0.48, 0.61, 0.74, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            }
+                          ],
+                          "color": [0.045, 0.064, 0.097, 1]
+                        },
+                        {
+                          "type": "uiImage",
+                          "name": "AlignmentSection",
+                          "rectTransform": {
+                            "offsetMax": [678, 386]
+                          },
+                          "selfLayout": {
+                            "height": "rect"
+                          },
+                          "groupLayout": {
+                            "direction": "vertical",
+                            "padding": [20, 20, 20, 20],
+                            "spacing": 12,
+                            "crossAlignment": "stretch"
+                          },
+                          "children": [
+                            {
+                              "type": "uiText",
+                              "name": "Title",
+                              "text": "04  ALIGNMENT + AN INDEPENDENT BADGE",
+                              "fontSize": 23,
+                              "color": [0.22, 0.83, 0.79, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            },
+                            {
+                              "type": "uiText",
+                              "name": "Description",
+                              "text": "The gold badge can float freely or join the layout group.",
+                              "fontSize": 16,
+                              "color": [0.48, 0.61, 0.74, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            },
+                            {
+                              "type": "uiContainer",
+                              "name": "Controls",
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              },
+                              "groupLayout": {
+                                "direction": "horizontal",
+                                "padding": [0, 0, 0, 0],
+                                "spacing": 8,
+                                "crossAlignment": "start"
+                              },
+                              "children": [
+                                {
+                                  "type": "uiButton",
+                                  "name": "Direction",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Axis",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                },
+                                {
+                                  "type": "uiButton",
+                                  "name": "Main",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Main",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                },
+                                {
+                                  "type": "uiButton",
+                                  "name": "Cross",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Cross",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                },
+                                {
+                                  "type": "uiButton",
+                                  "name": "Badge",
+                                  "rectTransform": {
+                                    "offsetMax": [0, 0]
+                                  },
+                                  "selfLayout": {
+                                    "height": "content",
+                                    "width": "content"
+                                  },
+                                  "groupLayout": {
+                                    "direction": "horizontal",
+                                    "padding": [8, 8, 8, 8],
+                                    "spacing": 0,
+                                    "crossAlignment": "start"
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "Badge",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": false,
+                                      "rectTransform": {
+                                        "offsetMax": [0, 0]
+                                      },
+                                      "selfLayout": {
+                                        "width": "content",
+                                        "height": "content"
+                                      }
+                                    }
+                                  ],
+                                  "color": [0.12, 0.25, 0.39, 1],
+                                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                                  "disabledColor": [0.08, 0.11, 0.15, 1]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "uiImage",
+                              "name": "Arena",
+                              "rectTransform": {
+                                "offsetMax": [0, 182]
+                              },
+                              "selfLayout": {
+                                "height": "rect"
+                              },
+                              "groupLayout": {
+                                "direction": "horizontal",
+                                "padding": [12, 12, 12, 12],
+                                "spacing": 8,
+                                "crossAlignment": "start"
+                              },
+                              "children": [
+                                {
+                                  "type": "uiImage",
+                                  "name": "One",
+                                  "color": [0.11, 0.37, 0.44, 1],
+                                  "rectTransform": {
+                                    "offsetMax": [108, 28]
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "ONE",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": true,
+                                      "rectTransform": {
+                                        "anchorMax": [1, 1]
+                                      },
+                                      "horizontalAlignment": "center",
+                                      "verticalAlignment": "middle"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "uiImage",
+                                  "name": "Two",
+                                  "color": [0.19, 0.25, 0.48, 1],
+                                  "rectTransform": {
+                                    "offsetMax": [138, 34]
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "TWO",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": true,
+                                      "rectTransform": {
+                                        "anchorMax": [1, 1]
+                                      },
+                                      "horizontalAlignment": "center",
+                                      "verticalAlignment": "middle"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "uiImage",
+                                  "name": "Three",
+                                  "color": [0.31, 0.22, 0.41, 1],
+                                  "rectTransform": {
+                                    "offsetMax": [116, 42]
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "THREE",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": true,
+                                      "rectTransform": {
+                                        "anchorMax": [1, 1]
+                                      },
+                                      "horizontalAlignment": "center",
+                                      "verticalAlignment": "middle"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "uiImage",
+                                  "name": "Badge",
+                                  "color": [0.64, 0.38, 0.12, 1],
+                                  "rectTransform": {
+                                    "anchorMin": [1, 0],
+                                    "anchorMax": [1, 0],
+                                    "offsetMin": [-118, 8],
+                                    "offsetMax": [-8, 34]
+                                  },
+                                  "children": [
+                                    {
+                                      "type": "uiText",
+                                      "name": "Label",
+                                      "text": "OVERLAY",
+                                      "fontSize": 16,
+                                      "color": [0.9, 0.94, 1, 1],
+                                      "wordWrap": true,
+                                      "rectTransform": {
+                                        "anchorMax": [1, 1]
+                                      },
+                                      "horizontalAlignment": "center",
+                                      "verticalAlignment": "middle"
+                                    }
+                                  ],
+                                  "selfLayout": {
+                                    "ignoreLayout": true
+                                  }
+                                }
+                              ],
+                              "color": [0.024, 0.038, 0.062, 1]
+                            },
+                            {
+                              "type": "uiText",
+                              "name": "Metrics",
+                              "text": "Horizontal | Main: Start | Cross: Start | Badge: overlay",
+                              "fontSize": 16,
+                              "color": [0.48, 0.61, 0.74, 1],
+                              "wordWrap": true,
+                              "rectTransform": {
+                                "offsetMax": [0, 0]
+                              },
+                              "selfLayout": {
+                                "height": "content"
+                              }
+                            }
+                          ],
+                          "color": [0.045, 0.064, 0.097, 1]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "uiText",
+                      "name": "Footer",
+                      "text": "Live content sizing + layout groups    |    F1: back to overview    |    Esc: exit",
+                      "fontSize": 16,
+                      "color": [0.48, 0.61, 0.74, 1],
+                      "wordWrap": true,
+                      "rectTransform": {
+                        "offsetMax": [0, 0]
+                      },
+                      "selfLayout": {
+                        "height": "content"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "uiButton",
+                  "name": "CloseAutoLayout",
+                  "rectTransform": {
+                    "anchorMin": [0.5, 0.5],
+                    "anchorMax": [0.5, 0.5],
+                    "offsetMin": [440, -624],
+                    "offsetMax": [440, -624]
+                  },
+                  "selfLayout": {
+                    "height": "content",
+                    "width": "content"
+                  },
+                  "groupLayout": {
+                    "direction": "horizontal",
+                    "padding": [8, 8, 8, 8],
+                    "spacing": 0,
+                    "crossAlignment": "start"
+                  },
+                  "children": [
+                    {
+                      "type": "uiText",
+                      "name": "Label",
+                      "text": "Back to overview  /  F1",
+                      "fontSize": 22,
+                      "color": [0.9, 0.94, 1, 1],
+                      "wordWrap": false,
+                      "rectTransform": {
+                        "offsetMax": [0, 0]
+                      },
+                      "selfLayout": {
+                        "width": "content",
+                        "height": "content"
+                      }
+                    }
+                  ],
+                  "color": [0.12, 0.25, 0.39, 1],
+                  "hoverColor": [0.17, 0.39, 0.53, 1],
+                  "pressedColor": [0.1, 0.57, 0.57, 1],
+                  "disabledColor": [0.08, 0.11, 0.15, 1]
                 }
               ]
             }

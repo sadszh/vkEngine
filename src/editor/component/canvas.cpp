@@ -134,6 +134,42 @@ namespace vke_editor
                         VKE_LOG_ERROR("Invalid UI rectangle: {}", result.error());
                 const auto &size = node.resolvedSize;
                 ImGui::Text("Resolved size: %.1f x %.1f", size.x, size.y);
+                if (ImGui::TreeNode("Self layout"))
+                {
+                    auto options = node.GetSelfLayout();
+                    int width = static_cast<int>(options.width), height = static_cast<int>(options.height);
+                    bool layoutChanged = ImGui::Combo("Width", &width, "Rect\0Content\0");
+                    layoutChanged |= ImGui::Combo("Height", &height, "Rect\0Content\0");
+                    layoutChanged |= ImGui::Checkbox("Ignore parent layout", &options.ignoreLayout);
+                    options.width = static_cast<SizeMode>(width);
+                    options.height = static_cast<SizeMode>(height);
+                    if (layoutChanged)
+                        if (auto result = node.SetSelfLayout(options); !result)
+                            VKE_LOG_ERROR("Invalid UI self layout: {}", result.error());
+                    ImGui::TreePop();
+                }
+                if (ImGui::TreeNode("Group layout"))
+                {
+                    auto options = node.GetGroupLayout();
+                    int direction = static_cast<int>(options.direction);
+                    int main = static_cast<int>(options.mainAlignment), cross = static_cast<int>(options.crossAlignment);
+                    bool layoutChanged = ImGui::Combo("Direction", &direction, "None\0Horizontal\0Vertical\0");
+                    if (direction != 0)
+                    {
+                        layoutChanged |= ImGui::InputFloat4("Padding (L/T/R/B)", glm::value_ptr(options.padding));
+                        layoutChanged |= ImGui::InputFloat("Spacing", &options.spacing);
+                        layoutChanged |= ImGui::Combo("Main alignment", &main, "Start\0Center\0End\0");
+                        layoutChanged |= ImGui::Combo("Cross alignment", &cross, "Start\0Center\0End\0Stretch\0");
+                    }
+                    options.direction = static_cast<LayoutDirection>(direction);
+                    options.mainAlignment = static_cast<LayoutAlignment>(main);
+                    options.crossAlignment = static_cast<LayoutAlignment>(cross);
+                    if (layoutChanged)
+                        if (auto result = node.SetGroupLayout(options); !result)
+                            VKE_LOG_ERROR("Invalid UI group layout: {}", result.error());
+                    ImGui::TextDisabled("Layout groups own child positions. Rect sizes use offset max - min.");
+                    ImGui::TreePop();
+                }
                 switch (type)
                 {
                 case UIType::Text:

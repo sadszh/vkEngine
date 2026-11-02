@@ -58,6 +58,7 @@ public sealed class UIInteractionScript : EntityScript
 
     public override void Update()
     {
+        if (UIShowcaseScript.IsAutoLayoutOpen) return;
         if (Input.IsKeyPressed(KeyCode.D)) toggleProbe();
         if (Input.IsKeyPressed(KeyCode.M)) openPauseMenu();
     }

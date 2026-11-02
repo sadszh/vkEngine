@@ -2,6 +2,7 @@
 #define UI_COMPONENT_H
 
 #include <ui/rect_transform.hpp>
+#include <ui/layout.hpp>
 #include <glm/mat4x4.hpp>
 #include <memory>
 #include <string>
@@ -9,6 +10,7 @@
 #include <utility>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <cmath>
+#include <optional>
 
 namespace vke_component
 {
@@ -51,6 +53,8 @@ namespace vke_ui
     {
         std::string name;
         RectTransform rectTransform;
+        UISelfLayoutOptions selfLayout;
+        UIGroupLayoutOptions groupLayout;
         bool hitTestEnabled = false;
         bool interactable = true;
         std::vector<std::unique_ptr<UINodeData>> children;
@@ -65,6 +69,10 @@ namespace vke_ui
         virtual vke_common::SceneResult<void> Validate() const
         {
             if (auto valid = rectTransform.Validate(); !valid)
+                return valid;
+            if (auto valid = selfLayout.Validate(); !valid)
+                return valid;
+            if (auto valid = groupLayout.Validate(); !valid)
                 return valid;
             for (const auto &child : children)
             {
@@ -95,6 +103,8 @@ namespace vke_ui
         virtual nlohmann::json ToJSON() const
         {
             nlohmann::json json{{"name", name}, {"rectTransform", rectTransform.ToJSON()}, {"hitTestEnabled", hitTestEnabled}, {"interactable", interactable}, {"children", nlohmann::json::array()}};
+            json["selfLayout"] = selfLayout.ToJSON();
+            json["groupLayout"] = groupLayout.ToJSON();
             for (const auto &child : children)
                 json["children"].push_back(child->ToJSON());
             return json;
@@ -120,6 +130,12 @@ namespace vke_ui
             if (json.contains("rectTransform"))
                 if (auto valid = RectTransform::ValidateJSON(json["rectTransform"]); !valid)
                     return valid;
+            if (json.contains("selfLayout"))
+                if (auto valid = UISelfLayoutOptions::ValidateJSON(json["selfLayout"]); !valid)
+                    return valid;
+            if (json.contains("groupLayout"))
+                if (auto valid = UIGroupLayoutOptions::ValidateJSON(json["groupLayout"]); !valid)
+                    return valid;
             return ValidateChildrenJSON(json);
         }
 
@@ -129,6 +145,10 @@ namespace vke_ui
         {
             if (json.contains("rectTransform"))
                 rectTransform = RectTransform(json["rectTransform"]);
+            if (json.contains("selfLayout"))
+                selfLayout = UISelfLayoutOptions(json["selfLayout"]);
+            if (json.contains("groupLayout"))
+                groupLayout = UIGroupLayoutOptions(json["groupLayout"]);
             if (json.contains("children"))
                 for (const auto &child : json["children"])
                     children.push_back(FromJSON(child));
@@ -145,6 +165,8 @@ namespace vke_ui
                 copiedChildren.push_back(child ? child->Clone() : nullptr);
             name = other.name;
             rectTransform = other.rectTransform;
+            selfLayout = other.selfLayout;
+            groupLayout = other.groupLayout;
             hitTestEnabled = other.hitTestEnabled;
             interactable = other.interactable;
             children = std::move(copiedChildren);
@@ -205,14 +227,34 @@ namespace vke_ui
             return {};
         }
         virtual std::unique_ptr<UINodeData> ToData() const = 0;
+        const UISelfLayoutOptions &GetSelfLayout() const { return selfLayout; }
+        vke_common::SceneResult<void> SetSelfLayout(const UISelfLayoutOptions &value)
+        {
+            if (auto valid = value.Validate(); !valid) return valid;
+            selfLayout = value;
+            layoutDirty = true;
+            return {};
+        }
+
+        const UIGroupLayoutOptions &GetGroupLayout() const { return groupLayout; }
+        vke_common::SceneResult<void> SetGroupLayout(const UIGroupLayoutOptions &value)
+        {
+            if (auto valid = value.Validate(); !valid) return valid;
+            groupLayout = value;
+            layoutDirty = true;
+            return {};
+        }
 
     protected:
         explicit UIComponent(const UINodeData &data) : name(data.name), rectTransform(data.rectTransform),
-                                                       hitTestEnabled(data.hitTestEnabled), interactable(data.interactable) {}
+                                                       hitTestEnabled(data.hitTestEnabled), interactable(data.interactable),
+                                                       selfLayout(data.selfLayout), groupLayout(data.groupLayout) {}
         void fillData(UINodeData &data) const
         {
             data.name = name;
             data.rectTransform = rectTransform;
+            data.selfLayout = selfLayout;
+            data.groupLayout = groupLayout;
             data.hitTestEnabled = hitTestEnabled;
             data.interactable = interactable;
             for (const auto &child : children)
@@ -222,6 +264,8 @@ namespace vke_ui
         virtual void unload() {}
         virtual void onSizeChanged() {}
         virtual void updateRenderTransform(const glm::mat4 &matrix, float order) {}
+        virtual glm::vec2 measureContent(std::optional<float> width) const { return glm::vec2(0); }
+        void invalidateLayout() { layoutDirty = true; }
 
     private:
         friend class vke_component::Canvas;
@@ -238,6 +282,9 @@ namespace vke_ui
         bool hovered = false;
         bool pressed = false;
         bool layoutDirty = true;
+        UISelfLayoutOptions selfLayout;
+        UIGroupLayoutOptions groupLayout;
+        glm::vec2 measuredSize{0};
         glm::mat4 layoutMatrix{1.0f};
     };
 
