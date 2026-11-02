@@ -25,13 +25,6 @@ struct AtmosphereParameter
     float aerialPerspectiveScale;
 };
 
-#ifndef ATMOSPHERE_NO_PUSH_CONSTANT
-layout(push_constant) uniform PushConstants{
-    vec4 mainLightDir;
-    vec4 mainLightColorIntensity;
-};
-#endif
-
 #ifndef ATMOSPHERE_DESCRIPTOR_SET
 #define ATMOSPHERE_DESCRIPTOR_SET 1
 #endif
@@ -184,7 +177,7 @@ vec3 GetMultiScattering(vec3 p, vec3 lightDir)
 }
 
 // 计算天空颜色
-vec3 GetSkyView(vec3 eyePos, vec3 viewDir, vec3 lightDir, float maxDis)
+vec3 GetSkyView(vec3 eyePos, vec3 viewDir, vec3 lightDir, vec4 lightColorIntensity, float maxDis)
 {
     const int N_SAMPLE = 32;
     vec3 color = vec3(0, 0, 0);
@@ -198,7 +191,7 @@ vec3 GetSkyView(vec3 eyePos, vec3 viewDir, vec3 lightDir, float maxDis)
 
     float ds = dis / float(N_SAMPLE);
     vec3 p = eyePos + (viewDir * ds) * 0.5;
-    vec3 sunLuminance = mainLightColorIntensity.rgb * mainLightColorIntensity.w *
+    vec3 sunLuminance = lightColorIntensity.rgb * lightColorIntensity.w *
                         parameters.sunLightIntensityFactor;
     vec3 opticalDepth = vec3(0, 0, 0);
 

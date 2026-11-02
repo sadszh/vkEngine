@@ -157,8 +157,6 @@ namespace vke_render
                     vkDestroyImageView(globalLogicalDevice, spotShadowMapLayerViews[i][slot], nullptr);
             }
         }
-
-        vkDestroySampler(globalLogicalDevice, shadowMapSampler, nullptr);
     }
 
     void ShadowManager::createDescriptorSets()
@@ -229,14 +227,14 @@ namespace vke_render
         if (directionalShadowMapImageViews[currentFrame] != VK_NULL_HANDLE)
             vkDestroyImageView(globalLogicalDevice, directionalShadowMapImageViews[currentFrame], nullptr);
         VkImage image = frameGraph.GetImageResource(directionalShadowMapResourceID).images[currentFrame];
-        directionalShadowMapImageViews[currentFrame] = RenderEnvironment::CreateImageView(image, context->depthFormat,
+        directionalShadowMapImageViews[currentFrame] = VulkanResourceManager::CreateImageView(image, context->depthFormat,
                                                                                           VK_IMAGE_ASPECT_DEPTH_BIT, 1, 0,
                                                                                           directionalConfig.cascadeCnt, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
         for (uint32_t cascade = 0; cascade < directionalConfig.cascadeCnt; ++cascade)
         {
             if (directionalShadowCascadeImageViews[currentFrame][cascade] != VK_NULL_HANDLE)
                 vkDestroyImageView(globalLogicalDevice, directionalShadowCascadeImageViews[currentFrame][cascade], nullptr);
-            directionalShadowCascadeImageViews[currentFrame][cascade] = RenderEnvironment::CreateImageView(image,
+            directionalShadowCascadeImageViews[currentFrame][cascade] = VulkanResourceManager::CreateImageView(image,
                                                                                                            context->depthFormat,
                                                                                                            VK_IMAGE_ASPECT_DEPTH_BIT,
                                                                                                            1, cascade, 1,
@@ -249,7 +247,7 @@ namespace vke_render
         VkImage image = frameGraph.GetImageResource(spotShadowMapResourceID).images[currentFrame];
         if (spotShadowMapImageViews[currentFrame] != VK_NULL_HANDLE)
             vkDestroyImageView(globalLogicalDevice, spotShadowMapImageViews[currentFrame], nullptr);
-        spotShadowMapImageViews[currentFrame] = RenderEnvironment::CreateImageView(
+        spotShadowMapImageViews[currentFrame] = VulkanResourceManager::CreateImageView(
             image, context->depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
             1, 0, MAX_SPOT_LIGHT_SHADOW_CNT, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
 
@@ -257,7 +255,7 @@ namespace vke_render
         {
             if (spotShadowMapLayerViews[currentFrame][slot] != VK_NULL_HANDLE)
                 vkDestroyImageView(globalLogicalDevice, spotShadowMapLayerViews[currentFrame][slot], nullptr);
-            spotShadowMapLayerViews[currentFrame][slot] = RenderEnvironment::CreateImageView(
+            spotShadowMapLayerViews[currentFrame][slot] = VulkanResourceManager::CreateImageView(
                 image, context->depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT,
                 1, slot, 1, VK_IMAGE_VIEW_TYPE_2D);
         }
@@ -265,21 +263,16 @@ namespace vke_render
 
     void ShadowManager::createSampler()
     {
-        VkSamplerCreateInfo samplerInfo{};
-        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter = VK_FILTER_LINEAR;
-        samplerInfo.minFilter = VK_FILTER_LINEAR;
-        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-        samplerInfo.compareEnable = VK_TRUE;
-        samplerInfo.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerInfo.maxAnisotropy = 1.0f;
-
-        VKE_VK_CHECK(vkCreateSampler(globalLogicalDevice, &samplerInfo, nullptr, &shadowMapSampler), "failed to create shadow map sampler!")
+        SamplerDesc desc;
+        desc.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        desc.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        desc.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        desc.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        desc.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        desc.compareEnable = true;
+        desc.compareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        desc.maxLod = 0.0f;
+        shadowMapSampler = VulkanResourceManager::GetSampler(desc);
     }
 
     void ShadowManager::updateDeferredLightingDescriptorSet(uint32_t currentFrame)

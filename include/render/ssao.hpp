@@ -29,7 +29,9 @@ namespace vke_render
                 imageViews[i] = VK_NULL_HANDLE;
                 rawImageViews[i] = VK_NULL_HANDLE;
             }
-            createSampler();
+            sampler = VulkanResourceManager::GetSampler(
+                VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                false, VK_SAMPLER_MIPMAP_MODE_NEAREST, 0.0f);
 
             imageCreateInfo = VkImageCreateInfo{};
             imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -106,7 +108,6 @@ namespace vke_render
                               GraphicsPipeline *pipeline, VkDescriptorSet descriptorSet, const float clearValue);
         void createImageView(FrameGraph &frameGraph, uint32_t currentFrame);
         void cleanupImageViews();
-        void createSampler();
     };
 }
 

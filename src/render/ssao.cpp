@@ -5,8 +5,6 @@ namespace vke_render
     SSAOPass::~SSAOPass()
     {
         cleanupImageViews();
-        if (sampler != VK_NULL_HANDLE)
-            vkDestroySampler(globalLogicalDevice, sampler, nullptr);
     }
 
     void SSAOPass::constructFrameGraph(FrameGraph &frameGraph,
@@ -217,12 +215,12 @@ namespace vke_render
         if (imageViews[currentFrame] != VK_NULL_HANDLE)
             vkDestroyImageView(globalLogicalDevice, imageViews[currentFrame], nullptr);
         VkImage image = frameGraph.GetImageResource(ssaoResourceID).images[currentFrame];
-        imageViews[currentFrame] = RenderEnvironment::CreateImageView(image, SSAO_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT);
+        imageViews[currentFrame] = VulkanResourceManager::CreateImageView(image, SSAO_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT);
 
         if (rawImageViews[currentFrame] != VK_NULL_HANDLE)
             vkDestroyImageView(globalLogicalDevice, rawImageViews[currentFrame], nullptr);
         VkImage rawImage = frameGraph.GetImageResource(ssaoRawResourceID).images[currentFrame];
-        rawImageViews[currentFrame] = RenderEnvironment::CreateImageView(rawImage, SSAO_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT);
+        rawImageViews[currentFrame] = VulkanResourceManager::CreateImageView(rawImage, SSAO_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT);
     }
 
     void SSAOPass::cleanupImageViews()
@@ -240,23 +238,5 @@ namespace vke_render
                 rawImageViews[i] = VK_NULL_HANDLE;
             }
         }
-    }
-
-    void SSAOPass::createSampler()
-    {
-        VkSamplerCreateInfo samplerInfo{};
-        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter = VK_FILTER_LINEAR;
-        samplerInfo.minFilter = VK_FILTER_LINEAR;
-        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-        samplerInfo.compareEnable = VK_FALSE;
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerInfo.maxAnisotropy = 1.0f;
-
-        VKE_VK_CHECK(vkCreateSampler(globalLogicalDevice, &samplerInfo, nullptr, &sampler), "failed to create ssao sampler!")
     }
 }

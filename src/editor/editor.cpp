@@ -40,6 +40,7 @@ namespace vke_editor
         vke_audio::AudioManager::Init();
         vke_editor::EditorStateManager::Init(vke_editor::EditorState::Edit);
         vke_render::RenderEnvironment::Init(window, editorConfig.gameConfig->enableVulkanValidationLayers);
+        vke_render::VulkanResourceManager::Init();
         vke_common::AssetManager::Init(
             std::make_unique<vke_common::AssetDBSQLite>(
                 EditorConfig::GetFullPath(editorConfig.assetDBPath),
@@ -47,7 +48,6 @@ namespace vke_editor
             editorConfig.workingDirectory);
         VKE_FATAL_IF(!vke_common::AssetManager::BulkLoad(EditorAssetLUTPath, true),
                      "Failed to load editor assets from {}", EditorAssetLUTPath.string())
-        vke_render::DescriptorSetAllocator::Init();
         vke_render::RenderContext *ctx = &(vke_render::RenderEnvironment::GetInstance()->rootRenderContext);
         EditorRenderer::Init(window, ctx, sceneViewportWidth, sceneViewportHeight,
                              []()
@@ -84,8 +84,8 @@ namespace vke_editor
         vke_render::Renderer::Dispose();
         vke_physics::PhysicsManager::Dispose();
         EditorRenderer::Dispose();
-        vke_render::DescriptorSetAllocator::Dispose();
         vke_common::AssetManager::Dispose();
+        vke_render::VulkanResourceManager::Dispose();
         vke_render::RenderEnvironment::Dispose();
         vke_audio::AudioManager::Dispose();
         vke_editor::EditorStateManager::Dispose();

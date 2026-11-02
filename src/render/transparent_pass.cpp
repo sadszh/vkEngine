@@ -207,8 +207,11 @@ namespace vke_render
 
         std::vector<SortedUnit> sorted;
         sorted.reserve(units.size());
+        const Frustum frustum(cameraInfo->projection * cameraInfo->view);
         for (auto &entry : units)
         {
+            if (!entry.second.unit->IsVisible(frustum))
+                continue;
             const glm::vec4 worldOrigin = entry.second.unit->modelMatrix[3];
             sorted.push_back({&entry.second, (cameraInfo->view * worldOrigin).z});
         }

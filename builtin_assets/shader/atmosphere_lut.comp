@@ -4,7 +4,6 @@
 #extension GL_EXT_scalar_block_layout : enable
 
 #define ATMOSPHERE_DESCRIPTOR_SET 0
-#define ATMOSPHERE_NO_PUSH_CONSTANT
 #define ATMOSPHERE_CORE_ONLY
 #define ATMOSPHERE_EXPLICIT_LOD
 #include "atmosphere.glsl"

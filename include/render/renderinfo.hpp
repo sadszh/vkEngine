@@ -3,6 +3,7 @@
 
 #include <render/material.hpp>
 #include <render/mesh.hpp>
+#include <render/frustum.hpp>
 #include <render/pipeline.hpp>
 #include <ds/id_allocator.hpp>
 
@@ -33,7 +34,12 @@ namespace vke_render
         ~RenderUnit()
         {
             if (ownsDescriptorSet)
-                DescriptorSetAllocator::FreeDescriptorSet(perUnitDescriptorSet);
+                VulkanResourceManager::FreeDescriptorSet(perUnitDescriptorSet);
+        }
+
+        bool IsVisible(const Frustum &frustum) const
+        {
+            return !mesh->joints.empty() || frustum.Intersects(mesh->bounds, modelMatrix);
         }
 
         void Render(VkCommandBuffer &commandBuffer, VkPipelineLayout &pipelineLayout, int descriptorSetOffset)
@@ -106,7 +112,7 @@ namespace vke_render
 
         ~RenderInfo()
         {
-            DescriptorSetAllocator::FreeDescriptorSet(commonDescriptorSet);
+            VulkanResourceManager::FreeDescriptorSet(commonDescriptorSet);
         }
 
         void CreatePipeline(const std::vector<uint32_t> &vertexAttributeSizes,
@@ -137,7 +143,7 @@ namespace vke_render
             units.erase(id);
         }
 
-        void Render(VkCommandBuffer &commandBuffer, VkDescriptorSet globalDescriptorSet)
+        void Render(VkCommandBuffer &commandBuffer, VkDescriptorSet globalDescriptorSet, const Frustum *frustum = nullptr)
         {
             int setcnt = 0;
             if (globalDescriptorSet != nullptr)
@@ -162,7 +168,8 @@ namespace vke_render
 
             material->SetPushConstants(commandBuffer, renderPipeline->pipelineLayout);
             for (auto &unit : units)
-                unit.second->Render(commandBuffer, renderPipeline->pipelineLayout, setcnt);
+                if (frustum == nullptr || unit.second->IsVisible(*frustum))
+                    unit.second->Render(commandBuffer, renderPipeline->pipelineLayout, setcnt);
         }
 
     private:

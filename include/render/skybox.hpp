@@ -5,8 +5,8 @@
 #include <render/frame_graph.hpp>
 #include <render/light_manager.hpp>
 #include <render/render_config.hpp>
-#include <render/renderinfo.hpp>
 #include <render/texture.hpp>
+#include <array>
 
 namespace vke_render
 {
@@ -19,11 +19,9 @@ namespace vke_render
     class SkyboxManager
     {
     public:
-        SkyboxManager(VkDescriptorSet *globalDescriptorSets, LightManager *lightManager,
-                      const AtmosphereParameter &atmosphereParameter)
-            : globalDescriptorSets(globalDescriptorSets),
-              lightManager(lightManager),
-              atmosphereParameter(atmosphereParameter)
+        SkyboxManager(LightManager *lightManager, const AtmosphereParameter &atmosphereParameter,
+                      const SkyLUTConfig &lutConfig)
+            : lightManager(lightManager), atmosphereParameter(atmosphereParameter), lutConfig(lutConfig)
         {
             initResources();
             createDescriptorSet();
@@ -42,11 +40,8 @@ namespace vke_render
         Texture2D *GetTransmittanceLUT() { return transmittanceLUT.get(); }
         Texture2D *GetScatteringLUT() { return scatteringLUT.get(); }
         DeviceBuffer *GetAtmosphereParamBuffer() { return atmosphereParamBuffer.get(); }
-        const AtmospherePushConstants &GetAtmospherePushConstants()
-        {
-            updateAtmospherePushConstants();
-            return atmospherePushConstants;
-        }
+        void Update(float cameraWorldHeight);
+        const AtmospherePushConstants &GetAtmospherePushConstants() const { return atmospherePushConstants; }
 
     private:
         static constexpr uint32_t SKY_IRRADIANCE_CUBE_SIZE = 64;
@@ -57,16 +52,27 @@ namespace vke_render
         static constexpr uint32_t TRANSMITTANCE_LUT_HEIGHT = 64;
         static constexpr uint32_t SCATTERING_LUT_SIZE = 32;
 
-        VkDescriptorSet *globalDescriptorSets;
+        struct alignas(16) SkyLUTPushConstants
+        {
+            AtmospherePushConstants atmosphere;
+            glm::vec4 groundColorBrightness;
+            float cameraHeight;
+            float groundHorizonSin;
+            float groundCurve;
+        };
+
         LightManager *lightManager;
         AtmospherePushConstants atmospherePushConstants{
             glm::normalize(glm::vec4(1, 2, 0, 0)),
             glm::vec4(1.0f, 1.0f, 1.0f, 7.4f)};
         AtmosphereParameter atmosphereParameter;
+        SkyLUTConfig lutConfig;
+        SkyLUTPushConstants lutParameters{};
+        bool hasLUTParameters = false;
+        std::array<bool, MAX_FRAMES_IN_FLIGHT> lutNeedsUpdate{};
         std::unique_ptr<ComputePipeline> skyLUTGenerationPipeline;
         std::unique_ptr<ComputePipeline> iblLUTGenerationPipeline;
         std::unique_ptr<ComputePipeline> atmosphereLUTGenerationPipeline;
-        std::shared_ptr<Material> skyboxMaterial;
         std::unique_ptr<DeviceBuffer> atmosphereParamBuffer;
         std::unique_ptr<Texture2D> transmittanceLUT;
         std::unique_ptr<Texture2D> scatteringLUT;

@@ -218,8 +218,8 @@ namespace vke_render
     {
         for (uint32_t frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame)
         {
-            DescriptorSetAllocator::FreeDescriptorSet(imageDescriptorSets[frame]);
-            DescriptorSetAllocator::FreeDescriptorSet(rendererDescriptorSets[frame]);
+            VulkanResourceManager::FreeDescriptorSet(imageDescriptorSets[frame]);
+            VulkanResourceManager::FreeDescriptorSet(rendererDescriptorSets[frame]);
         }
     }
 
@@ -506,7 +506,7 @@ namespace vke_render
         barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
         vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
                              0, 0, nullptr, 0, nullptr, 1, &barrier);
-        RenderEnvironment::CopyBufferToImage(commandBuffer, dynamicAtlasStagingBuffers[currentFrame]->buffer,
+        VulkanResourceManager::CopyBufferToImage(commandBuffer, dynamicAtlasStagingBuffers[currentFrame]->buffer,
                                              dynamicAtlasTextures[currentFrame]->textureImage,
                                              vke_common::Font::ATLAS_SIZE, vke_common::Font::ATLAS_SIZE);
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;

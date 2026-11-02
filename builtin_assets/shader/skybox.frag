@@ -7,6 +7,11 @@
 #include "camera.glsl"
 #include "atmosphere.glsl"
 
+layout(push_constant) uniform PushConstants {
+    vec4 mainLightDir;
+    vec4 mainLightColorIntensity;
+};
+
 layout(location = 0) in vec3 Dir;
 layout(location = 0) out vec4 FragColor;
 

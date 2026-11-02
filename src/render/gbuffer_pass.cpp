@@ -110,6 +110,7 @@ namespace vke_render
 
         vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
+        const Frustum frustum(cameraInfo->projection * cameraInfo->view);
         for (auto &kv : renderInfoMap)
         {
             std::unique_ptr<RenderInfo> &renderInfo = kv.second;
@@ -128,7 +129,7 @@ namespace vke_render
             scissor.extent = {context->width, context->height};
             vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-            renderInfo->Render(commandBuffer, globalDescriptorSets[currentFrame]);
+            renderInfo->Render(commandBuffer, globalDescriptorSets[currentFrame], &frustum);
         }
 
         vkCmdEndRendering(commandBuffer);

@@ -2,6 +2,8 @@
 #define RENDER_CONFIG_H
 
 #include <common.hpp>
+#include <array>
+#include <cmath>
 #include <cstdint>
 #include <nlohmann/json.hpp>
 
@@ -54,6 +56,38 @@ namespace vke_render
             ozoneLevelWidth = json.value("ozoneLevelWidth", ozoneLevelWidth);
             aerialPerspectiveDistance = json.value("aerialPerspectiveDistance", aerialPerspectiveDistance);
             aerialPerspectiveScale = json.value("aerialPerspectiveScale", aerialPerspectiveScale);
+        }
+    };
+
+    struct SkyLUTConfig
+    {
+        float sunDirectionThresholdDegrees = 0.1f;
+        float sunColorThreshold = 0.01f;
+        float sunIntensityThreshold = 0.01f;
+        float cameraHeightThreshold = 1.0f;
+        std::array<float, 3> groundColor{0.18f, 0.20f, 0.22f};
+        float groundBrightness = 1.0f;
+        float groundHorizonWidthDegrees = 25.0f;
+        float groundCurve = 1.0f;
+
+        void LoadJSON(const nlohmann::json &json)
+        {
+            if (json.is_null())
+                return;
+
+            sunDirectionThresholdDegrees = json.value("sunDirectionThresholdDegrees", sunDirectionThresholdDegrees);
+            sunColorThreshold = json.value("sunColorThreshold", sunColorThreshold);
+            sunIntensityThreshold = json.value("sunIntensityThreshold", sunIntensityThreshold);
+            cameraHeightThreshold = json.value("cameraHeightThreshold", cameraHeightThreshold);
+            if (auto color = json.find("groundColor"); color != json.end())
+            {
+                VKE_FATAL_IF(!color->is_array() || color->size() != 3,
+                             "Sky LUT groundColor must contain three linear RGB components")
+                groundColor = color->get<std::array<float, 3>>();
+            }
+            groundBrightness = json.value("groundBrightness", groundBrightness);
+            groundHorizonWidthDegrees = json.value("groundHorizonWidthDegrees", groundHorizonWidthDegrees);
+            groundCurve = json.value("groundCurve", groundCurve);
         }
     };
 
@@ -169,6 +203,7 @@ namespace vke_render
         SSAOConfig ssao;
         DirectionalShadowConfig directionalShadow;
         AtmosphereParameter atmosphere;
+        SkyLUTConfig skyLUT;
         nlohmann::json sourceJSON = nlohmann::json::object();
 
         RenderConfig() = default;
@@ -188,6 +223,7 @@ namespace vke_render
             ssao.LoadJSON(json.value("ssao", nlohmann::json::object()));
             directionalShadow.LoadJSON(json.value("directionalShadow", nlohmann::json::object()));
             atmosphere.LoadJSON(json.value("atmosphere", nlohmann::json::object()));
+            skyLUT.LoadJSON(json.value("skyLUT", nlohmann::json::object()));
         }
     };
 }

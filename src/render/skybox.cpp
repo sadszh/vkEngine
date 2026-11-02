@@ -12,10 +12,10 @@ namespace vke_render
                                             std::map<std::string, vke_ds::id32_t> &blackboard,
                                             ResourceNodeIDMap &currentResourceNodeID)
     {
-        vke_ds::id32_t lutTaskID = frameGraph.AllocTaskNode("gen sky lut", COMPUTE_TASK,
+        vke_ds::id32_t lutTaskID = frameGraph.AllocTaskNode("gen sky lut", RENDER_TASK,
                                                             std::bind(&SkyboxManager::generateLUT, this,
                                                                       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
-        vke_ds::id32_t iblTaskID = frameGraph.AllocTaskNode("gen sky ibl lut", COMPUTE_TASK,
+        vke_ds::id32_t iblTaskID = frameGraph.AllocTaskNode("gen sky ibl lut", RENDER_TASK,
                                                             std::bind(&SkyboxManager::generateIBLLUT, this,
                                                                       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
 
@@ -24,7 +24,8 @@ namespace vke_render
             skyLUTImages[i] = skyLUTs[i]->image;
         vke_ds::id32_t lutResourceID = frameGraph.AddPermanentImageResource("skyLUT", true, skyLUTImages,
                                                                             VK_IMAGE_ASPECT_COLOR_BIT, skyLUTs[0]->mipLevelCnt, 6, false,
-                                                                            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, std::nullopt);
+                                                                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                                                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         vke_ds::id32_t lutOutResourceNodeID = frameGraph.AllocResourceNode("outSkyLUT", lutResourceID);
 
         VkImage skyIrradianceImages[MAX_FRAMES_IN_FLIGHT];
@@ -32,7 +33,8 @@ namespace vke_render
             skyIrradianceImages[i] = skyIrradianceLUTs[i]->image;
         vke_ds::id32_t irradianceResourceID = frameGraph.AddPermanentImageResource("skyIrradianceLUT", true, skyIrradianceImages,
                                                                                    VK_IMAGE_ASPECT_COLOR_BIT, skyIrradianceLUTs[0]->mipLevelCnt, 6, false,
-                                                                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, std::nullopt);
+                                                                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                                                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         vke_ds::id32_t irradianceOutResourceNodeID = frameGraph.AllocResourceNode("outSkyIrradianceLUT", irradianceResourceID);
 
         VkImage skySpecularImages[MAX_FRAMES_IN_FLIGHT];
@@ -40,7 +42,8 @@ namespace vke_render
             skySpecularImages[i] = skySpecularLUTs[i]->image;
         vke_ds::id32_t specularResourceID = frameGraph.AddPermanentImageResource("skySpecularLUT", true, skySpecularImages,
                                                                                  VK_IMAGE_ASPECT_COLOR_BIT, skySpecularLUTs[0]->mipLevelCnt, 6, false,
-                                                                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, std::nullopt);
+                                                                                 VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                                                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         vke_ds::id32_t specularOutResourceNodeID = frameGraph.AllocResourceNode("outSkySpecularLUT", specularResourceID);
 
         frameGraph.AddTaskNodeResourceRef(lutTaskID, 0, lutOutResourceNodeID,
@@ -99,14 +102,13 @@ namespace vke_render
         skyLUTGenerationPipeline = std::make_unique<ComputePipeline>(std::move(skyLUTShader));
         std::shared_ptr<ShaderModuleSet> iblLUTShader = vke_common::AssetManager::LoadComputeShaderUnique(vke_common::BUILTIN_COMPUTE_SHADER_IBL_LUT_ID);
         iblLUTGenerationPipeline = std::make_unique<ComputePipeline>(std::move(iblLUTShader));
-        skyboxMaterial = vke_common::AssetManager::LoadMaterial(vke_common::BUILTIN_MATERIAL_SKYBOX_ID);
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             skyLUTs[i] = std::make_unique<CubeMap>(SKY_VIEW_CUBE_SIZE, SKY_VIEW_CUBE_SIZE,
                                                    VK_FORMAT_R16G16B16A16_SFLOAT,
                                                    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-                                                   VK_IMAGE_LAYOUT_GENERAL,
+                                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                                                    VK_FILTER_LINEAR,
                                                    VK_FILTER_LINEAR,
                                                    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -114,7 +116,7 @@ namespace vke_render
             skyIrradianceLUTs[i] = std::make_unique<CubeMap>(SKY_IRRADIANCE_CUBE_SIZE, SKY_IRRADIANCE_CUBE_SIZE,
                                                              VK_FORMAT_R16G16B16A16_SFLOAT,
                                                              VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-                                                             VK_IMAGE_LAYOUT_GENERAL,
+                                                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                                                              VK_FILTER_LINEAR,
                                                              VK_FILTER_LINEAR,
                                                              VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -122,7 +124,7 @@ namespace vke_render
             skySpecularLUTs[i] = std::make_unique<CubeMap>(SKY_SPECULAR_CUBE_SIZE, SKY_SPECULAR_CUBE_SIZE,
                                                            VK_FORMAT_R16G16B16A16_SFLOAT,
                                                            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
-                                                           VK_IMAGE_LAYOUT_GENERAL,
+                                                           VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                                                            VK_FILTER_LINEAR,
                                                            VK_FILTER_LINEAR,
                                                            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -137,8 +139,7 @@ namespace vke_render
     {
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            skyLUTDescriptorSets[i] = skyLUTGenerationPipeline->shader->CreateDescriptorSet(1);
-            skyboxMaterial->UpdateDescriptorSet(skyLUTDescriptorSets[i]);
+            skyLUTDescriptorSets[i] = skyLUTGenerationPipeline->shader->CreateDescriptorSet(0);
             skyIBLDescriptorSets[i] = iblLUTGenerationPipeline->shader->CreateDescriptorSet(0);
         }
 
@@ -224,13 +225,13 @@ namespace vke_render
             commandBuffer, std::vector<VkDescriptorSet>{descriptorSet}, &pass,
             glm::ivec3((SCATTERING_LUT_SIZE + 7) / 8, (SCATTERING_LUT_SIZE + 7) / 8, 1));
 
-        RenderEnvironment::MakeLayoutTransition(
+        VulkanResourceManager::MakeLayoutTransition(
             commandBuffer, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             transmittanceLUT->textureImage, VK_IMAGE_ASPECT_COLOR_BIT, 1,
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        RenderEnvironment::MakeLayoutTransition(
+        VulkanResourceManager::MakeLayoutTransition(
             commandBuffer, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             scatteringLUT->textureImage, VK_IMAGE_ASPECT_COLOR_BIT, 1,
@@ -255,17 +256,49 @@ namespace vke_render
         atmospherePushConstants.mainLightColorIntensity = sun->colorWithIntensity;
     }
 
-    void SkyboxManager::generateLUT(TaskNode &node, FrameGraph &frameGraph, VkCommandBuffer commandBuffer, uint32_t currentFrame, uint32_t imageIndex)
+    void SkyboxManager::Update(float cameraWorldHeight)
     {
         updateAtmospherePushConstants();
-        skyLUTGenerationPipeline->Dispatch(commandBuffer, std::vector<VkDescriptorSet>{globalDescriptorSets[currentFrame], skyLUTDescriptorSets[currentFrame]},
-                                           &atmospherePushConstants, glm::ivec3((SKY_VIEW_CUBE_SIZE + 31) / 32, (SKY_VIEW_CUBE_SIZE + 31) / 32, 6));
+        const float cameraHeight = std::max(cameraWorldHeight - atmosphereParameter.seaLevel, 1.0f);
+        const auto &previous = lutParameters.atmosphere;
+        const glm::vec3 directionDelta = glm::vec3(atmospherePushConstants.mainLightDir - previous.mainLightDir);
+        const float directionThreshold = 2.0f * std::sin(glm::radians(lutConfig.sunDirectionThresholdDegrees) * 0.5f);
+        const glm::vec4 lightDelta = glm::abs(atmospherePushConstants.mainLightColorIntensity - previous.mainLightColorIntensity);
+
+        if (hasLUTParameters &&
+            glm::dot(directionDelta, directionDelta) <= directionThreshold * directionThreshold &&
+            std::max({lightDelta.x, lightDelta.y, lightDelta.z}) <= lutConfig.sunColorThreshold &&
+            lightDelta.w <= lutConfig.sunIntensityThreshold &&
+            std::abs(cameraHeight - lutParameters.cameraHeight) <= lutConfig.cameraHeightThreshold)
+            return;
+
+        lutParameters.atmosphere = atmospherePushConstants;
+        lutParameters.groundColorBrightness = glm::vec4(
+            lutConfig.groundColor[0], lutConfig.groundColor[1], lutConfig.groundColor[2], lutConfig.groundBrightness);
+        lutParameters.cameraHeight = cameraHeight;
+        lutParameters.groundHorizonSin = std::sin(glm::radians(lutConfig.groundHorizonWidthDegrees));
+        lutParameters.groundCurve = lutConfig.groundCurve;
+        hasLUTParameters = true;
+        lutNeedsUpdate.fill(true);
+    }
+
+    void SkyboxManager::generateLUT(TaskNode &node, FrameGraph &frameGraph, VkCommandBuffer commandBuffer, uint32_t currentFrame, uint32_t imageIndex)
+    {
+        if (!lutNeedsUpdate[currentFrame])
+            return;
+
+        skyLUTGenerationPipeline->Dispatch(commandBuffer, std::vector<VkDescriptorSet>{skyLUTDescriptorSets[currentFrame]},
+                                           &lutParameters, glm::ivec3((SKY_VIEW_CUBE_SIZE + 31) / 32, (SKY_VIEW_CUBE_SIZE + 31) / 32, 6));
     }
 
     void SkyboxManager::generateIBLLUT(TaskNode &node, FrameGraph &frameGraph, VkCommandBuffer commandBuffer, uint32_t currentFrame, uint32_t imageIndex)
     {
+        if (!lutNeedsUpdate[currentFrame])
+            return;
+
         iblLUTGenerationPipeline->Dispatch(commandBuffer,
                                            std::vector<VkDescriptorSet>{skyIBLDescriptorSets[currentFrame]},
                                            glm::ivec3((SKY_SPECULAR_CUBE_SIZE + 7) / 8, (SKY_SPECULAR_CUBE_SIZE + 7) / 8, 6));
+        lutNeedsUpdate[currentFrame] = false;
     }
 }

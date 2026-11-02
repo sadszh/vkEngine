@@ -91,7 +91,7 @@ namespace vke_render
     {
         ~Layered2DMaterialState()
         {
-            DescriptorSetAllocator::FreeDescriptorSet(commonDescriptorSet);
+            VulkanResourceManager::FreeDescriptorSet(commonDescriptorSet);
         }
 
         std::shared_ptr<Material> material;

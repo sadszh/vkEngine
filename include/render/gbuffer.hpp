@@ -1,6 +1,7 @@
 #ifndef GBUFFER_H
 #define GBUFFER_H
 
+#include <render/vulkan_resource_manager.hpp>
 #include <render/environment.hpp>
 #include <render/frame_graph.hpp>
 
@@ -68,7 +69,7 @@ namespace vke_render
                 if (imageViews[i][currentFrame] != VK_NULL_HANDLE)
                     vkDestroyImageView(globalLogicalDevice, imageViews[i][currentFrame], nullptr);
                 VkImage image = frameGraph.GetImageResource(resourceIDs[i]).images[currentFrame];
-                imageViews[i][currentFrame] = RenderEnvironment::CreateImageView(image, gbufferFormats[i], VK_IMAGE_ASPECT_COLOR_BIT);
+                imageViews[i][currentFrame] = VulkanResourceManager::CreateImageView(image, gbufferFormats[i], VK_IMAGE_ASPECT_COLOR_BIT);
             }
         }
 
@@ -108,7 +109,6 @@ namespace vke_render
     private:
         void dispose()
         {
-            vkDestroySampler(globalLogicalDevice, sampler, nullptr);
             cleanupImageViews();
         }
 
@@ -122,20 +122,9 @@ namespace vke_render
                     imageViews[i][j] = VK_NULL_HANDLE;
             }
 
-            VkSamplerCreateInfo samplerInfo{};
-            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            samplerInfo.magFilter = VK_FILTER_LINEAR;
-            samplerInfo.minFilter = VK_FILTER_LINEAR;
-            samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-            samplerInfo.compareEnable = VK_FALSE;
-            samplerInfo.unnormalizedCoordinates = VK_FALSE;
-            samplerInfo.maxAnisotropy = 1.0f;
-
-            vkCreateSampler(globalLogicalDevice, &samplerInfo, nullptr, &sampler);
+            sampler = VulkanResourceManager::GetSampler(
+                VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                false, VK_SAMPLER_MIPMAP_MODE_NEAREST, 0.0f);
         }
 
         void cleanupImageViews()

@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <map>
 #include <unordered_set>
+#include <cstring>
 
 bool checkScene(const tinygltf::Model &model, const tinygltf::Scene &scene);
 void processMeshNode(const tinygltf::Model &model, const tinygltf::Node &node, const std::string &opth);
@@ -36,18 +37,38 @@ void saveJSON(const std::filesystem::path &pth, const nlohmann::json &json)
 
 int main(int argc, char **argv)
 {
-    if (argc != 5)
+    const bool meshOnly = argc == 4 && std::string(argv[3]) == "--mesh-only";
+    if (argc != 5 && !meshOnly)
+    {
+        VKE_LOG_ERROR("Usage: gltf_conv <input.glb> <output_dir> <scene.json> <assets.json>\n"
+                      "       gltf_conv <input.glb> <output_dir> --mesh-only")
         return -1;
+    }
 
     std::filesystem::path pth(argv[1]);
     std::filesystem::path odir(argv[2]);
-    std::filesystem::path scenePth(argv[3]);
-    std::filesystem::path assetPth(argv[4]);
     std::filesystem::path opth = odir / pth.stem();
     opth += std::string(".mesh");
     gltfName = pth.stem().string();
 
-    VKE_LOG_INFO("PTH {} ODIR {} SPTH {} APTH {}", pth.string(), odir.string(), scenePth.string(), assetPth.string())
+    VKE_LOG_INFO("PTH {} ODIR {}", pth.string(), odir.string())
+
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+    std::string err;
+    std::string warn;
+    loader.LoadBinaryFromFile(&model, &err, &warn, pth.string().c_str());
+
+    VKE_FATAL_IF(!checkScene(model, model.scenes[0]), "Invalid gltf format!")
+    VKE_LOG_INFO("GLTF CHECK OK")
+
+    const tinygltf::Node &node = model.nodes[model.scenes[0].nodes[0]]; // TODO load scene
+    processMeshNode(model, node, opth.string());
+    if (meshOnly)
+        return 0;
+
+    std::filesystem::path scenePth(argv[3]);
+    std::filesystem::path assetPth(argv[4]);
 
     nlohmann::json scene = loadJSON(scenePth);
     nlohmann::json assetLUT = loadJSON(assetPth);
@@ -73,19 +94,6 @@ int main(int argc, char **argv)
                         {"name", gltfName},
                         {"path", opth.string()}});
 
-    tinygltf::Model model;
-    tinygltf::TinyGLTF loader;
-    std::string err;
-    std::string warn;
-    loader.LoadBinaryFromFile(&model, &err, &warn, pth.string().c_str());
-
-    VKE_FATAL_IF(!checkScene(model, model.scenes[0]), "Invalid gltf format!")
-    VKE_LOG_INFO("GLTF CHECK OK")
-
-    const tinygltf::Node &node = model.nodes[model.scenes[0].nodes[0]]; // TODO load scene
-    processMeshNode(model, node, opth.string());
-
-    auto &mesh = model.meshes[node.mesh];
     uint32_t maxID = scene["maxid"];
     auto textureIndices = nlohmann::json::array();
 
@@ -405,6 +413,8 @@ void processMeshNode(const tinygltf::Model &model, const tinygltf::Node &node, c
 
     vke_render::CPUBuffer<> vertices(vertexSumSize);
     vke_render::CPUBuffer<> indices(indexSumSize);
+    // Optional attributes absent from the source retain zero values.
+    std::memset(vertices.data, 0, vertices.size);
 
     i = 0;
     for (auto &prim : mesh.primitives)

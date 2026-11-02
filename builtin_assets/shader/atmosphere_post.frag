@@ -8,6 +8,11 @@
 #define ATMOSPHERE_NO_SKYVIEW_DESCRIPTORS
 #include "atmosphere.glsl"
 
+layout(push_constant) uniform PushConstants {
+    vec4 mainLightDir;
+    vec4 mainLightColorIntensity;
+};
+
 layout(location = 0) in vec2 vTexCoord;
 layout(location = 0) out vec4 outColor;
 

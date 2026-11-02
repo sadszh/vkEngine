@@ -73,6 +73,7 @@ namespace
         fs::path resourceDir;
         fs::path outputDir;
         std::string baseName;
+        bool meshOnly = false;
         json assets = json::array();
         AssetIds ids;
         std::map<std::pair<int, bool>, uint64_t> textureAssets;
@@ -722,14 +723,17 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
         return false;
 
     out.mesh = ids.mesh++;
-    assets.push_back({{"type", ASSET_MESH},
-                      {"id", out.mesh},
-                      {"name", meshName},
-                      {"path", PathString(meshPath)}});
+    if (!meshOnly)
+    {
+        assets.push_back({{"type", ASSET_MESH},
+                          {"id", out.mesh},
+                          {"name", meshName},
+                          {"path", PathString(meshPath)}});
+        if (!ExportMaterial(primitive.material, out.material))
+            return false;
+    }
     if (primitiveAssets.empty() || (primitiveAssets.size() + 1) % 100 == 0)
         VKE_LOG_INFO("Exported {} mesh primitives", primitiveAssets.size() + 1)
-    if (!ExportMaterial(primitive.material, out.material))
-        return false;
     primitiveAssets[key] = out;
     return true;
 }
@@ -1177,6 +1181,19 @@ bool Converter::Run()
     VKE_LOG_INFO("Loaded GLB: {} scenes, {} nodes, {} meshes, {} materials, {} textures, {} lights",
                  model.scenes.size(), model.nodes.size(), model.meshes.size(),
                  model.materials.size(), model.textures.size(), model.lights.size())
+    if (meshOnly)
+    {
+        for (int meshIndex = 0; meshIndex < static_cast<int>(model.meshes.size()); ++meshIndex)
+            for (int primitiveIndex = 0;
+                 primitiveIndex < static_cast<int>(model.meshes[meshIndex].primitives.size()); ++primitiveIndex)
+            {
+                PrimitiveAsset primitiveAsset;
+                if (!ExportPrimitive(meshIndex, primitiveIndex, primitiveAsset))
+                    return false;
+            }
+        VKE_LOG_INFO("Mesh export complete: {} mesh primitives", primitiveAssets.size())
+        return true;
+    }
     if (!ExportScenes())
         return false;
     const fs::path assetPath = outputDir / (SafeName(baseName) + "_assets.json");
@@ -1191,9 +1208,10 @@ bool Converter::Run()
 
 int main(int argc, char **argv)
 {
-    if (argc != 4)
+    const bool meshOnly = argc == 5 && std::string(argv[4]) == "--mesh-only";
+    if (argc != 4 && !meshOnly)
     {
-        std::cerr << "usage: gltf_scene_conv <input.glb> <resource_dir> <output_dir>\n";
+        std::cerr << "usage: gltf_scene_conv <input.glb> <resource_dir> <output_dir> [--mesh-only]\n";
         return EXIT_FAILURE;
     }
     Converter converter;
@@ -1201,5 +1219,6 @@ int main(int argc, char **argv)
     converter.resourceDir = fs::absolute(argv[2]);
     converter.outputDir = fs::absolute(argv[3]);
     converter.baseName = converter.inputPath.stem().string();
+    converter.meshOnly = meshOnly;
     return converter.Run() ? EXIT_SUCCESS : EXIT_FAILURE;
 }

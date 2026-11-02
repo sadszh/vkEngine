@@ -1,7 +1,7 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include <render/descriptor.hpp>
+#include <render/vulkan_resource_manager.hpp>
 #include <assert.h>
 #include <string>
 #include <iostream>
@@ -137,14 +137,14 @@ namespace vke_render
                 return nullptr;
 
             DescriptorSetInfo &setInfo = it->second;
-            VkDescriptorSet descriptorSet = vke_render::DescriptorSetAllocator::AllocateDescriptorSet(setInfo);
+            VkDescriptorSet descriptorSet = vke_render::VulkanResourceManager::AllocateDescriptorSet(setInfo);
             return descriptorSet;
         }
 
         void CreateDescriptorSets(std::vector<VkDescriptorSet> &descriptorSets)
         {
             for (auto &kv : descriptorSetInfoMap)
-                descriptorSets.push_back(vke_render::DescriptorSetAllocator::AllocateDescriptorSet(kv.second));
+                descriptorSets.push_back(vke_render::VulkanResourceManager::AllocateDescriptorSet(kv.second));
         }
 
     private:

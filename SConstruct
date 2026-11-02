@@ -24,7 +24,7 @@ print(dlls)
 print(selflibs)
 
 DEBUG = False
-ENABLE_FRAME_GRAPH_PROFILING = True
+ENABLE_FRAME_GRAPH_PROFILING = False
 
 ######################### CodeGen ######################
 
@@ -148,6 +148,7 @@ commonsrc = (
         "./src/asset/asset_db_json.cpp",
         "./src/asset/asset_db_sqlite.cpp",
         "./src/render/descriptor.cpp",
+        "./src/render/vulkan_resource_manager.cpp",
         "./src/render/skybox.cpp",
         "./src/render/skybox_render.cpp",
         "./src/render/gbuffer_pass.cpp",

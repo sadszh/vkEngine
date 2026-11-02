@@ -46,9 +46,9 @@ namespace vke_common
             EngineStateManager::Init();
             vke_audio::AudioManager::Init();
             vke_render::RenderEnvironment::Init(window, gameConfig.enableVulkanValidationLayers);
+            vke_render::VulkanResourceManager::Init();
             AssetManager::Init(std::make_unique<AssetDBJSON>(gameConfig.assetLUTPath, CUSTOM_ASSET_ID_ST), "");
             vke_physics::PhysicsManager::Init(gameConfig.physicsConfig);
-            vke_render::DescriptorSetAllocator::Init();
             if (ctx == nullptr)
                 ctx = &(vke_render::RenderEnvironment::GetInstance()->rootRenderContext);
             vke_render::Renderer::Init(ctx, passes, customPasses, gameConfig.renderConfig);
@@ -83,9 +83,9 @@ namespace vke_common
             SceneManager::Dispose();
             ScriptManager::Dispose();
             vke_render::Renderer::Dispose();
-            vke_render::DescriptorSetAllocator::Dispose();
             vke_physics::PhysicsManager::Dispose();
             AssetManager::Dispose();
+            vke_render::VulkanResourceManager::Dispose();
             vke_render::RenderEnvironment::Dispose();
             vke_audio::AudioManager::Dispose();
             EngineStateManager::Dispose();

@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstring>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -39,6 +40,7 @@ struct Args
 {
     std::filesystem::path input;
     std::filesystem::path output;
+    bool meshOnly = false;
     bool anim = false;
     bool animAll = false;
     bool rootMotion = false;
@@ -56,7 +58,9 @@ static bool parseArgs(int argc, char **argv, Args &args)
     for (int i = 3; i < argc; ++i)
     {
         const std::string arg = argv[i];
-        if (arg == "--anim")
+        if (arg == "--mesh-only")
+            args.meshOnly = true;
+        else if (arg == "--anim")
             args.anim = true;
         else if (arg == "--all")
             args.animAll = true;
@@ -71,15 +75,16 @@ static bool parseArgs(int argc, char **argv, Args &args)
     if (args.animAll)
         args.anim = true;
 
-    return true;
+    return !args.meshOnly || (!args.anim && !args.rootMotion && args.rootJointName.empty());
 }
 
 static void usage()
 {
     VKE_LOG_ERROR(
         "Usage: gltf_anim_conv <input.glb> <output_dir> [options]\n"
-        "  Always extracts: <stem>.mesh, <stem>_skeleton.ozz\n"
+        "  Default outputs: <stem>.mesh, <stem>_skeleton.ozz\n"
         "  Options:\n"
+        "    --mesh-only          Export only <stem>.mesh; use without animation options\n"
         "    --anim               Extract first animation\n"
         "    --all                Extract all animations (implies --anim)\n"
         "    --root-motion        Extract root motion tracks\n"
@@ -273,6 +278,8 @@ static void processSkinNode(const tinygltf::Model &model, const tinygltf::Node &
 
     vke_render::CPUBuffer<> vertices(vertexSumSize);
     vke_render::CPUBuffer<> indices(indexSumSize);
+    // Optional attributes absent from the source retain zero values.
+    std::memset(vertices.data, 0, vertices.size);
 
     i = 0;
     for (auto &prim : mesh.primitives)
@@ -837,7 +844,7 @@ int main(int argc, char **argv)
     meshPath += ".mesh";
     std::filesystem::path skeletonPath = args.output / (args.input.stem().string() + "_skeleton.ozz");
 
-    // Build and save skeleton
+    // Build the skeleton to establish the mesh's joint mapping.
     std::vector<int> nodeToJoint(model.nodes.size(), -1);
     ozz::unique_ptr<ozz::animation::Skeleton> skeleton = buildOzzSkeleton(model, scene, nodeToJoint);
     VKE_FATAL_IF(!skeleton, "Failed to build skeleton.")
@@ -859,7 +866,8 @@ int main(int argc, char **argv)
         VKE_LOG_ERROR("Failed to create output directory {}: {}", args.output.string(), ec.message())
         return 1;
     }
-    saveOzzSkeleton(skeletonPath, *skeleton);
+    if (!args.meshOnly)
+        saveOzzSkeleton(skeletonPath, *skeleton);
 
     // Process skinned mesh
     processSkinNode(model, node, meshPath.string(), nodeToJoint);

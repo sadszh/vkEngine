@@ -164,6 +164,8 @@ namespace vke_render
         if (directionalShadowInfo.lightIndex.x != INVALID_SHADOW_LIGHT_INDEX)
             for (uint32_t cascade = 0; cascade < directionalConfig.cascadeCnt; ++cascade)
             {
+                const Frustum frustum(directionalShadowInfo.lightViewProj[cascade]);
+
                 VkRenderingAttachmentInfo depthAttachmentInfo{};
                 depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
                 depthAttachmentInfo.pNext = nullptr;
@@ -194,7 +196,7 @@ namespace vke_render
                                        offsetof(ShadowPushConstants, shadowIndex), sizeof(uint32_t), &cascade);
                     vkCmdPushConstants(commandBuffer, renderInfo->renderPipeline->pipelineLayout, VK_SHADER_STAGE_ALL,
                                        offsetof(ShadowPushConstants, shadowType), sizeof(uint32_t), &shadowType);
-                    renderInfo->Render(commandBuffer, shadowManager->GetShadowPassDescriptorSet(currentFrame));
+                    renderInfo->Render(commandBuffer, shadowManager->GetShadowPassDescriptorSet(currentFrame), &frustum);
                 }
 
                 vkCmdEndRendering(commandBuffer);
@@ -211,6 +213,8 @@ namespace vke_render
         {
             if (!shadowManager->IsSpotShadowSlotActive(slot))
                 continue;
+
+            const Frustum frustum(shadowManager->GetSpotShadowInfo(slot).lightViewProj);
 
             VkRenderingAttachmentInfo depthAttachmentInfo{};
             depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -242,7 +246,7 @@ namespace vke_render
                                    offsetof(ShadowPushConstants, shadowIndex), sizeof(uint32_t), &slot);
                 vkCmdPushConstants(commandBuffer, renderInfo->renderPipeline->pipelineLayout, VK_SHADER_STAGE_ALL,
                                    offsetof(ShadowPushConstants, shadowType), sizeof(uint32_t), &shadowType);
-                renderInfo->Render(commandBuffer, shadowManager->GetShadowPassDescriptorSet(currentFrame));
+                renderInfo->Render(commandBuffer, shadowManager->GetShadowPassDescriptorSet(currentFrame), &frustum);
             }
 
             vkCmdEndRendering(commandBuffer);

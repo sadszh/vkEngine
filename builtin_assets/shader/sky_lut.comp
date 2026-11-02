@@ -4,11 +4,17 @@
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_EXT_scalar_block_layout : enable
 
-#include "camera.glsl"
+#define ATMOSPHERE_DESCRIPTOR_SET 0
 #include "atmosphere.glsl"
 
-const vec3 GROUND_COLOR = vec3(0.42, 0.34, 0.18);
-const float GROUND_HORIZON_BLEND = 0.08;
+layout(push_constant) uniform PushConstants {
+    vec4 mainLightDir;
+    vec4 mainLightColorIntensity;
+    vec4 groundColorBrightness;
+    float cameraHeight;
+    float groundHorizonSin;
+    float groundCurve;
+};
 
 vec3 FaceUVToViewDir(uint face, vec2 uv)
 {
@@ -35,11 +41,33 @@ void main(){
     vec2 uv = (vec2(pixel) + vec2(0.5)) / vec2(imageExtent);
     vec3 viewDir = FaceUVToViewDir(face, uv);
     
-    float h = max(CameraInfo.viewPos.y - parameters.seaLevel, 1) + parameters.planetRadius;
+    float h = cameraHeight + parameters.planetRadius;
     vec3 eyePos = vec3(0, h, 0);
 
-    color.rgb = GetSkyView(eyePos, viewDir, mainLightDir.xyz, -1.0);
-    float groundBlend = smoothstep(0.0, -GROUND_HORIZON_BLEND, viewDir.y);
-    color.rgb = mix(color.rgb, GROUND_COLOR, groundBlend);
+    if (viewDir.y >= 0.0)
+    {
+        color.rgb = GetSkyView(eyePos, viewDir, mainLightDir.xyz, mainLightColorIntensity, -1.0);
+    }
+    else
+    {
+        vec3 sunLuminance = mainLightColorIntensity.rgb * mainLightColorIntensity.w *
+                            parameters.sunLightIntensityFactor;
+        vec3 directLight = vec3(0.0);
+        if (mainLightDir.y > 0.0)
+            directLight = sunLuminance * TransmittanceToAtmosphere(eyePos, mainLightDir.xyz) *
+                          mainLightDir.y / PI;
+
+        vec3 skyLight = GetSkyView(eyePos, vec3(0.0, 1.0, 0.0), mainLightDir.xyz,
+                                  mainLightColorIntensity, -1.0);
+        vec3 ground = groundColorBrightness.rgb * groundColorBrightness.a * (directLight + skyLight);
+        float groundBlend = pow(smoothstep(0.0, groundHorizonSin, -viewDir.y), groundCurve);
+        color.rgb = ground;
+        if (groundBlend < 1.0)
+        {
+            vec3 horizonDir = normalize(vec3(viewDir.x, 0.0, viewDir.z));
+            vec3 horizon = GetSkyView(eyePos, horizonDir, mainLightDir.xyz, mainLightColorIntensity, -1.0);
+            color.rgb = mix(horizon, ground, groundBlend);
+        }
+    }
     imageStore(skyViewImage, ivec3(pixel, int(face)), color);
 }

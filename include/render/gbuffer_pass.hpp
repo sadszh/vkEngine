@@ -2,6 +2,7 @@
 #define GUBFFER_PASS_H
 
 #include <render/gbuffer.hpp>
+#include <render/camera.hpp>
 #include <render/renderinfo.hpp>
 #include <render/subpass.hpp>
 
@@ -11,8 +12,8 @@ namespace vke_render
     class GBufferPass : public RenderPassBase
     {
     public:
-        GBufferPass(RenderContext *ctx, VkDescriptorSet *globalDescriptorSets)
-            : RenderPassBase(GBUFFER_PASS, ctx, globalDescriptorSets) {}
+        GBufferPass(RenderContext *ctx, VkDescriptorSet *globalDescriptorSets, const CameraInfo *cameraInfo)
+            : RenderPassBase(GBUFFER_PASS, ctx, globalDescriptorSets), cameraInfo(cameraInfo) {}
 
         void Init(int subpassID,
                   FrameGraph &frameGraph,
@@ -63,6 +64,7 @@ namespace vke_render
         void OnWindowResize(FrameGraph &frameGraph, RenderContext *ctx) override;
 
     private:
+        const CameraInfo *cameraInfo;
         std::map<Material *, std::unique_ptr<RenderInfo>> renderInfoMap;
         GBuffer *gbuffer;
         vke_ds::id32_t gbufferTaskNodeID;

@@ -2,8 +2,11 @@
 #define MESH_H
 
 #include <render/buffer.hpp>
+#include <render/render_common.hpp>
 #include <concepts>
+#include <cstring>
 #include <iostream>
+#include <limits>
 #include <span>
 #include <vector>
 #include <ozz/base/maths/simd_math.h>
@@ -62,6 +65,7 @@ namespace vke_render
         std::vector<ozz::math::Float4x4> invBindMatrices;
         std::vector<int> joints;
         std::vector<MeshInfo> infos;
+        AABB bounds;
 
         Mesh() : handle(0), vertexBuffer(nullptr), indexBuffer(nullptr) {}
 
@@ -73,6 +77,7 @@ namespace vke_render
               indexBuffer(std::make_unique<DeviceBuffer>(ibuffer.size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT)),
               infos(std::move(infos))
         {
+            bounds = calculateBounds(this->infos, vbuffer.data, ibuffer.data);
             vertexBuffer->ToBuffer(0, vbuffer.data, vbuffer.size);
             indexBuffer->ToBuffer(0, ibuffer.data, ibuffer.size);
         }
@@ -84,6 +89,7 @@ namespace vke_render
               indexBuffer(std::make_unique<DeviceBuffer>(indices.size_bytes(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT)),
               infos(std::move(infos))
         {
+            bounds = calculateBounds(this->infos, vertices.data(), indices.data());
             vertexBuffer->ToBuffer(0, vertices.data(), vertices.size_bytes());
             indexBuffer->ToBuffer(0, indices.data(), indices.size_bytes());
         }
@@ -97,10 +103,13 @@ namespace vke_render
             vertexBuffer->ToBuffer(0, vertices.data(), vertices.size_bytes());
             indexBuffer->ToBuffer(0, indices.data(), indices.size_bytes());
             infos.emplace_back(0, vertexBuffer->bufferSize, vertices.size(), 0, indexBuffer->bufferSize, indices.size());
+            bounds = calculateBounds(infos, vertices.data(), indices.data());
         }
 
         Mesh(const vke_common::AssetHandle hdl, std::istream &binary) : handle(hdl)
         {
+            binary.read((char *)&bounds.min, 3 * sizeof(float));
+            binary.read((char *)&bounds.max, 3 * sizeof(float));
             uint32_t infoCnt;
             binary.read((char *)&infoCnt, sizeof(uint32_t));
             infos.resize(infoCnt);
@@ -184,11 +193,9 @@ namespace vke_render
         static void MeshDataToBinary(std::ostream &binary, const std::vector<MeshInfo> &infos,
                                      const std::span<const VT> &vertices, const std::span<const IT> &indices)
         {
-            uint32_t infoCnt = infos.size();
             uint64_t vsize = vertices.size_bytes();
             uint64_t isize = indices.size_bytes();
-            binary.write((const char *)&infoCnt, sizeof(uint32_t));
-            binary.write((const char *)(infos.data()), infoCnt * sizeof(MeshInfo));
+            writeHeader(binary, infos, vertices.data(), indices.data());
             binary.write((const char *)&vsize, sizeof(uint64_t));
             binary.write((const char *)(vertices.data()), vsize);
             binary.write((const char *)&isize, sizeof(uint64_t));
@@ -198,9 +205,7 @@ namespace vke_render
         static void MeshDataToBinary(std::ostream &binary, const std::vector<MeshInfo> &infos,
                                      const CPUBuffer<> &vertices, const CPUBuffer<> &indices)
         {
-            uint32_t infoCnt = infos.size();
-            binary.write((const char *)&infoCnt, sizeof(uint32_t));
-            binary.write((const char *)(infos.data()), infoCnt * sizeof(MeshInfo));
+            writeHeader(binary, infos, vertices.data, indices.data);
             vertices.WriteToBinaryStream(binary);
             indices.WriteToBinaryStream(binary);
         }
@@ -217,6 +222,53 @@ namespace vke_render
         }
 
     private:
+        static void writeHeader(std::ostream &binary, const std::vector<MeshInfo> &infos,
+                                const void *vertices, const void *indices)
+        {
+            const AABB bounds = calculateBounds(infos, vertices, indices);
+            const uint32_t infoCnt = infos.size();
+            binary.write((const char *)&bounds.min, 3 * sizeof(float));
+            binary.write((const char *)&bounds.max, 3 * sizeof(float));
+            binary.write((const char *)&infoCnt, sizeof(infoCnt));
+            binary.write((const char *)infos.data(), infoCnt * sizeof(MeshInfo));
+        }
+
+        static AABB calculateBounds(const std::vector<MeshInfo> &infos, const void *vertices, const void *indices)
+        {
+            AABB bounds{glm::vec3(std::numeric_limits<float>::max()),
+                        glm::vec3(std::numeric_limits<float>::lowest())};
+            bool hasIndices = false;
+            const char *vertexData = static_cast<const char *>(vertices);
+            const char *indexData = static_cast<const char *>(indices);
+            // Every mesh vertex layout starts with its local-space position.
+            for (const MeshInfo &info : infos)
+            {
+                if (info.indexCnt == 0)
+                    continue;
+                hasIndices = true;
+                const uint64_t stride = info.getVertexUnitSize();
+                const uint64_t indexStride = info.getIndexUnitSize();
+                for (uint64_t i = 0; i < info.indexCnt; ++i)
+                {
+                    uint32_t index;
+                    const char *source = indexData + info.indexOffset + i * indexStride;
+                    if (indexStride == sizeof(uint16_t))
+                    {
+                        uint16_t shortIndex;
+                        std::memcpy(&shortIndex, source, sizeof(shortIndex));
+                        index = shortIndex;
+                    }
+                    else
+                        std::memcpy(&index, source, sizeof(index));
+                    glm::vec3 position;
+                    std::memcpy(&position, vertexData + info.vertexOffset + index * stride, 3 * sizeof(float));
+                    bounds.min = glm::min(bounds.min, position);
+                    bounds.max = glm::max(bounds.max, position);
+                }
+            }
+            return hasIndices ? bounds : AABB{};
+        }
+
         VkIndexType getIndexType(const MeshInfo &info) const
         {
             if (info.getIndexUnitSize() == 2)
