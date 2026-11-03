@@ -13,7 +13,6 @@
 #include <render/skybox_render.hpp>
 #include <render/hdr_color.hpp>
 #include <render/layered_2d.hpp>
-#include <editor/wireframe_collision_pass.hpp>
 #include <render/light_manager.hpp>
 #include <render/camera.hpp>
 #include <event.hpp>
@@ -168,14 +167,6 @@ namespace vke_render
                     instance->subPasses.push_back(std::move(transparentPass));
                     break;
                 }
-                case WIREFRAME_COLLISION_PASS:
-                {
-                    auto wireframePass = std::make_unique<vke_editor::WireframeCollisionPass>(ctx, instance->globalDescriptorSets[GLOBAL_DESCRIPTOR_SET_NO_LIGHT]);
-                    wireframePass->Init(i, *(instance->frameGraph), instance->blackboard, instance->currentResourceNodeID);
-                    instance->subPassMap[WIREFRAME_COLLISION_PASS] = instance->subPasses.size();
-                    instance->subPasses.push_back(std::move(wireframePass));
-                    break;
-                }
                 case BLOOM_PASS:
                 {
                     const nlohmann::json &bloomConfigJSON = renderConfig.sourceJSON.value("bloom", nlohmann::json::object());
@@ -315,14 +306,6 @@ namespace vke_render
             if (it == instance->subPassMap.end())
                 return nullptr;
             return static_cast<Layered2DRenderer *>(instance->subPasses[it->second].get());
-        }
-
-        static vke_editor::WireframeCollisionPass *GetWireframeCollisionPass()
-        {
-            auto it = instance->subPassMap.find(WIREFRAME_COLLISION_PASS);
-            if (it == instance->subPassMap.end())
-                return nullptr;
-            return static_cast<vke_editor::WireframeCollisionPass *>(instance->subPasses[it->second].get());
         }
 
         static QuadManager *GetQuadManager()

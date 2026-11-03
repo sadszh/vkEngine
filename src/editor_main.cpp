@@ -15,7 +15,6 @@ std::vector<vke_render::PassType> defaultPasses{
     vke_render::SKYBOX_RENDERER,
     vke_render::ATMOSPHERE_PASS,
     vke_render::TRANSPARENT_PASS,
-    vke_render::WIREFRAME_COLLISION_PASS,
     vke_render::BLOOM_PASS,
     vke_render::TONE_MAPPING_PASS,
     vke_render::LAYERED_2D_RENDERER,

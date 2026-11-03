@@ -48,12 +48,16 @@ namespace vke_render
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
         const vke_ds::id32_t depthResourceID = blackboard.at("depthAttachment");
+        // TODO: Separate depth preservation from FrameGraph write tracking; STORE currently
+        // forces a depth output node and write synchronization for this depth-test-only pass.
+        const auto depthOutput = frameGraph.AllocResourceNode("transparentOutDepth", depthResourceID);
         frameGraph.AddTaskNodeResourceRef(
-            taskNodeID, currentResourceNodeID.at(depthResourceID), 0,
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+            taskNodeID, currentResourceNodeID.at(depthResourceID), depthOutput,
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-            VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+            VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        currentResourceNodeID[depthResourceID] = depthOutput;
 
         for (const char *clusterName : {"pointLightClusterBuffer", "spotLightClusterBuffer"})
         {
@@ -231,7 +235,8 @@ namespace vke_render
         depthAttachment.imageView = context->depthImageViews[currentFrame];
         depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        // TODO: Revisit this depth store when preservation and FrameGraph write dependencies are separated.
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
         VkRenderingInfo renderingInfo{};
         renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;

@@ -168,7 +168,6 @@ commonsrc = (
         "./src/render/frame_graph.cpp",
         "./src/render/profile.cpp",
         "./src/render/queue.cpp",
-        "./src/editor/wireframe_collision_pass.cpp",
         "./src/component.cpp",
         "./src/scene.cpp",
         "./src/scene_data.cpp",
@@ -264,6 +263,8 @@ for info in targetinfo:
 
 imguiObjs = SConscript(["third_party/imgui/Sconscript"], exports=["env", "VULKAN_PATH"])
 editorsrc = [
+    "./src/editor/gizmo_renderer.cpp",
+    "./src/editor/collision_gizmos.cpp",
     "./src/editor/editor.cpp",
     "./src/editor/camera.cpp",
     "./src/editor/viewport.cpp",

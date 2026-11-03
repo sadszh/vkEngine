@@ -22,11 +22,15 @@ namespace vke_render
                                           VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                                           VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
                                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-        frameGraph.AddTaskNodeResourceRef(skyTaskNodeID, currentResourceNodeID[depthAttachmentResourceID], 0,
-                                          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+        // TODO: Separate depth preservation from FrameGraph write tracking; STORE currently
+        // forces a depth output node and write synchronization for this depth-test-only pass.
+        const auto depthOutput = frameGraph.AllocResourceNode("skyOutDepth", depthAttachmentResourceID);
+        frameGraph.AddTaskNodeResourceRef(skyTaskNodeID, currentResourceNodeID[depthAttachmentResourceID], depthOutput,
+                                          VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                                           VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-                                          VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                                          VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+                                          VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE,
+                                          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        currentResourceNodeID[depthAttachmentResourceID] = depthOutput;
         frameGraph.AddTaskNodeResourceRef(skyTaskNodeID, lutOutResourceNodeID, 0,
                                           VK_ACCESS_SHADER_READ_BIT,
                                           VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -174,7 +178,8 @@ namespace vke_render
         depthAttachmentInfo.imageView = context->depthImageViews[currentFrame];
         depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        depthAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        // TODO: Revisit this depth store when preservation and FrameGraph write dependencies are separated.
+        depthAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
         VkRenderingInfo renderingInfo{};
         renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;

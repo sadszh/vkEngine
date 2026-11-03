@@ -87,7 +87,7 @@ namespace vke_render
         colorAttachmentResourceID = frameGraph->AddPermanentImageResource("colorAttachment", true, context->colorImages.data(), VK_IMAGE_ASPECT_COLOR_BIT, true,
                                                                           VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_IMAGE_LAYOUT_UNDEFINED, context->outColorLayout);
         depthAttachmentResourceID = frameGraph->AddPermanentImageResource("depthAttachment", true, context->depthImages, VK_IMAGE_ASPECT_DEPTH_BIT, false,
-                                                                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, std::nullopt, std::nullopt);
+                                                                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, std::nullopt, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
         frameGraph->AddTargetResource(colorAttachmentResourceID);
         frameGraph->AddTargetResource(depthAttachmentResourceID);

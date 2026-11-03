@@ -2,6 +2,7 @@
 #define EDITOR_RENDERER_H
 
 #include <render/environment.hpp>
+#include <editor/gizmo_renderer.hpp>
 
 namespace vke_editor
 {
@@ -39,9 +40,9 @@ namespace vke_editor
 
         void BeginFrame();
 
-        void Update()
+        void Update(const glm::mat4 &viewProj, std::span<const glm::vec3> lines)
         {
-            render();
+            render(viewProj, lines);
             currentFrame = (currentFrame + 1) % vke_render::MAX_FRAMES_IN_FLIGHT;
         }
 
@@ -67,12 +68,13 @@ namespace vke_editor
         VkCommandPool commandPool;
         VkCommandBuffer commandBuffers[vke_render::MAX_FRAMES_IN_FLIGHT];
         bool sceneTexturesRegistered;
+        std::unique_ptr<GizmoRenderer> gizmoRenderer;
 
         void registerSceneTextures();
         void removeSceneTextures();
         void createSceneRenderContext(uint32_t width, uint32_t height);
         void cleanupSceneRenderContext();
-        void render();
+        void render(const glm::mat4 &viewProj, std::span<const glm::vec3> lines);
     };
 }
 

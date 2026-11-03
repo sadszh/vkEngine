@@ -8,7 +8,6 @@ namespace vke_render
     enum PassType
     {
         CUSTOM_RENDERER,
-        WIREFRAME_COLLISION_PASS,
         GBUFFER_PASS,
         SHADOW_PASS,
         SSAO_PASS,

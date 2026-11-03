@@ -198,9 +198,6 @@ namespace vke_editor
         vke_ui::UIPointerInput pointer;
         editorRenderer->BeginFrame();
         drawGUI(pointer);
-        WireframeCollisionPass *wireframePass = vke_render::Renderer::GetWireframeCollisionPass();
-        if (wireframePass)
-            wireframePass->SetSelectedEntity(selectedEntity);
         using vke_common::InputManager;
         auto *window = vke_render::RenderEnvironment::GetInstance()->window;
         pointer.active = EditorStateManager::GetState() == EditorState::Run &&
@@ -211,7 +208,10 @@ namespace vke_editor
         pointer.pressed = InputManager::IsMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
         pointer.released = InputManager::IsMouseButtonReleased(GLFW_MOUSE_BUTTON_LEFT);
         vke_common::Engine::UpdatePresentation(&pointer);
-        editorRenderer->Update();
+        std::vector<glm::vec3> collisionLines;
+        extractCollisionLines(selectedEntity, collisionLines);
+        const auto &camera = vke_render::Renderer::GetCameraInfo();
+        editorRenderer->Update(camera.projection * camera.view, collisionLines);
         vke_common::InputManager::EndFrame();
         return true;
     }

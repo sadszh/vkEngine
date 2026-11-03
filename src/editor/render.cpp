@@ -76,6 +76,7 @@ namespace vke_editor
         vke_render::RenderEnvironment::GetGraphicsQueue()->Submit(1, &initialSignalSubmitInfo, VK_NULL_HANDLE);
 
         instance->createSceneRenderContext(sceneViewportWidth, sceneViewportHeight);
+        instance->gizmoRenderer = std::make_unique<GizmoRenderer>(&instance->sceneRenderContext);
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -122,7 +123,7 @@ namespace vke_editor
         VkSemaphoreSubmitInfo waitSemaphoreInfo{};
         waitSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
         waitSemaphoreInfo.semaphore = instance->sceneImageAvailableSemaphores[currentFrame];
-        waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
         waitSemaphoreInfo.deviceIndex = 0;
 
         VkSubmitInfo2 submitInfo{};
@@ -258,7 +259,7 @@ namespace vke_editor
             depthBarrier.srcAccessMask = VK_ACCESS_NONE;
             depthBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+            depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             depthBarrier.image = sceneDepthImages[i];
@@ -336,7 +337,7 @@ namespace vke_editor
 
     }
 
-    void EditorRenderer::render()
+    void EditorRenderer::render(const glm::mat4 &viewProj, std::span<const glm::vec3> lines)
     {
         uint32_t imageIndex = context->AcquireNextImage(currentFrame);
 
@@ -348,6 +349,36 @@ namespace vke_editor
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         VKE_VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo), "Failed to begin editor command buffer!")
+
+        if (!lines.empty())
+        {
+            VkImageMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.oldLayout = sceneRenderContext.outColorLayout;
+            barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image = sceneColorImages[currentFrame];
+            barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+            vkCmdPipelineBarrier(commandBuffer,
+                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0,
+                                 0, nullptr, 0, nullptr, 1, &barrier);
+
+            gizmoRenderer->Render(commandBuffer, currentFrame,
+                                  viewProj, lines, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+
+            barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            barrier.newLayout = sceneRenderContext.outColorLayout;
+            vkCmdPipelineBarrier(commandBuffer,
+                                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+                                 0, nullptr, 0, nullptr, 1, &barrier);
+        }
 
         VkImageMemoryBarrier colorBeginBarrier{};
         colorBeginBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -424,7 +455,7 @@ namespace vke_editor
         VkSemaphoreSubmitInfo waitSemaphoreInfo{};
         waitSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
         waitSemaphoreInfo.semaphore = sceneRenderFinishedSemaphores[currentFrame];
-        waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+        waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
         waitSemaphoreInfo.deviceIndex = 0;
 
         VkSemaphoreSubmitInfo signalSemaphoreInfo{};

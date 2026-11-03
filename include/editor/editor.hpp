@@ -78,6 +78,7 @@ namespace vke_editor
         void drawSceneToolbar();
         bool drawSceneTools(glm::vec2 origin, glm::vec2 size, bool hovered);
         void cancelGizmo();
+        void extractCollisionLines(entt::entity entity, std::vector<glm::vec3> &outVertices);
         void pickEntity(glm::vec2 position, glm::vec2 size);
         void showMainMenuBar();
         void showProjectSettings();
