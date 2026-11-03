@@ -5,5 +5,19 @@
     "name": "WireframeCollisionShader",
     "path": "editor_assets/shader/wireframe_collision_vert.spv",
     "fragPath": "editor_assets/shader/wireframe_collision_frag.spv"
+  },
+  {
+    "type": 2,
+    "id": 513,
+    "name": "EntityPickingShader",
+    "path": "editor_assets/shader/entity_picking_vert.spv",
+    "fragPath": "editor_assets/shader/entity_picking_frag.spv"
+  },
+  {
+    "type": 2,
+    "id": 514,
+    "name": "SkinnedEntityPickingShader",
+    "path": "editor_assets/shader/entity_picking_skin_vert.spv",
+    "fragPath": "editor_assets/shader/entity_picking_frag.spv"
   }
 ]

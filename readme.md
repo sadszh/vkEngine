@@ -84,6 +84,7 @@ Or launch the editor with your project's config:
 - [recastnavigation](https://github.com/recastnavigation/recastnavigation)
 - [miniaudio](https://github.com/mackron/miniaudio)
 - [imgui](https://github.com/ocornut/imgui)
+- [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo)
 - [ImGuiFileDialog](https://github.com/aiekick/ImGuiFileDialog)
 - [sqlite](https://sqlite.org/)
 

@@ -266,6 +266,9 @@ imguiObjs = SConscript(["third_party/imgui/Sconscript"], exports=["env", "VULKAN
 editorsrc = [
     "./src/editor/editor.cpp",
     "./src/editor/camera.cpp",
+    "./src/editor/viewport.cpp",
+    "./src/editor/entity_picker.cpp",
+    "./third_party/ImGuizmo/ImGuizmo.cpp",
     "./src/editor/render.cpp",
     "./src/editor/assets.cpp",
     "./src/editor/logger.cpp",
@@ -352,6 +355,9 @@ sprefix = "./editor_assets/shader/"
 shaders = [
     ["wireframe_collision.vert", "wireframe_collision_vert.spv"],
     ["wireframe_collision.frag", "wireframe_collision_frag.spv"],
+    ["entity_picking.vert", "entity_picking_vert.spv"],
+    ["entity_picking_skin.vert", "entity_picking_skin_vert.spv"],
+    ["entity_picking.frag", "entity_picking_frag.spv"],
 ]
 for s in shaders:
     print(glslc + f" {sprefix+s[0]} -I {sprefix} -o {sprefix+s[1]}")

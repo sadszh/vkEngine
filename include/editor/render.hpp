@@ -2,8 +2,6 @@
 #define EDITOR_RENDERER_H
 
 #include <render/environment.hpp>
-#include <functional>
-#include <ui/ui.hpp>
 
 namespace vke_editor
 {
@@ -23,8 +21,7 @@ namespace vke_editor
         static EditorRenderer *Init(GLFWwindow *window,
                                     vke_render::RenderContext *ctx,
                                     uint32_t sceneViewportWidth,
-                                    uint32_t sceneViewportHeight,
-                                    std::function<void()> updateGUIFunc);
+                                    uint32_t sceneViewportHeight);
 
         vke_render::RenderContext *GetSceneRenderContext()
         {
@@ -35,7 +32,12 @@ namespace vke_editor
 
         void ResizeSceneViewport(uint32_t width, uint32_t height);
 
-        void BeginFrame(vke_ui::UIPointerInput &pointer);
+        VkDescriptorSet GetSceneTexture() const
+        {
+            return sceneTextureDescriptorSets[currentFrame];
+        }
+
+        void BeginFrame();
 
         void Update()
         {
@@ -65,13 +67,11 @@ namespace vke_editor
         VkCommandPool commandPool;
         VkCommandBuffer commandBuffers[vke_render::MAX_FRAMES_IN_FLIGHT];
         bool sceneTexturesRegistered;
-        std::function<void()> updateGUIFunc;
 
         void registerSceneTextures();
         void removeSceneTextures();
         void createSceneRenderContext(uint32_t width, uint32_t height);
         void cleanupSceneRenderContext();
-        void drawSceneViewport(vke_ui::UIPointerInput &pointer);
         void render();
     };
 }

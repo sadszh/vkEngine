@@ -1,0 +1,3 @@
+https://github.com/CedricGuillemet/ImGuizmo
+Commit: 105e4fde45e4e74aae8973d98750820ef7aca7e2
+Vendored files: src/ImGuizmo.h, src/ImGuizmo.cpp, LICENSE

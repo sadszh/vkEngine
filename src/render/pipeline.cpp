@@ -136,7 +136,8 @@ namespace vke_render
         pipelineInfo.stageCount = shader->stageCreateInfos.size();
         pipelineInfo.pStages = shader->stageCreateInfos.data();
 
-        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        if (pipelineInfo.pVertexInputState == nullptr)
+            pipelineInfo.pVertexInputState = &vertexInputInfo;
         pipelineInfo.pInputAssemblyState = &inputAssembly;
         pipelineInfo.pViewportState = &viewportState;
         pipelineInfo.pRasterizationState = &rasterizer;

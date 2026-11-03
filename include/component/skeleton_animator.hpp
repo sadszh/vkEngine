@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
+#include <span>
 #include <component/transform.hpp>
 #include <scene_transform_system.hpp>
 #include <animation.hpp>
@@ -402,6 +403,11 @@ namespace vke_component
         void Start() { updatePose(0.0f); }
 
         void Update(float deltaTime) { updatePose(deltaTime); }
+
+        std::span<const ozz::math::Float4x4> GetSkinningMatrices() const
+        {
+            return {skinningMatrices.data(), skinningMatrices.size()};
+        }
 
         vke_common::SceneResult<void> AddAnimation(
             std::shared_ptr<vke_common::Animation> anim,

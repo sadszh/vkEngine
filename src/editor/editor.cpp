@@ -1,4 +1,6 @@
 #include <editor/editor.hpp>
+#include <imgui_internal.h>
+#include <ImGuizmo/ImGuizmo.h>
 #include <engine.hpp>
 #include <asset/asset_db_sqlite.hpp>
 #include <audio/audio_manager.hpp>
@@ -10,6 +12,30 @@
 
 namespace vke_editor
 {
+    static void BuildDefaultDockLayout(ImGuiID dockspaceId)
+    {
+        const ImGuiViewport *viewport = ImGui::GetMainViewport();
+        ImGui::DockBuilderRemoveNode(dockspaceId);
+        ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderSetNodeSize(dockspaceId, viewport->WorkSize);
+
+        ImGuiID mainDock = dockspaceId;
+        ImGuiID leftDock = 0;
+        ImGuiID rightDock = 0;
+        ImGuiID bottomDock = 0;
+
+        ImGui::DockBuilderSplitNode(mainDock, ImGuiDir_Left, 0.20f, &leftDock, &mainDock);
+        ImGui::DockBuilderSplitNode(mainDock, ImGuiDir_Right, 0.25f, &rightDock, &mainDock);
+        ImGui::DockBuilderSplitNode(mainDock, ImGuiDir_Down, 0.25f, &bottomDock, &mainDock);
+
+        ImGui::DockBuilderDockWindow("Hierarchy", leftDock);
+        ImGui::DockBuilderDockWindow("Inspector", rightDock);
+        ImGui::DockBuilderDockWindow("Assets", bottomDock);
+        ImGui::DockBuilderDockWindow("Log", bottomDock);
+        ImGui::DockBuilderDockWindow("Scene", mainDock);
+        ImGui::DockBuilderFinish(dockspaceId);
+    }
+
     EditorConfig *EditorConfig::instance = nullptr;
     EditorStateManager *EditorStateManager::instance;
     Editor *Editor::instance = nullptr;
@@ -49,9 +75,7 @@ namespace vke_editor
         VKE_FATAL_IF(!vke_common::AssetManager::BulkLoad(EditorAssetLUTPath, true),
                      "Failed to load editor assets from {}", EditorAssetLUTPath.string())
         vke_render::RenderContext *ctx = &(vke_render::RenderEnvironment::GetInstance()->rootRenderContext);
-        EditorRenderer::Init(window, ctx, sceneViewportWidth, sceneViewportHeight,
-                             []()
-                             { instance->DrawGUI(); });
+        EditorRenderer::Init(window, ctx, sceneViewportWidth, sceneViewportHeight);
 
         vke_physics::PhysicsManager::Init(editorConfig.gameConfig->physicsConfig);
         vke_render::Renderer::Init(EditorRenderer::GetInstance()->GetSceneRenderContext(),
@@ -77,6 +101,7 @@ namespace vke_editor
     void Editor::Dispose()
     {
         instance->editorCamera.Deactivate();
+        instance->entityPicker.reset();
         instance->disposeTexturePreviewDescriptorSets();
         instance->editSnapshot.reset();
         vke_ui::UIManager::Dispose();
@@ -107,6 +132,7 @@ namespace vke_editor
         if (EditorStateManager::GetState() != EditorState::Edit || editSnapshot)
             return std::unexpected("editor is not ready to start");
         sceneManager->ProcessDestroyRequests();
+        cancelGizmo();
         auto snapshot = sceneManager->ExportAllEntities();
         if (!snapshot)
             return std::unexpected(snapshot.error());
@@ -168,19 +194,13 @@ namespace vke_editor
                 vke_common::TimeManager::GetDeltaTime(), fixedUpdateAccumulator);
         }
 
+        auto *editorRenderer = EditorRenderer::GetInstance();
+        vke_ui::UIPointerInput pointer;
+        editorRenderer->BeginFrame();
+        drawGUI(pointer);
         WireframeCollisionPass *wireframePass = vke_render::Renderer::GetWireframeCollisionPass();
         if (wireframePass)
             wireframePass->SetSelectedEntity(selectedEntity);
-
-        auto *editorRenderer = EditorRenderer::GetInstance();
-        vke_ui::UIPointerInput pointer;
-        editorRenderer->BeginFrame(pointer);
-        if (EditorStateManager::GetState() == EditorState::Edit)
-        {
-            const auto *sceneContext = editorRenderer->GetSceneRenderContext();
-            editorCamera.Update(sceneContext->width, sceneContext->height, pointer.inside,
-                                vke_common::TimeManager::GetDeltaTime());
-        }
         using vke_common::InputManager;
         auto *window = vke_render::RenderEnvironment::GetInstance()->window;
         pointer.active = EditorStateManager::GetState() == EditorState::Run &&
@@ -196,8 +216,20 @@ namespace vke_editor
         return true;
     }
 
-    void Editor::DrawGUI()
+    void Editor::drawGUI(vke_ui::UIPointerInput &pointer)
     {
+        ImGuizmo::BeginFrame();
+        ImGuiID dockspaceId = ImGui::DockSpaceOverViewport();
+        static bool defaultDockLayoutBuilt = false;
+        if (!defaultDockLayoutBuilt)
+        {
+            BuildDefaultDockLayout(dockspaceId);
+            defaultDockLayoutBuilt = true;
+        }
+
+        if (EditorStateManager::GetState() == EditorState::Edit || EditorStateManager::GetState() == EditorState::Run)
+            drawSceneViewport(pointer);
+
         ensureSelectedEntityValid();
         showMainMenuBar();
         showProjectSettings();

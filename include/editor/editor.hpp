@@ -3,6 +3,7 @@
 
 #include <editor/assets.hpp>
 #include <editor/camera.hpp>
+#include <editor/entity_picker.hpp>
 #include <editor/render.hpp>
 #include <editor/editor_config.hpp>
 #include <editor/editor_state.hpp>
@@ -31,6 +32,12 @@ namespace vke_editor
         Editor &operator=(const Editor &);
 
         EditorCamera editorCamera;
+        std::unique_ptr<EntityPicker> entityPicker;
+        int transformTool = 0;
+        bool localGizmo = true;
+        entt::entity gizmoEntity = entt::null;
+        vke_common::TransformData gizmoStart;
+        glm::mat4 gizmoMatrix{1.0f};
         float fixedUpdateAccumulator;
         std::optional<vke_common::SceneData> editSnapshot;
         bool toggleRunRequested = false;
@@ -61,12 +68,17 @@ namespace vke_editor
         static void OnWindowResize(GLFWwindow *window, int width, int height);
 
         bool Update();
-        void DrawGUI();
 
     private:
         vke_common::SceneResult<void> startRun();
         vke_common::SceneResult<void> stopRun();
 
+        void drawGUI(vke_ui::UIPointerInput &pointer);
+        void drawSceneViewport(vke_ui::UIPointerInput &pointer);
+        void drawSceneToolbar();
+        bool drawSceneTools(glm::vec2 origin, glm::vec2 size, bool hovered);
+        void cancelGizmo();
+        void pickEntity(glm::vec2 position, glm::vec2 size);
         void showMainMenuBar();
         void showProjectSettings();
         void showHierarchy();
