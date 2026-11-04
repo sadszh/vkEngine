@@ -267,7 +267,7 @@ for info in targetinfo:
 imguiObjs = SConscript(["third_party/imgui/Sconscript"], exports=["env", "VULKAN_PATH"])
 editorsrc = [
     "./src/editor/gizmo_renderer.cpp",
-    "./src/editor/collision_gizmos.cpp",
+    "./src/editor/gizmo.cpp",
     "./src/editor/editor.cpp",
     "./src/editor/camera.cpp",
     "./src/editor/viewport.cpp",

@@ -147,5 +147,5 @@ Or launch the editor with your project's config:
   - [x] asset database
   - [x] script field editing
   - [x] game state snapshot
-  - [ ] gizmo
+  - [x] gizmo
   - [ ] assets preivew

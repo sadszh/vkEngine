@@ -1,4 +1,7 @@
 #include <editor/editor.hpp>
+#include <editor/builtin_assets.hpp>
+#include <component/camera.hpp>
+#include <component/light.hpp>
 #include <cfloat>
 #include <ImGuizmo/ImGuizmo.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -76,6 +79,46 @@ namespace vke_editor
         ImGui::EndDisabled();
     }
 
+    entt::entity Editor::drawSceneIcons(glm::vec2 origin, glm::vec2 size)
+    {
+        const auto &camera = vke_render::Renderer::GetCameraInfo();
+        const glm::mat4 viewProjection = camera.projection * camera.view;
+        const float halfSize = 16.0f * ImGui::GetStyle().FontScaleDpi;
+        auto *drawList = ImGui::GetWindowDrawList();
+        drawList->PushClipRect(ImVec2(origin.x, origin.y), ImVec2(origin.x + size.x, origin.y + size.y), true);
+        entt::entity hoveredEntity = entt::null;
+        const auto mouse = ImGui::GetMousePos();
+        const auto drawIcon = [&](entt::entity entity, glm::vec3 position, VkDescriptorSet texture, ImU32 color)
+        {
+            if (sceneManager->IsPendingDestroy(entity))
+                return;
+            const glm::vec4 clip = viewProjection * glm::vec4(position, 1.0f);
+            if (clip.w <= 0.0f || clip.z < 0.0f || clip.z > clip.w)
+                return;
+            const glm::vec2 center = origin + (glm::vec2(clip) / clip.w * 0.5f + 0.5f) * size;
+            const ImVec2 min(center.x - halfSize, center.y - halfSize);
+            const ImVec2 max(center.x + halfSize, center.y + halfSize);
+            const ImU32 tint = entity == selectedEntity ? IM_COL32(255, 191, 51, 255) : color;
+            drawList->AddImage(ImTextureRef((ImTextureID)texture), min, max, ImVec2(0, 0), ImVec2(1, 1), tint);
+            if (mouse.x >= min.x && mouse.x <= max.x && mouse.y >= min.y && mouse.y <= max.y)
+                hoveredEntity = entity;
+        };
+        const auto cameraTexture = getTexturePreviewDescriptorSet(BUILTIN_TEXTURE_CAMERA_ICON_ID);
+        for (auto [entity, sceneCamera] : sceneManager->registry.view<vke_component::Camera>().each())
+            drawIcon(entity, glm::vec3(sceneCamera.cameraInfo.invView[3]), cameraTexture, IM_COL32(102, 204, 255, 255));
+        const auto drawLights = [&]<typename T>(vke_common::AssetHandle icon)
+        {
+            const auto texture = getTexturePreviewDescriptorSet(icon);
+            for (auto [entity, transform] : sceneManager->registry.view<T, vke_common::Transform>().each())
+                drawIcon(entity, transform.GetGlobalPosition(), texture, IM_COL32(255, 240, 160, 255));
+        };
+        drawLights.operator()<vke_component::DirectionalLight>(BUILTIN_TEXTURE_DIRECTIONAL_LIGHT_ICON_ID);
+        drawLights.operator()<vke_component::PointLight>(BUILTIN_TEXTURE_POINT_LIGHT_ICON_ID);
+        drawLights.operator()<vke_component::SpotLight>(BUILTIN_TEXTURE_SPOT_LIGHT_ICON_ID);
+        drawList->PopClipRect();
+        return hoveredEntity;
+    }
+
     void Editor::pickEntity(glm::vec2 position, glm::vec2 size)
     {
         const auto *context = EditorRenderer::GetInstance()->GetSceneRenderContext();
@@ -117,6 +160,7 @@ namespace vke_editor
         auto *window = vke_render::RenderEnvironment::GetInstance()->window;
         const bool focused = glfwGetWindowAttrib(window, GLFW_FOCUSED) &&
                              !InputManager::IsFocusLostThisFrame();
+        const auto hoveredIcon = visible ? drawSceneIcons(origin, size) : entt::null;
         if (!visible || !focused || InputManager::IsKeyPressed(GLFW_KEY_ESCAPE) ||
             (gizmoEntity != entt::null && gizmoEntity != selectedEntity))
         {
@@ -202,7 +246,13 @@ namespace vke_editor
         if (hovered && !navigating && !handled && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         {
             const auto mouse = ImGui::GetMousePos();
-            pickEntity(glm::vec2(mouse.x, mouse.y) - origin, size);
+            if (hoveredIcon != entt::null)
+            {
+                clearSelectedAsset();
+                selectedEntity = hoveredIcon;
+            }
+            else
+                pickEntity(glm::vec2(mouse.x, mouse.y) - origin, size);
         }
         return handled;
     }

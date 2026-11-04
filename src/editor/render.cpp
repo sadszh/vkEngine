@@ -337,7 +337,7 @@ namespace vke_editor
 
     }
 
-    void EditorRenderer::render(const glm::mat4 &viewProj, std::span<const glm::vec3> lines)
+    void EditorRenderer::render(const glm::mat4 &viewProj, std::span<const glm::vec3> lines, std::span<const GizmoBatch> batches)
     {
         uint32_t imageIndex = context->AcquireNextImage(currentFrame);
 
@@ -368,7 +368,7 @@ namespace vke_editor
                                  0, nullptr, 0, nullptr, 1, &barrier);
 
             gizmoRenderer->Render(commandBuffer, currentFrame,
-                                  viewProj, lines, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+                                  viewProj, lines, batches);
 
             barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;

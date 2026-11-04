@@ -7,6 +7,13 @@
 
 namespace vke_editor
 {
+    struct GizmoBatch
+    {
+        uint32_t firstVertex;
+        uint32_t vertexCount;
+        glm::vec4 color;
+    };
+
     class GizmoRenderer
     {
     public:
@@ -14,7 +21,7 @@ namespace vke_editor
 
         void Render(VkCommandBuffer commandBuffer, uint32_t currentFrame,
                     const glm::mat4 &viewProj, std::span<const glm::vec3> lines,
-                    const glm::vec4 &colorValue);
+                    std::span<const GizmoBatch> batches);
 
     private:
         struct PushConstants

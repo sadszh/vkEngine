@@ -1,14 +1,13 @@
 #include <editor/gizmo_renderer.hpp>
+#include <editor/builtin_assets.hpp>
 #include <asset/asset_manager.hpp>
 
 namespace vke_editor
 {
-    static const vke_common::AssetHandle GIZMO_SHADER_ID = 512;
-
     GizmoRenderer::GizmoRenderer(vke_render::RenderContext *ctx)
         : context(ctx)
     {
-        shader = vke_common::AssetManager::LoadVertFragShaderUnique(GIZMO_SHADER_ID);
+        shader = vke_common::AssetManager::LoadVertFragShaderUnique(BUILTIN_VFSHADER_GIZMO_ID);
         createGraphicsPipeline();
     }
 
@@ -63,7 +62,7 @@ namespace vke_editor
 
     void GizmoRenderer::Render(VkCommandBuffer commandBuffer, uint32_t currentFrame,
                                const glm::mat4 &viewProj, std::span<const glm::vec3> lines,
-                               const glm::vec4 &colorValue)
+                               std::span<const GizmoBatch> batches)
     {
         size_t neededBytes = lines.size() * sizeof(glm::vec3);
         auto &buf = vertexBuffers[currentFrame];
@@ -109,17 +108,18 @@ namespace vke_editor
 
         PushConstants pc;
         pc.viewProj = viewProj;
-        pc.color = colorValue;
-
         pipeline->Bind(commandBuffer);
-        vkCmdPushConstants(commandBuffer, pipeline->pipelineLayout,
-                           VK_SHADER_STAGE_ALL,
-                           0, sizeof(PushConstants), &pc);
 
         VkBuffer vkBuf = vertexBuffers[currentFrame]->buffer;
         VkDeviceSize offset = 0;
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vkBuf, &offset);
-        vkCmdDraw(commandBuffer, static_cast<uint32_t>(lines.size()), 1, 0, 0);
+        for (const auto &batch : batches)
+        {
+            pc.color = batch.color;
+            vkCmdPushConstants(commandBuffer, pipeline->pipelineLayout,
+                               VK_SHADER_STAGE_ALL, 0, sizeof(PushConstants), &pc);
+            vkCmdDraw(commandBuffer, batch.vertexCount, 1, batch.firstVertex, 0);
+        }
 
         vkCmdEndRendering(commandBuffer);
     }

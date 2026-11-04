@@ -1,4 +1,6 @@
 #include <editor/editor.hpp>
+#include <editor/gizmo.hpp>
+#include <component/camera.hpp>
 #include <imgui_internal.h>
 #include <ImGuizmo/ImGuizmo.h>
 #include <engine.hpp>
@@ -208,10 +210,24 @@ namespace vke_editor
         pointer.pressed = InputManager::IsMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
         pointer.released = InputManager::IsMouseButtonReleased(GLFW_MOUSE_BUTTON_LEFT);
         vke_common::Engine::UpdatePresentation(&pointer);
-        std::vector<glm::vec3> collisionLines;
-        extractCollisionLines(selectedEntity, collisionLines);
+        std::vector<glm::vec3> gizmoLines;
+        std::vector<GizmoBatch> gizmoBatches;
+        extractCollisionLines(*sceneManager, selectedEntity, gizmoLines);
+        if (!gizmoLines.empty())
+            gizmoBatches.push_back({0, static_cast<uint32_t>(gizmoLines.size()), glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)});
+        if (EditorStateManager::GetState() == EditorState::Edit)
+        {
+            const auto firstVertex = static_cast<uint32_t>(gizmoLines.size());
+            if (const auto *sceneCamera = sceneManager->registry.try_get<vke_component::Camera>(selectedEntity);
+                sceneCamera && !sceneManager->IsPendingDestroy(selectedEntity))
+                appendFrustumLines(sceneCamera->cameraInfo, gizmoLines);
+            extractLightLines(*sceneManager, *vke_render::Renderer::GetInstance()->lightManager, selectedEntity, gizmoLines);
+            const auto vertexCount = static_cast<uint32_t>(gizmoLines.size()) - firstVertex;
+            if (vertexCount != 0)
+                gizmoBatches.push_back({firstVertex, vertexCount, glm::vec4(1.0f, 0.75f, 0.2f, 1.0f)});
+        }
         const auto &camera = vke_render::Renderer::GetCameraInfo();
-        editorRenderer->Update(camera.projection * camera.view, collisionLines);
+        editorRenderer->Update(camera.projection * camera.view, gizmoLines, gizmoBatches);
         vke_common::InputManager::EndFrame();
         return true;
     }

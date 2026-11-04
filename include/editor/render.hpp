@@ -40,9 +40,9 @@ namespace vke_editor
 
         void BeginFrame();
 
-        void Update(const glm::mat4 &viewProj, std::span<const glm::vec3> lines)
+        void Update(const glm::mat4 &viewProj, std::span<const glm::vec3> lines, std::span<const GizmoBatch> batches)
         {
-            render(viewProj, lines);
+            render(viewProj, lines, batches);
             currentFrame = (currentFrame + 1) % vke_render::MAX_FRAMES_IN_FLIGHT;
         }
 
@@ -74,7 +74,7 @@ namespace vke_editor
         void removeSceneTextures();
         void createSceneRenderContext(uint32_t width, uint32_t height);
         void cleanupSceneRenderContext();
-        void render(const glm::mat4 &viewProj, std::span<const glm::vec3> lines);
+        void render(const glm::mat4 &viewProj, std::span<const glm::vec3> lines, std::span<const GizmoBatch> batches);
     };
 }
 

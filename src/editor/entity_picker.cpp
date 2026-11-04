@@ -1,4 +1,5 @@
 #include <editor/entity_picker.hpp>
+#include <editor/builtin_assets.hpp>
 #include <scene.hpp>
 #include <component/renderable_object.hpp>
 #include <component/skeleton_animator.hpp>
@@ -8,9 +9,6 @@
 
 namespace vke_editor
 {
-    static const vke_common::AssetHandle ENTITY_PICKING_SHADER_ID = 513;
-    static const vke_common::AssetHandle ENTITY_PICKING_SKIN_SHADER_ID = 514;
-
     namespace
     {
         constexpr VkFormat idFormat = VK_FORMAT_R32_UINT;
@@ -58,8 +56,8 @@ namespace vke_editor
 
     EntityPicker::EntityPicker(VkFormat depthFormat) : depthFormat(depthFormat)
     {
-        shaders[0] = vke_common::AssetManager::LoadVertFragShaderUnique(ENTITY_PICKING_SHADER_ID);
-        shaders[1] = vke_common::AssetManager::LoadVertFragShaderUnique(ENTITY_PICKING_SKIN_SHADER_ID);
+        shaders[0] = vke_common::AssetManager::LoadVertFragShaderUnique(BUILTIN_VFSHADER_ENTITY_PICKING_ID);
+        shaders[1] = vke_common::AssetManager::LoadVertFragShaderUnique(BUILTIN_VFSHADER_ENTITY_PICKING_SKIN_ID);
     }
 
     vke_render::GraphicsPipeline &EntityPicker::getPipeline(bool skinned, uint32_t stride)
