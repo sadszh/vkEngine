@@ -1,0 +1,13 @@
+Import("env")
+
+svg_env = env.Clone()
+svg_env.Append(CPPPATH=["include", "plutovg/include"], CPPDEFINES=[
+    "LUNASVG_BUILD_STATIC", "PLUTOVG_BUILD_STATIC", "_CRT_SECURE_NO_WARNINGS",
+    "LUNASVG_DISABLE_LOAD_SYSTEM_FONTS", "LUNASVG_DISABLE_EXTERNAL_RESOURCES",
+])
+svg_objs = svg_env.Object(Glob("source/*.cpp"))
+pluto_env = svg_env.Clone()
+pluto_env.Replace(CCFLAGS=[flag for flag in env["CCFLAGS"] if flag not in ("/std:c++23preview", "/EHs-")])
+pluto_env.Append(CCFLAGS=["/std:c11"])
+svg_objs += pluto_env.Object(Glob("plutovg/source/*.c"))
+Return("svg_objs")

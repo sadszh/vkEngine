@@ -1,4 +1,5 @@
 #include <asset/asset_manager.hpp>
+#include <asset/svg.hpp>
 #include <logger.hpp>
 #include <stb/stb_image.h>
 #include <vector>
@@ -123,6 +124,17 @@ namespace vke_common
 
     static inline std::unique_ptr<vke_render::Texture2D> loadTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::string &fullPath)
     {
+        if (IsSVGPath(asset.path))
+        {
+            VKE_FATAL_IF(asset.format != VK_FORMAT_R8G8B8A8_SRGB && asset.format != VK_FORMAT_R8G8B8A8_UNORM,
+                         "SVG textures require R8G8B8A8_SRGB or R8G8B8A8_UNORM: {}", fullPath)
+            auto image = LoadSVG(fullPath, asset.rasterWidth, asset.rasterHeight);
+            VKE_FATAL_IF(!image, "Failed to load SVG {}: {}", fullPath, image.error())
+            return std::make_unique<vke_render::Texture2D>(hdl, image->pixels.data(), image->width, image->height,
+                                                          asset.format, asset.usage, asset.layout,
+                                                          asset.minFilter, asset.magFilter, asset.addressMode,
+                                                          asset.anisotropyEnable, asset.generateMipMap);
+        }
         int texWidth, texHeight, texChannels;
         void *pixels = nullptr;
         if (asset.format == VK_FORMAT_R16G16B16A16_UNORM)

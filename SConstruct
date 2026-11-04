@@ -112,6 +112,7 @@ ozzObjs = SConscript(["third_party/ozz/Sconscript"], exports=["env"])
 freetypeObjs = SConscript(["third_party/freetype/Sconscript"], exports=["env"])
 recastObjs = SConscript(["third_party/recast/Sconscript"], exports=["env"])
 sqliteObjs = SConscript(["third_party/sqlite/Sconscript"], exports=["env"])
+svgObjs = SConscript(["third_party/lunasvg/Sconscript"], exports=["env"])
 
 
 libs = ["Gdi32", "shell32", "user32", "vulkan-1"] + selflibs
@@ -126,7 +127,7 @@ cpppath = [
     "./third_party/imgui/backends",
 ]
 cpppath.append("./third_party/freetype/include")
-cppdefines = ["JSON_NOEXCEPTION", "SPDLOG_NO_EXCEPTIONS"]
+cppdefines = ["JSON_NOEXCEPTION", "SPDLOG_NO_EXCEPTIONS", "LUNASVG_BUILD_STATIC"]
 if ENABLE_FRAME_GRAPH_PROFILING:
     cppdefines.append("VKE_ENABLE_FRAME_GRAPH_PROFILING")
 if DEBUG:
@@ -139,10 +140,12 @@ commonsrc = (
     + freetypeObjs
     + recastObjs
     + sqliteObjs
+    + svgObjs
     + [
         "./src/render/environment.cpp",
         "./src/asset/asset.cpp",
         "./src/asset/loader.cpp",
+        "./src/asset/svg.cpp",
         "./src/asset/scene_loader.cpp",
         "./src/asset/builtin.cpp",
         "./src/asset/asset_db_json.cpp",

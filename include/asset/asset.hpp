@@ -172,6 +172,8 @@ namespace vke_common
         VkSamplerAddressMode addressMode;
         bool anisotropyEnable;
         bool generateMipMap;
+        int rasterWidth = 0;
+        int rasterHeight = 0;
 
         TextureAsset() {}
 
@@ -185,6 +187,8 @@ namespace vke_common
             addressMode = json.contains("addressMode") ? (VkSamplerAddressMode)json["addressMode"] : VK_SAMPLER_ADDRESS_MODE_REPEAT;
             anisotropyEnable = json.contains("anisotropy") ? (bool)json["anisotropy"] : true;
             generateMipMap = json.contains("genMipMap") ? (bool)json["genMipMap"] : true;
+            rasterWidth = json.value("rasterWidth", 0);
+            rasterHeight = json.value("rasterHeight", 0);
         }
 
         TextureAsset(AssetHandle id, const std::string &nm, const std::string &pth)
@@ -202,6 +206,8 @@ namespace vke_common
             json["addressMode"] = addressMode;
             json["anisotropy"] = anisotropyEnable;
             json["genMipMap"] = generateMipMap;
+            json["rasterWidth"] = rasterWidth;
+            json["rasterHeight"] = rasterHeight;
         }
     };
 

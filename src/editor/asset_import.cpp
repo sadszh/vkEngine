@@ -1,5 +1,6 @@
 #include <editor/editor.hpp>
 #include <editor/editor_config.hpp>
+#include <asset/svg.hpp>
 #include <imgui/dialog/ImGuiFileDialog.h>
 #include <algorithm>
 #include <cstring>
@@ -30,6 +31,8 @@ namespace vke_editor
             int textureAddressMode = 0;
             bool textureAnisotropy = true;
             bool textureGenerateMipMap = true;
+            int textureRasterWidth = 0;
+            int textureRasterHeight = 0;
 
             bool animationHasRootMotion = false;
 
@@ -76,7 +79,7 @@ namespace vke_editor
             case vke_common::ASSET_AUDIO_CLIP:
                 return ".wav,.mp3,.ogg,.flac";
             case vke_common::ASSET_TEXTURE:
-                return ".png,.jpg,.jpeg,.bmp,.tga,.hdr,.ktx";
+                return ".png,.jpg,.jpeg,.bmp,.tga,.hdr,.ktx,.svg,.SVG";
             case vke_common::ASSET_FONT:
                 return ".ttf,.otf";
             default:
@@ -130,6 +133,10 @@ namespace vke_editor
                 return false;
             if (importState.type == vke_common::ASSET_VF_SHADER && importState.fragmentPath[0] == '\0')
                 return false;
+            if (importState.type == vke_common::ASSET_TEXTURE && vke_common::IsSVGPath(importState.path))
+                return importState.textureRasterWidth >= 0 && importState.textureRasterHeight >= 0 &&
+                       importState.textureRasterWidth <= vke_common::MaxSVGDimension &&
+                       importState.textureRasterHeight <= vke_common::MaxSVGDimension;
             return importState.type != vke_common::ASSET_FONT || IsFontConfigurationValid();
         }
 
@@ -240,7 +247,16 @@ namespace vke_editor
             if (importState.type == vke_common::ASSET_TEXTURE)
             {
                 ImGui::SeparatorText("Texture Settings");
-                ImGui::Combo("Format", &importState.textureFormat, textureFormatNames, textureFormatCount);
+                const bool svg = vke_common::IsSVGPath(importState.path);
+                if (svg)
+                {
+                    if (importState.textureFormat > 1)
+                        importState.textureFormat = 0;
+                    ImGui::InputInt("Raster Width", &importState.textureRasterWidth);
+                    ImGui::InputInt("Raster Height", &importState.textureRasterHeight);
+                    ImGui::TextDisabled("0 = automatic; maximum 4096 pixels per dimension.");
+                }
+                ImGui::Combo("Format", &importState.textureFormat, textureFormatNames, svg ? 2 : textureFormatCount);
                 ImGui::Combo("Min Filter", &importState.textureMinFilter, textureFilterNames, textureFilterCount);
                 ImGui::Combo("Mag Filter", &importState.textureMagFilter, textureFilterNames, textureFilterCount);
                 ImGui::Combo("Address Mode", &importState.textureAddressMode,
@@ -345,6 +361,17 @@ namespace vke_editor
                         asset.addressMode = textureAddressModeValues[importState.textureAddressMode];
                         asset.anisotropyEnable = importState.textureAnisotropy;
                         asset.generateMipMap = importState.textureGenerateMipMap;
+                        asset.rasterWidth = importState.textureRasterWidth;
+                        asset.rasterHeight = importState.textureRasterHeight;
+                        if (vke_common::IsSVGPath(asset.path))
+                        {
+                            auto image = vke_common::LoadSVG(EditorConfig::GetFullPath(asset.path), asset.rasterWidth, asset.rasterHeight);
+                            if (!image)
+                            {
+                                importState.error = image.error();
+                                break;
+                            }
+                        }
                         newAsset = assetDB->CreateTextureAsset(asset);
                         break;
                     }
@@ -385,7 +412,7 @@ namespace vke_editor
                             importState.dialogActive = false;
                         }
                     }
-                    else
+                    else if (importState.error.empty())
                     {
                         importState.error = "The asset database could not create this asset.";
                     }

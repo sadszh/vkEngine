@@ -87,6 +87,7 @@ Or launch the editor with your project's config:
 - [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo)
 - [ImGuiFileDialog](https://github.com/aiekick/ImGuiFileDialog)
 - [sqlite](https://sqlite.org/)
+- [LunaSVG](https://github.com/sammycage/lunasvg) / [PlutoVG](https://github.com/sammycage/plutovg)
 
 
 ## Roadmap 
