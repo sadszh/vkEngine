@@ -58,10 +58,10 @@ namespace vke_common
 
     SceneResult<void> AssetManager::checkPath(AssetHandle handle, const std::filesystem::path &path) const
     {
-        const auto full = (handle < CUSTOM_ASSET_ID_ST ? RelDir : pathPrefix) / path;
+        const auto full = resolveAssetPath(handle, path);
         std::error_code error;
         if (!std::filesystem::is_regular_file(full, error))
-            return std::unexpected("asset file not found: " + full.string());
+            return std::unexpected("asset file not found: " + PathToUTF8(full));
         return {};
     }
 
@@ -88,20 +88,22 @@ namespace vke_common
         return {};
     }
 
-    void ReadFile(const std::string &filename, std::vector<char> &buffer)
+    void ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer)
     {
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
+        VKE_FATAL_IF(!file, "Cannot open file: {}", PathToUTF8(filename))
         size_t fileSize = (size_t)file.tellg();
         buffer.resize(fileSize);
 
         file.seekg(0);
         file.read(buffer.data(), fileSize);
+        VKE_FATAL_IF(!file, "Cannot read file: {}", PathToUTF8(filename))
 
         file.close();
     }
 
-    nlohmann::json LoadJSON(const std::string &pth)
+    nlohmann::json LoadJSON(const std::filesystem::path &pth)
     {
         nlohmann::json ret;
         std::ifstream ifs(pth, std::ios::in);
@@ -122,14 +124,14 @@ namespace vke_common
         return asset->val;
     }
 
-    static inline std::unique_ptr<vke_render::Texture2D> loadTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::string &fullPath)
+    static inline std::unique_ptr<vke_render::Texture2D> loadTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::filesystem::path &fullPath)
     {
         if (IsSVGPath(asset.path))
         {
             VKE_FATAL_IF(asset.format != VK_FORMAT_R8G8B8A8_SRGB && asset.format != VK_FORMAT_R8G8B8A8_UNORM,
-                         "SVG textures require R8G8B8A8_SRGB or R8G8B8A8_UNORM: {}", fullPath)
+                         "SVG textures require R8G8B8A8_SRGB or R8G8B8A8_UNORM: {}", PathToUTF8(fullPath))
             auto image = LoadSVG(fullPath, asset.rasterWidth, asset.rasterHeight);
-            VKE_FATAL_IF(!image, "Failed to load SVG {}: {}", fullPath, image.error())
+            VKE_FATAL_IF(!image, "Failed to load SVG {}: {}", PathToUTF8(fullPath), image.error())
             return std::make_unique<vke_render::Texture2D>(hdl, image->pixels.data(), image->width, image->height,
                                                           asset.format, asset.usage, asset.layout,
                                                           asset.minFilter, asset.magFilter, asset.addressMode,
@@ -137,10 +139,13 @@ namespace vke_common
         }
         int texWidth, texHeight, texChannels;
         void *pixels = nullptr;
+        FILE *input = _wfopen(fullPath.c_str(), L"rb");
+        VKE_FATAL_IF(!input, "Cannot open texture: {}", PathToUTF8(fullPath))
         if (asset.format == VK_FORMAT_R16G16B16A16_UNORM)
-            pixels = stbi_load_16(fullPath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+            pixels = stbi_load_from_file_16(input, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         else
-            pixels = stbi_load(fullPath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+            pixels = stbi_load_from_file(input, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        fclose(input);
         VKE_FATAL_IF(!pixels, "Failed to load texture image!")
 
         std::unique_ptr<vke_render::Texture2D> texture = std::make_unique<vke_render::Texture2D>(hdl, pixels, texWidth, texHeight,
@@ -158,9 +163,7 @@ namespace vke_common
                           : instance->assetDB->GetTextureAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         return loadTexture2D(hdl, *asset, path);
     }
 
@@ -171,16 +174,14 @@ namespace vke_common
                           : instance->assetDB->GetTextureAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         std::function<std::unique_ptr<vke_render::Texture2D>(TextureAsset &)> op = [hdl, path](TextureAsset &a)
         { return loadTexture2D(hdl, a, path); };
 
         return loadFromCacheOrUpdate<vke_render::Texture2D>(asset, op);
     }
 
-    static inline std::unique_ptr<vke_render::Mesh> loadMesh(const AssetHandle hdl, const std::string &pth)
+    static inline std::unique_ptr<vke_render::Mesh> loadMesh(const AssetHandle hdl, const std::filesystem::path &pth)
     {
         std::ifstream file(pth, std::ios::binary);
         return std::make_unique<vke_render::Mesh>(hdl, file);
@@ -193,9 +194,7 @@ namespace vke_common
                           : instance->assetDB->GetMeshAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         return loadMesh(hdl, path);
     }
 
@@ -206,16 +205,14 @@ namespace vke_common
                           : instance->assetDB->GetMeshAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         std::function<std::unique_ptr<vke_render::Mesh>(MeshAsset &)> op = [hdl, path](MeshAsset &a)
         { return loadMesh(hdl, path); };
 
         return loadFromCacheOrUpdate<vke_render::Mesh>(asset, op);
     }
 
-    static inline std::unique_ptr<vke_render::ShaderModuleSet> loadVertFragShader(const AssetHandle hdl, const std::string &vpth, const std::string &fpth)
+    static inline std::unique_ptr<vke_render::ShaderModuleSet> loadVertFragShader(const AssetHandle hdl, const std::filesystem::path &vpth, const std::filesystem::path &fpth)
     {
         std::vector<char> vcode, fcode;
         ReadFile(vpth, vcode);
@@ -230,12 +227,8 @@ namespace vke_common
                           : instance->assetDB->GetVFShaderAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string vertPath = hdl < CUSTOM_ASSET_ID_ST
-                                   ? (RelDir / asset->path).string()
-                                   : (instance->pathPrefix / asset->path).string();
-        std::string fragPath = hdl < CUSTOM_ASSET_ID_ST
-                                   ? (RelDir / asset->fragPath).string()
-                                   : (instance->pathPrefix / asset->fragPath).string();
+        const auto vertPath = resolveAssetPath(hdl, asset->path);
+        const auto fragPath = resolveAssetPath(hdl, asset->fragPath);
         return loadVertFragShader(hdl, vertPath, fragPath);
     }
 
@@ -246,19 +239,15 @@ namespace vke_common
                           : instance->assetDB->GetVFShaderAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string vertPath = hdl < CUSTOM_ASSET_ID_ST
-                                   ? (RelDir / asset->path).string()
-                                   : (instance->pathPrefix / asset->path).string();
-        std::string fragPath = hdl < CUSTOM_ASSET_ID_ST
-                                   ? (RelDir / asset->fragPath).string()
-                                   : (instance->pathPrefix / asset->fragPath).string();
+        const auto vertPath = resolveAssetPath(hdl, asset->path);
+        const auto fragPath = resolveAssetPath(hdl, asset->fragPath);
         std::function<std::unique_ptr<vke_render::ShaderModuleSet>(VFShaderAsset &)> op = [hdl, vertPath, fragPath](VFShaderAsset &a)
         { return loadVertFragShader(hdl, vertPath, fragPath); };
 
         return loadFromCacheOrUpdate<vke_render::ShaderModuleSet>(asset, op);
     }
 
-    static inline std::unique_ptr<vke_render::ShaderModuleSet> loadComputeShader(const AssetHandle hdl, const std::string &pth)
+    static inline std::unique_ptr<vke_render::ShaderModuleSet> loadComputeShader(const AssetHandle hdl, const std::filesystem::path &pth)
     {
         std::vector<char> code;
         ReadFile(pth, code);
@@ -272,9 +261,7 @@ namespace vke_common
                           : instance->assetDB->GetComputeShaderAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         return loadComputeShader(hdl, path);
     }
 
@@ -285,9 +272,7 @@ namespace vke_common
                           : instance->assetDB->GetComputeShaderAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         std::function<std::unique_ptr<vke_render::ShaderModuleSet>(ComputeShaderAsset &)> op = [hdl, path](ComputeShaderAsset &a)
         { return loadComputeShader(hdl, path); };
 
@@ -331,14 +316,19 @@ namespace vke_common
         return loadFromCacheOrUpdate<vke_render::Material>(asset, op);
     }
 
-    std::unique_ptr<Skeleton> loadSkeleton(SkeletonAsset &asset, const std::string &fullPath)
+    std::unique_ptr<Skeleton> loadSkeleton(SkeletonAsset &asset, const std::filesystem::path &fullPath)
     {
         auto ret = std::make_unique<Skeleton>(asset.id);
-        ozz::io::File file(fullPath.c_str(), "rb");
+        ozz::io::File file(_wfopen(fullPath.c_str(), L"rb"));
+        if (!file.opened())
+        {
+            VKE_LOG_ERROR("Cannot open animation archive: {}", PathToUTF8(fullPath))
+            return nullptr;
+        }
         ozz::io::IArchive archive(&file);
         if (!archive.TestTag<ozz::animation::Skeleton>())
         {
-            VKE_LOG_ERROR("Failed to load skeleton instance from file {}", fullPath)
+            VKE_LOG_ERROR("Failed to load skeleton instance from file {}", PathToUTF8(fullPath))
             return nullptr;
         }
         archive >> ret->skeleton;
@@ -352,9 +342,7 @@ namespace vke_common
                           : instance->assetDB->GetSkeletonAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         return loadSkeleton(*asset, path);
     }
 
@@ -365,22 +353,25 @@ namespace vke_common
                           : instance->assetDB->GetSkeletonAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         std::function<std::unique_ptr<Skeleton>(SkeletonAsset &)> op = [path](SkeletonAsset &a)
         { return loadSkeleton(a, path); };
         return loadFromCacheOrUpdate<Skeleton>(asset, op);
     }
 
-    std::unique_ptr<Animation> loadAnimation(AnimationAsset &asset, const std::string &fullPath)
+    std::unique_ptr<Animation> loadAnimation(AnimationAsset &asset, const std::filesystem::path &fullPath)
     {
         auto ret = std::make_unique<Animation>(asset.id);
-        ozz::io::File file(fullPath.c_str(), "rb");
+        ozz::io::File file(_wfopen(fullPath.c_str(), L"rb"));
+        if (!file.opened())
+        {
+            VKE_LOG_ERROR("Cannot open animation archive: {}", PathToUTF8(fullPath))
+            return nullptr;
+        }
         ozz::io::IArchive archive(&file);
         if (!archive.TestTag<ozz::animation::Animation>())
         {
-            VKE_LOG_ERROR("Failed to load animation instance from file {}", fullPath)
+            VKE_LOG_ERROR("Failed to load animation instance from file {}", PathToUTF8(fullPath))
             return nullptr;
         }
         archive >> ret->animation;
@@ -389,14 +380,14 @@ namespace vke_common
         {
             if (!archive.TestTag<ozz::animation::Float3Track>())
             {
-                VKE_LOG_ERROR("Failed to load root motion position track from file {}", fullPath)
+                VKE_LOG_ERROR("Failed to load root motion position track from file {}", PathToUTF8(fullPath))
                 return nullptr;
             }
             archive >> ret->rootMotionPosition;
 
             if (!archive.TestTag<ozz::animation::QuaternionTrack>())
             {
-                VKE_LOG_ERROR("Failed to load root motion rotation track from file {}", fullPath)
+                VKE_LOG_ERROR("Failed to load root motion rotation track from file {}", PathToUTF8(fullPath))
                 return nullptr;
             }
             archive >> ret->rootMotionRotation;
@@ -436,9 +427,7 @@ namespace vke_common
                           : instance->assetDB->GetAnimationAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         return loadAnimation(*asset, path);
     }
 
@@ -449,25 +438,25 @@ namespace vke_common
                           : instance->assetDB->GetAnimationAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         std::function<std::unique_ptr<Animation>(AnimationAsset &)> op = [path](AnimationAsset &a)
         { return loadAnimation(a, path); };
         return loadFromCacheOrUpdate<Animation>(asset, op);
     }
 
-    static inline std::unique_ptr<Font> loadFont(FontAsset &asset, const std::string &fullPath)
+    static inline std::unique_ptr<Font> loadFont(FontAsset &asset, const std::filesystem::path &fullPath)
     {
         auto ret = std::make_unique<Font>(asset.id);
-        FT_Error error = FT_New_Face(AssetManager::GetInstance()->ftLibrary, fullPath.c_str(), 0, &(ret->face));
-        VKE_FATAL_IF(error != FT_Err_Ok, "Failed to load font face from {}", fullPath)
+        ReadFile(fullPath, ret->fontData);
+        FT_Error error = FT_New_Memory_Face(AssetManager::GetInstance()->ftLibrary,
+            reinterpret_cast<const FT_Byte *>(ret->fontData.data()), static_cast<FT_Long>(ret->fontData.size()), 0, &(ret->face));
+        VKE_FATAL_IF(error != FT_Err_Ok, "Failed to load font face from {}", PathToUTF8(fullPath))
 
         if (ret->face->charmap == nullptr)
             FT_Select_Charmap(ret->face, FT_ENCODING_UNICODE);
 
         error = FT_Set_Pixel_Sizes(ret->face, 0, asset.pixelSize);
-        VKE_FATAL_IF(error != FT_Err_Ok, "Failed to set font pixel size to {} for {}", asset.pixelSize, fullPath)
+        VKE_FATAL_IF(error != FT_Err_Ok, "Failed to set font pixel size to {} for {}", asset.pixelSize, PathToUTF8(fullPath))
 
         ret->familyName = ret->face->family_name == nullptr ? "" : ret->face->family_name;
         ret->styleName = ret->face->style_name == nullptr ? "" : ret->face->style_name;
@@ -489,9 +478,7 @@ namespace vke_common
                           : instance->assetDB->GetFontAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         return loadFont(*asset, path);
     }
 
@@ -502,17 +489,15 @@ namespace vke_common
                           : instance->assetDB->GetFontAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         std::function<std::unique_ptr<Font>(FontAsset &)> op = [path](FontAsset &a)
         { return loadFont(a, path); };
         return loadFromCacheOrUpdate<Font>(asset, op);
     }
 
-    static std::unique_ptr<vke_audio::AudioClip> loadAudioClip(AudioClipAsset &asset, const std::string &fullPath)
+    static std::unique_ptr<vke_audio::AudioClip> loadAudioClip(AudioClipAsset &asset, const std::filesystem::path &fullPath)
     {
-        return std::make_unique<vke_audio::AudioClip>(asset.id, fullPath);
+        return std::make_unique<vke_audio::AudioClip>(asset.id, PathToUTF8(fullPath));
     }
 
     std::unique_ptr<vke_audio::AudioClip> AssetManager::LoadAudioClipUnique(const AssetHandle hdl)
@@ -522,9 +507,7 @@ namespace vke_common
                           : instance->assetDB->GetAudioClipAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         return loadAudioClip(*asset, path);
     }
 
@@ -535,9 +518,7 @@ namespace vke_common
                           : instance->assetDB->GetAudioClipAsset(hdl);
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
-        std::string path = hdl < CUSTOM_ASSET_ID_ST
-                               ? (RelDir / asset->path).string()
-                               : (instance->pathPrefix / asset->path).string();
+        const auto path = resolveAssetPath(hdl, asset->path);
         std::function<std::unique_ptr<vke_audio::AudioClip>(AudioClipAsset &)> op = [path](AudioClipAsset &a)
         { return loadAudioClip(a, path); };
         return loadFromCacheOrUpdate<vke_audio::AudioClip>(asset, op);

@@ -75,9 +75,9 @@ namespace vke_common
     const std::string AssetTypeToName[] = {"Texture", "Mesh", "VFShader", "ComputeShader",
                                            "Material", "Skeleton", "Animation", "Scene", "Font", "AudioClip"};
 
-    void ReadFile(const std::string &filename, std::vector<char> &buffer);
+    void ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer);
 
-    nlohmann::json LoadJSON(const std::string &pth);
+    nlohmann::json LoadJSON(const std::filesystem::path &pth);
 
     template <AssetType TID, typename T, typename VT>
     class Asset
@@ -92,9 +92,9 @@ namespace vke_common
         Asset() : id(0), val(nullptr) {}
 
         Asset(AssetHandle id, const nlohmann::json &json)
-            : id(id), name(json["name"]), path(json["path"].get<std::string>()), val(nullptr) {}
+            : id(id), name(json["name"]), path(PathFromUTF8(json["path"].get<std::string>())), val(nullptr) {}
         Asset(AssetHandle id, const std::string &nm, const std::string &pth)
-            : id(id), name(nm), path(pth), val(nullptr) {}
+            : id(id), name(nm), path(PathFromUTF8(pth)), val(nullptr) {}
 
         Asset<TID, T, VT> &operator=(const Asset<TID, T, VT> &ano)
         {
@@ -111,7 +111,7 @@ namespace vke_common
                 {"type", type},
                 {"id", id},
                 {"name", name},
-                {"path", path.generic_string()}};
+                {"path", PathToUTF8(path)}};
             static_cast<const T *>(this)->writeJSON(json);
             return json;
         }
@@ -250,16 +250,16 @@ namespace vke_common
         VFShaderAsset() {}
 
         VFShaderAsset(AssetHandle id, const nlohmann::json &json)
-            : fragPath(json["fragPath"].get<std::string>()), Asset(id, json) {}
+            : fragPath(PathFromUTF8(json["fragPath"].get<std::string>())), Asset(id, json) {}
 
         DEFAULT_CONSTRUCTOR2(VFShaderAsset)
 
         VFShaderAsset(AssetHandle id, const std::string &nm, const std::string &pth, const std::string &fragpth)
-            : fragPath(fragpth), Asset(id, nm, pth) {}
+            : fragPath(PathFromUTF8(fragpth)), Asset(id, nm, pth) {}
 
         void writeJSON(nlohmann::json &json) const
         {
-            json["fragPath"] = fragPath.generic_string();
+            json["fragPath"] = PathToUTF8(fragPath);
         }
     };
 

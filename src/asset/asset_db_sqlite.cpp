@@ -160,7 +160,7 @@ namespace vke_common
     void AssetDBSQLite::Init()
     {
         const int rc = sqlite3_open_v2(
-            path.string().c_str(),
+            PathToUTF8(path).c_str(),
             &db,
             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
             nullptr);
@@ -236,7 +236,7 @@ namespace vke_common
 
     bool AssetDBSQLite::BulkLoad(const std::filesystem::path &pth)
     {
-        const nlohmann::json assets = LoadJSON(pth.string());
+        const nlohmann::json assets = LoadJSON(pth);
 
         if (!assets.is_array())
         {

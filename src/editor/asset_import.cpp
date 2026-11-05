@@ -142,38 +142,24 @@ namespace vke_editor
 
         bool GetRelativeAssetPath(const char *input, std::filesystem::path &relativePath, std::string &error)
         {
-            std::error_code pathError;
-            const std::filesystem::path workingDirectory =
-                std::filesystem::weakly_canonical(EditorConfig::GetInstance()->workingDirectory, pathError);
-            if (pathError)
+            try
             {
-                error = "Unable to resolve the project working directory.";
+                auto sourcePath = vke_common::PathFromUTF8(input);
+                if (sourcePath.is_relative())
+                    sourcePath = vke_common::Paths::Project(sourcePath);
+                if (!std::filesystem::is_regular_file(sourcePath))
+                {
+                    error = "The selected path is not a regular file.";
+                    return false;
+                }
+                relativePath = vke_common::Paths::ProjectRelative(sourcePath);
+                return true;
+            }
+            catch (const std::exception &exception)
+            {
+                error = exception.what();
                 return false;
             }
-
-            std::filesystem::path sourcePath(input);
-            if (sourcePath.is_relative())
-                sourcePath = workingDirectory / sourcePath;
-            sourcePath = std::filesystem::weakly_canonical(sourcePath, pathError);
-            if (pathError)
-            {
-                error = "The selected path could not be resolved.";
-                return false;
-            }
-            if (!std::filesystem::is_regular_file(sourcePath, pathError) || pathError)
-            {
-                error = "The selected path is not a readable file.";
-                return false;
-            }
-
-            relativePath = sourcePath.lexically_relative(workingDirectory);
-            if (relativePath.empty() || relativePath.is_absolute() ||
-                (!relativePath.empty() && *relativePath.begin() == ".."))
-            {
-                error = "Assets must be located inside the project working directory.";
-                return false;
-            }
-            return true;
         }
 
         void HandleBrowseResult(const char *key, char *buffer, size_t bufferSize)
@@ -190,7 +176,7 @@ namespace vke_editor
 
                 if (importState.name[0] == '\0')
                 {
-                    const std::string stem = std::filesystem::path(filePath).stem().string();
+                    const std::string stem = vke_common::PathToUTF8(vke_common::PathFromUTF8(filePath).stem());
                     std::strncpy(importState.name, stem.c_str(), sizeof(importState.name) - 1);
                     importState.name[sizeof(importState.name) - 1] = '\0';
                 }
@@ -226,7 +212,7 @@ namespace vke_editor
             if (ImGui::Button("Browse..."))
             {
                 IGFD::FileDialogConfig dialogConfig;
-                dialogConfig.path = EditorConfig::GetInstance()->workingDirectory.string();
+                dialogConfig.path = vke_common::PathToUTF8(vke_common::Paths::ProjectRoot());
                 ImGuiFileDialog::Instance()->OpenDialog(
                     "ImportBrowse", "Select File", GetImportFilter(importState.type), dialogConfig);
             }
@@ -238,7 +224,7 @@ namespace vke_editor
                 if (ImGui::Button("Browse Frag..."))
                 {
                     IGFD::FileDialogConfig dialogConfig;
-                    dialogConfig.path = EditorConfig::GetInstance()->workingDirectory.string();
+                    dialogConfig.path = vke_common::PathToUTF8(vke_common::Paths::ProjectRoot());
                     ImGuiFileDialog::Instance()->OpenDialog(
                         "ImportBrowseFrag", "Select Fragment Shader", ".spv", dialogConfig);
                 }
@@ -365,7 +351,7 @@ namespace vke_editor
                         asset.rasterHeight = importState.textureRasterHeight;
                         if (vke_common::IsSVGPath(asset.path))
                         {
-                            auto image = vke_common::LoadSVG(EditorConfig::GetFullPath(asset.path), asset.rasterWidth, asset.rasterHeight);
+                            auto image = vke_common::LoadSVG(vke_common::Paths::Project(asset.path), asset.rasterWidth, asset.rasterHeight);
                             if (!image)
                             {
                                 importState.error = image.error();

@@ -40,7 +40,7 @@ scons
 
 ## Run
 
-Run from the repository root. The engine expects a single game config json:
+The engine expects a single game config JSON. The examples below use commands relative to the repository root:
 
 ```
 ./out/engine.exe ./tests/cfg/test_sponza.json

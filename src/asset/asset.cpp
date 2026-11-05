@@ -12,15 +12,20 @@ namespace vke_common
     extern const std::vector<vke_render::Vertex> planeVertices;
     extern const std::vector<uint32_t> planeIndices;
 
-    AssetManager *AssetManager::Init(std::unique_ptr<AssetDBBase> &&db, const std::filesystem::path &prefix)
+    AssetManager *AssetManager::Init(std::unique_ptr<AssetDBBase> &&db)
     {
-        instance = new AssetManager(prefix);
+        instance = new AssetManager();
         instance->assetDB = std::move(db);
         instance->assetDB->Init();
         instance->ftLibrary = nullptr;
         VKE_FATAL_IF(FT_Init_FreeType(&(instance->ftLibrary)), "Failed to initialize FreeType library!")
         instance->initBuiltinAssets();
         return instance;
+    }
+
+    std::filesystem::path AssetManager::resolveAssetPath(AssetHandle handle, const std::filesystem::path &path)
+    {
+        return handle < CUSTOM_ASSET_ID_ST ? Paths::Engine(path) : Paths::Project(path);
     }
 
     void AssetManager::initBuiltinAssets()

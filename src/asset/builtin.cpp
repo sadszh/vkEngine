@@ -2,7 +2,7 @@
 
 namespace vke_common
 {
-    const std::filesystem::path BuiltinAssetLUTPath = std::filesystem::path(REL_DIR) / "builtin_assets" / "builtin_assets.json";
+    const std::filesystem::path BuiltinAssetLUTPath = "builtin_assets/builtin_assets.json";
 
     extern const std::vector<vke_render::Vertex> planeVertices = {
         vke_render::Vertex(glm::vec3(1, 0, 1), glm::vec3(0, 1, 0), glm::vec4(1, 0, 0, 1), glm::vec2(1, 1)),

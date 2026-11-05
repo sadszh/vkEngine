@@ -7,11 +7,14 @@ GLFWwindow *initWindow(int width, int height)
     return glfwCreateWindow(width, height, "Vulkan window", nullptr, nullptr);
 }
 
-int main(int argc, char **argv)
+int wmain(int argc, wchar_t **argv)
 {
     VKE_FATAL_IF(argc != 2, "arg count mismatch")
-    const std::string configPath(argv[1]);
+    const auto configPath = std::filesystem::absolute(std::filesystem::path(argv[1]));
     const nlohmann::json &configJSON = vke_common::LoadJSON(configPath);
+    vke_common::Paths::Init(configPath,
+        vke_common::PathFromUTF8(configJSON.value("projectRoot", ".")),
+        vke_common::PathFromUTF8(configJSON.value("engineRoot", "")));
     vke_common::GameConfig::Init(configJSON);
     const vke_common::GameConfig *gameConfig = vke_common::GameConfig::GetInstance();
 
@@ -32,7 +35,7 @@ int main(int argc, char **argv)
     vke_common::Engine *engine = vke_common::Engine::Init(window, *gameConfig, nullptr, passes, customPasses);
 
     {
-        auto sceneData = vke_common::AssetManager::LoadSceneFile(gameConfig->defaultScenePath);
+        auto sceneData = vke_common::AssetManager::LoadSceneFile(vke_common::Paths::Project(vke_common::PathFromUTF8(gameConfig->defaultScenePath)));
         VKE_FATAL_IF(!sceneData, "Cannot read scene: {}", sceneData.error())
         auto prepared = vke_common::AssetManager::PrepareSceneData(*sceneData);
         VKE_FATAL_IF(!prepared, "Cannot prepare scene: {}", prepared.error())

@@ -3,6 +3,7 @@
 
 #include <logger.hpp>
 #include <filesystem>
+#include <paths.hpp>
 #include <expected>
 #include <string>
 
@@ -30,11 +31,6 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-#ifndef COMPILE_TO_LIB
-#define REL_DIR "."
-#define REL_DIR_W L"."
-#endif
-
 #include <cstdint>
 
 namespace vke_common
@@ -43,7 +39,6 @@ namespace vke_common
     template <typename T>
     using SceneResult = std::expected<T, std::string>;
 
-    const std::filesystem::path RelDir = REL_DIR;
 }
 
 #endif

@@ -22,8 +22,8 @@ namespace vke_common
     {
     private:
         static AssetManager *instance;
-        AssetManager(const std::filesystem::path &prefix)
-            : ftLibrary(nullptr), pathPrefix(prefix), builtinAssets(std::make_unique<AssetDBJSON>(BuiltinAssetLUTPath)) {};
+        AssetManager()
+            : ftLibrary(nullptr), builtinAssets(std::make_unique<AssetDBJSON>(Paths::Engine(BuiltinAssetLUTPath))) {};
         ~AssetManager()
         {
             assetDB.reset();
@@ -46,7 +46,7 @@ namespace vke_common
             return instance;
         }
 
-        static AssetManager *Init(std::unique_ptr<AssetDBBase> &&db, const std::filesystem::path &prefix);
+        static AssetManager *Init(std::unique_ptr<AssetDBBase> &&db);
 
         static void Dispose()
         {
@@ -113,7 +113,7 @@ namespace vke_common
         static SceneResult<void> PrepareSceneData(SceneData &data);
 
     private:
-        std::filesystem::path pathPrefix;
+        static std::filesystem::path resolveAssetPath(AssetHandle handle, const std::filesystem::path &path);
         std::unique_ptr<AssetDBJSON> builtinAssets;
         std::unique_ptr<AssetDBBase> assetDB;
         std::unordered_map<AssetHandle, std::unordered_set<AssetHandle>> sceneDependencies;

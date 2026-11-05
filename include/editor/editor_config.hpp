@@ -17,18 +17,16 @@ namespace vke_editor
     public:
         uint32_t windowWidth;
         uint32_t windowHeight;
-        std::filesystem::path workingDirectory;
-        std::filesystem::path assetDBPath;    // relative to workingDirectory
-        std::filesystem::path gameConfigPath; // relative to workingDirectory
+        std::filesystem::path assetDBPath;    // relative to project root
+        std::filesystem::path gameConfigPath; // relative to project root
         vke_common::GameConfig *gameConfig;
 
         EditorConfig() : windowWidth(1920), windowHeight(1080), gameConfig(nullptr) {};
 
         EditorConfig(const nlohmann::json &json)
             : windowWidth(json["windowWidth"]), windowHeight(json["windowHeight"]),
-              workingDirectory(json["workingDirectory"].get<std::string>()),
-              assetDBPath(json["assetDBPath"].get<std::string>()),
-              gameConfigPath(json.value("gameConfigPath", "")),
+              assetDBPath(vke_common::PathFromUTF8(json["assetDBPath"].get<std::string>())),
+              gameConfigPath(vke_common::PathFromUTF8(json.value("gameConfigPath", ""))),
               gameConfig(nullptr) {}
 
         static EditorConfig *GetInstance()
@@ -41,7 +39,7 @@ namespace vke_editor
         {
             instance = new EditorConfig(json);
             const nlohmann::json &gameConfigJSON = vke_common::LoadJSON(
-                GetFullPath(instance->gameConfigPath).string());
+                vke_common::Paths::Project(instance->gameConfigPath));
             instance->gameConfig = vke_common::GameConfig::Init(gameConfigJSON);
             return instance;
         }
@@ -51,11 +49,6 @@ namespace vke_editor
             vke_common::GameConfig::Dispose();
             delete instance;
             instance = nullptr;
-        }
-
-        static std::filesystem::path GetFullPath(const std::filesystem::path &relPath)
-        {
-            return instance->workingDirectory / relPath;
         }
     };
 }

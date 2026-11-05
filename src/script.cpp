@@ -94,9 +94,6 @@ namespace vke_common
         return std::move(context.scripts);
     }
 
-    const std::string EngineCSharpPath = std::string(REL_DIR) + "/csharp";
-    static const char_t *ENGINE_CORE_CSHARP_CONFIG_PATH = REL_DIR_W L"/csharp/EngineCore.runtimeconfig.json";
-    static const char_t *ENGINE_CORE_CSHARP_ASSEMBLY_PATH = REL_DIR_W L"/csharp/EngineCore.dll";
     static const char_t *CSHARP_TYPE_NAME = L"vkEngine.EngineCore.EntryPoint, EngineCore";
     static const char_t *CSHARP_GET_EXPORTS_METHOD_NAME = L"GetCSharpExports";
 
@@ -161,18 +158,20 @@ namespace vke_common
     void ScriptManager::init()
     {
         VKE_FATAL_IF(!loadHostFXR(), "Failed to load hostfxr")
-        getDotnetLoadAssembly(ENGINE_CORE_CSHARP_CONFIG_PATH, functionPointers);
-        functionPointers.loadAssembly(ENGINE_CORE_CSHARP_ASSEMBLY_PATH, nullptr, nullptr);
+        const auto runtimeConfig = Paths::Engine("csharp/EngineCore.runtimeconfig.json");
+        const auto coreAssembly = Paths::Engine("csharp/EngineCore.dll");
+        getDotnetLoadAssembly(runtimeConfig.c_str(), functionPointers);
+        functionPointers.loadAssembly(coreAssembly.c_str(), nullptr, nullptr);
 
         const std::string &gameAssemblyPath = GameConfig::GetInstance()->gameScriptPath;
         if (gameAssemblyPath.length() > 0)
         {
-            functionPointers.loadAssembly(std::wstring(gameAssemblyPath.begin(), gameAssemblyPath.end()).c_str(), nullptr, nullptr);
+            functionPointers.loadAssembly(Paths::Project(PathFromUTF8(gameAssemblyPath)).c_str(), nullptr, nullptr);
             const std::string &typeInfoPath =
                 GameConfig::GetInstance()->gameScriptTypeInfoPath;
             VKE_FATAL_IF(typeInfoPath.empty(),
                          "gameScriptTypeInfoPath is required when gameScriptPath is configured")
-            loadTypeInfos(typeInfoPath);
+            loadTypeInfos(Paths::Project(PathFromUTF8(typeInfoPath)));
         }
 
         getCSharpExports();
@@ -181,20 +180,20 @@ namespace vke_common
         registerNativeFunctions();
     }
 
-    void ScriptManager::loadTypeInfos(const std::string &path)
+    void ScriptManager::loadTypeInfos(const std::filesystem::path &path)
     {
         std::ifstream input(path);
-        VKE_FATAL_IF(!input, "Failed to open game script type information: {}", path)
+        VKE_FATAL_IF(!input, "Failed to open game script type information: {}", PathToUTF8(path))
 
         const nlohmann::json document = nlohmann::json::parse(input, nullptr, false);
         VKE_FATAL_IF(document.is_discarded() || !document.is_object(),
-                     "Invalid game script type information JSON: {}", path)
+                     "Invalid game script type information JSON: {}", PathToUTF8(path))
 
         const auto types = document.find("types");
         VKE_FATAL_IF(types == document.end(),
-                     "Game script type information is missing field $.types: {}", path)
+                     "Game script type information is missing field $.types: {}", PathToUTF8(path))
         VKE_FATAL_IF(!types->is_array(),
-                     "Game script type information field $.types must be an array: {}", path)
+                     "Game script type information field $.types must be an array: {}", PathToUTF8(path))
 
         typeInfos.clear();
         typeInfos.reserve(types->size());
@@ -205,14 +204,14 @@ namespace vke_common
             {
                 VKE_FATAL("Invalid game script TypeInfo at $.types[{}]{}: {} ({})",
                           i, type.error().path.substr(1),
-                          ToString(type.error().code), path)
+                          ToString(type.error().code), PathToUTF8(path))
             }
 
             const std::string name = (*type)->Name();
             const auto [_, inserted] = typeInfos.emplace(name, std::move(*type));
             VKE_FATAL_IF(!inserted,
                          "Duplicate game script TypeInfo name '{}' at $.types[{}]: {}",
-                         name, i, path)
+                         name, i, PathToUTF8(path))
         }
     }
 

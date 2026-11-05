@@ -27,7 +27,7 @@ namespace vke_common
 
     bool AssetDBJSON::bulkLoad(const std::filesystem::path &pth)
     {
-        const nlohmann::json &json = LoadJSON(pth.string());
+        const nlohmann::json &json = LoadJSON(pth);
         for (const auto &asset : json)
         {
             AssetType type = asset["type"];

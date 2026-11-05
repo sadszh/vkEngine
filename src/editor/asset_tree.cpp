@@ -45,7 +45,7 @@ namespace vke_editor
                 AssetTreeNode *node = &root;
                 const std::filesystem::path assetPath = asset.path.lexically_normal();
                 std::vector<std::string> directoryParts =
-                    GetAssetDirectoryParts(assetPath.generic_string());
+                    GetAssetDirectoryParts(vke_common::PathToUTF8(assetPath));
 
                 for (const std::string &part : directoryParts)
                 {
@@ -55,7 +55,7 @@ namespace vke_editor
                     node = &child;
                 }
 
-                node->assets.push_back({type, asset.id, asset.name, asset.path.string()}); });
+                node->assets.push_back({type, asset.id, asset.name, vke_common::PathToUTF8(asset.path)}); });
         }
     }
 

@@ -84,6 +84,11 @@ namespace
         fs::path commonVertexBinaryPath;
         bool commonVertexShaderGenerated = false;
 
+        std::string assetPath(const fs::path &path) const
+        {
+            return vke_common::PathToUTF8(vke_common::Paths::ProjectRelative(path));
+        }
+
         bool Run();
         bool ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsset &out);
         bool ExportMaterial(int materialIndex, uint64_t &out);
@@ -132,11 +137,6 @@ namespace
         }
         output << value;
         return output.good();
-    }
-
-    std::string PathString(const fs::path &path)
-    {
-        return path.lexically_normal().generic_string();
     }
 
     double ReadComponent(const unsigned char *data, int componentType, bool normalized)
@@ -435,8 +435,7 @@ namespace
         return {
             {"pos", {transform.position.x, transform.position.y, transform.position.z}},
             {"scl", {transform.scale.x, transform.scale.y, transform.scale.z}},
-            {"rot", {transform.rotation.x, transform.rotation.y, transform.rotation.z,
-                     transform.rotation.w}}};
+            {"rot", {transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w}}};
     }
 
     std::string ImageExtension(const tinygltf::Image &image)
@@ -561,7 +560,8 @@ layout(location = 0) in vec3 vViewPos;
 layout(location = 1) in vec2 vTexCoord;
 layout(location = 2) in mat3 vTBN;
 layout(location = 0) out vec4 outColor;
-)" : R"(#version 450
+)"
+                                         : R"(#version 450
 layout(push_constant) uniform PushConstants {
     layout(offset = 0) mat4 model;
     layout(offset = 64) vec4 baseColorFactor;
@@ -637,9 +637,10 @@ layout(location = 3) out float outLinearDepth;
     bool CompileShader(const fs::path &source, const fs::path &output)
     {
         VKE_LOG_INFO("Compiling shader {}", source.filename().string())
-        const std::string command = "glslc --target-env=vulkan1.4 -I \"builtin_assets/shader\" \"" +
-                                    source.string() + "\" -o \"" + output.string() + "\"";
-        if (std::system(command.c_str()) != 0)
+        const std::wstring command = L"glslc --target-env=vulkan1.4 -I \"" +
+                                     vke_common::Paths::Engine("builtin_assets/shader").wstring() + L"\" \"" +
+                                     source.wstring() + L"\" -o \"" + output.wstring() + L"\"";
+        if (_wsystem(command.c_str()) != 0)
         {
             LogError("glslc failed for " + source.string());
             return false;
@@ -728,7 +729,7 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
         assets.push_back({{"type", ASSET_MESH},
                           {"id", out.mesh},
                           {"name", meshName},
-                          {"path", PathString(meshPath)}});
+                          {"path", assetPath(meshPath)}});
         if (!ExportMaterial(primitive.material, out.material))
             return false;
     }
@@ -738,7 +739,7 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
     return true;
 }
 
-    bool Converter::ExportTexture(int textureIndex, bool srgb, uint64_t &out)
+bool Converter::ExportTexture(int textureIndex, bool srgb, uint64_t &out)
 {
     const auto key = std::make_pair(textureIndex, srgb);
     auto existing = textureAssets.find(key);
@@ -757,7 +758,7 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
     fs::path texturePath;
     if (!image.uri.empty() && image.uri.rfind("data:", 0) != 0)
     {
-        const fs::path sourcePath = resourceDir / fs::path(image.uri);
+        const fs::path sourcePath = resourceDir / vke_common::PathFromUTF8(image.uri);
         texturePath = outputDir /
                       (SafeName(baseName + "_image_" + std::to_string(texture.source)) +
                        sourcePath.extension().string());
@@ -780,7 +781,7 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
         if (view.byteOffset + view.byteLength > buffer.data.size())
             return false;
         texturePath = outputDir / (SafeName(baseName + "_image_" +
-                                             std::to_string(texture.source)) +
+                                            std::to_string(texture.source)) +
                                    ImageExtension(image));
         std::ofstream output(texturePath, std::ios::binary);
         output.write(reinterpret_cast<const char *>(buffer.data.data() + view.byteOffset),
@@ -816,7 +817,7 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
     assets.push_back({{"type", ASSET_TEXTURE},
                       {"id", out},
                       {"name", textureName},
-                      {"path", PathString(texturePath)},
+                      {"path", assetPath(texturePath)},
                       {"format", srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM},
                       {"minFilter", minFilter},
                       {"magFilter", magFilter},
@@ -867,10 +868,10 @@ bool Converter::ExportShader(int materialIndex, uint64_t &out)
     assets.push_back({{"type", ASSET_VF_SHADER},
                       {"id", out},
                       {"name", shaderName},
-                      {"path", PathString(commonVertexBinaryPath)},
-                      {"fragPath", PathString(fragSpvPath)},
-                      {"sourcePath", PathString(commonVertexSourcePath)},
-                      {"fragSourcePath", PathString(fragPath)}});
+                      {"path", assetPath(commonVertexBinaryPath)},
+                      {"fragPath", assetPath(fragSpvPath)},
+                      {"sourcePath", assetPath(commonVertexSourcePath)},
+                      {"fragSourcePath", assetPath(fragPath)}});
     shaderAssets[featureMask] = out;
     VKE_LOG_INFO("Generated shader variant {} (mask 0x{:X})", shaderName, featureMask)
     return true;
@@ -922,8 +923,8 @@ bool Converter::ExportMaterial(int materialIndex, uint64_t &out)
     for (size_t i = 0; i < std::min<size_t>(3, material.emissiveFactor.size()); ++i)
         emissive[i] = material.emissiveFactor[i];
     const double alphaCutoff = material.alphaMode == "MASK" ? material.alphaCutoff : 0.0;
-    const std::string renderMode = material.alphaMode == "MASK" ? "cutoff" :
-                                   material.alphaMode == "BLEND" ? "blend" : "opaque";
+    const std::string renderMode = material.alphaMode == "MASK" ? "cutoff" : material.alphaMode == "BLEND" ? "blend"
+                                                                                                           : "opaque";
 
     out = ids.material++;
     const std::string materialName =
@@ -932,37 +933,34 @@ bool Converter::ExportMaterial(int materialIndex, uint64_t &out)
                                               (materialIndex >= 0 ? std::to_string(materialIndex)
                                                                   : std::string("default"))
                                         : material.name));
-    assets.push_back({
-        {"type", ASSET_MATERIAL},
-        {"id", out},
-        {"name", materialName},
-        {"path", ""},
-        {"shader", shader},
-        {"renderMode", renderMode},
-        {"blendMode", "alpha"},
-        {"textures", textures},
-        {"bindingInfos", bindings},
-        {"pushConstantInfos",
-         json::array({
-             {{"name", "baseColorFactor"},
-              {"offset", 64},
-              {"component_cnt", 4},
-              {"component_type", "float"},
-              {"data", {baseColor[0], baseColor[1], baseColor[2], baseColor[3]}}},
-             {{"name", "materialFactors"},
-              {"offset", 80},
-              {"component_cnt", 4},
-              {"component_type", "float"},
-              {"data",
-               {material.pbrMetallicRoughness.metallicFactor,
-                material.pbrMetallicRoughness.roughnessFactor,
-                material.normalTexture.scale, material.occlusionTexture.strength}}},
-             {{"name", "emissiveAlpha"},
-              {"offset", 96},
-              {"component_cnt", 4},
-              {"component_type", "float"},
-              {"data", {emissive[0], emissive[1], emissive[2], alphaCutoff}}}
-         })}});
+    assets.push_back({{"type", ASSET_MATERIAL},
+                      {"id", out},
+                      {"name", materialName},
+                      {"path", ""},
+                      {"shader", shader},
+                      {"renderMode", renderMode},
+                      {"blendMode", "alpha"},
+                      {"textures", textures},
+                      {"bindingInfos", bindings},
+                      {"pushConstantInfos",
+                       json::array({{{"name", "baseColorFactor"},
+                                     {"offset", 64},
+                                     {"component_cnt", 4},
+                                     {"component_type", "float"},
+                                     {"data", {baseColor[0], baseColor[1], baseColor[2], baseColor[3]}}},
+                                    {{"name", "materialFactors"},
+                                     {"offset", 80},
+                                     {"component_cnt", 4},
+                                     {"component_type", "float"},
+                                     {"data",
+                                      {material.pbrMetallicRoughness.metallicFactor,
+                                       material.pbrMetallicRoughness.roughnessFactor,
+                                       material.normalTexture.scale, material.occlusionTexture.strength}}},
+                                    {{"name", "emissiveAlpha"},
+                                     {"offset", 96},
+                                     {"component_cnt", 4},
+                                     {"component_type", "float"},
+                                     {"data", {emissive[0], emissive[1], emissive[2], alphaCutoff}}}})}});
     materialAssets[materialIndex] = out;
     if (materialAssets.size() == 1 || materialAssets.size() % 50 == 0)
         VKE_LOG_INFO("Exported {} material assets", materialAssets.size())
@@ -1015,32 +1013,29 @@ bool Converter::WriteScene(size_t sceneIndex)
                 parents[child] = nodeIds[nodeIndex];
 
     json objects = json::array();
-    objects.push_back({
-        {"id", 1},
-        {"static", true},
-        {"name", "scene_cam"},
-        {"parent", 0},
-        {"transform",
-         {{"pos", {0.0, 0.0, 3.0}},
-          {"scl", {1.0, 1.0, 1.0}},
-          {"rot", {0.0, 0.0, 0.0, 1.0}}}},
-        {"components",
-         json::array({
-             {{"type", "camera"},
-              {"id", 1},
-              {"fov", 70.0},
-              {"width", 1920.0},
-              {"height", 1080.0},
-              {"near", 0.01},
-              {"far", 1000.0}},
-             {{"type", "script"},
-              {"className", "TestProj.TestCameraScript"},
-              {"data",
-               {{"JumpSpeed", 5.0},
-                {"MoveSpeed", 4.0},
-                {"RotateSpeed", 2.0}}}}
-         })},
-        {"children", json::array()}});
+    objects.push_back({{"id", 1},
+                       {"static", true},
+                       {"name", "scene_cam"},
+                       {"parent", 0},
+                       {"transform",
+                        {{"pos", {0.0, 0.0, 3.0}},
+                         {"scl", {1.0, 1.0, 1.0}},
+                         {"rot", {0.0, 0.0, 0.0, 1.0}}}},
+                       {"components",
+                        json::array({{{"type", "camera"},
+                                      {"id", 1},
+                                      {"fov", 70.0},
+                                      {"width", 1920.0},
+                                      {"height", 1080.0},
+                                      {"near", 0.01},
+                                      {"far", 1000.0}},
+                                     {{"type", "script"},
+                                      {"className", "TestProj.TestCameraScript"},
+                                      {"data",
+                                       {{"JumpSpeed", 5.0},
+                                        {"MoveSpeed", 4.0},
+                                        {"RotateSpeed", 2.0}}}}})},
+                       {"children", json::array()}});
 
     for (int nodeIndex : order)
     {
@@ -1086,13 +1081,12 @@ bool Converter::WriteScene(size_t sceneIndex)
                                       {"color", color},
                                       {"intensity", light.intensity}});
             else if (light.type == "spot")
-                components.push_back({
-                    {"type", "spotLight"},
-                    {"radius", light.range > 0.0 ? light.range : 10.0},
-                    {"color", color},
-                    {"intensity", light.intensity},
-                    {"innerCone", glm::degrees(static_cast<float>(light.spot.innerConeAngle))},
-                    {"outerCone", glm::degrees(static_cast<float>(light.spot.outerConeAngle))}});
+                components.push_back({{"type", "spotLight"},
+                                      {"radius", light.range > 0.0 ? light.range : 10.0},
+                                      {"color", color},
+                                      {"intensity", light.intensity},
+                                      {"innerCone", glm::degrees(static_cast<float>(light.spot.innerConeAngle))},
+                                      {"outerCone", glm::degrees(static_cast<float>(light.spot.outerConeAngle))}});
         }
 
         if (meshPrimitives.size() > 1)
@@ -1135,7 +1129,7 @@ bool Converter::WriteScene(size_t sceneIndex)
     assets.push_back({{"type", ASSET_SCENE},
                       {"id", ids.scene++},
                       {"name", sceneName},
-                      {"path", PathString(scenePath)}});
+                      {"path", assetPath(scenePath)}});
     VKE_LOG_INFO("Exported scene {} with {} objects", sceneName, nextObjectId - 1)
     return true;
 }
@@ -1166,7 +1160,7 @@ bool Converter::Run()
     tinygltf::TinyGLTF loader;
     std::string warning;
     std::string loadError;
-    if (!loader.LoadBinaryFromFile(&model, &loadError, &warning, inputPath.string()))
+    if (!loader.LoadBinaryFromFile(&model, &loadError, &warning, vke_common::PathToUTF8(inputPath)))
     {
         LogError(loadError.empty() ? "failed to load GLB" : loadError);
         return false;
@@ -1206,19 +1200,41 @@ bool Converter::Run()
     return true;
 }
 
-int main(int argc, char **argv)
+int wmain(int argc, wchar_t **argv)
 {
-    const bool meshOnly = argc == 5 && std::string(argv[4]) == "--mesh-only";
-    if (argc != 4 && !meshOnly)
+    if (argc < 4)
     {
-        std::cerr << "usage: gltf_scene_conv <input.glb> <resource_dir> <output_dir> [--mesh-only]\n";
+        std::cerr << "usage: gltf_scene_conv <input.glb> <resource_dir> <output_dir> [--mesh-only] [--project-root <dir>]\n";
         return EXIT_FAILURE;
     }
     Converter converter;
     converter.inputPath = fs::absolute(argv[1]);
     converter.resourceDir = fs::absolute(argv[2]);
     converter.outputDir = fs::absolute(argv[3]);
-    converter.baseName = converter.inputPath.stem().string();
-    converter.meshOnly = meshOnly;
-    return converter.Run() ? EXIT_SUCCESS : EXIT_FAILURE;
+    fs::path projectRoot = converter.outputDir;
+    for (int i = 4; i < argc; ++i)
+    {
+        const std::wstring option(argv[i]);
+        if (option == L"--mesh-only")
+            converter.meshOnly = true;
+        else if (option == L"--project-root" && i + 1 < argc)
+            projectRoot = fs::absolute(argv[++i]);
+        else
+        {
+            std::cerr << "Invalid converter option\n";
+            return EXIT_FAILURE;
+        }
+    }
+    vke_common::Paths::Init(projectRoot / "project.json");
+    try
+    {
+        (void)vke_common::Paths::ProjectRelative(converter.outputDir);
+        converter.baseName = vke_common::PathToUTF8(converter.inputPath.stem());
+        return converter.Run() ? EXIT_SUCCESS : EXIT_FAILURE;
+    }
+    catch (const std::exception &error)
+    {
+        LogError(error.what());
+        return EXIT_FAILURE;
+    }
 }

@@ -143,6 +143,7 @@ commonsrc = (
     + svgObjs
     + [
         "./src/render/environment.cpp",
+        "./src/paths.cpp",
         "./src/asset/asset.cpp",
         "./src/asset/loader.cpp",
         "./src/asset/svg.cpp",
@@ -215,7 +216,7 @@ libs.append("nethost")
 
 ### tools
 
-toolCommonSrc = ["./src/logger.cpp"]
+toolCommonSrc = ["./src/paths.cpp", "./src/logger.cpp"]
 
 targetinfo = [
     [

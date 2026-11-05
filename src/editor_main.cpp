@@ -22,13 +22,16 @@ std::vector<vke_render::PassType> defaultPasses{
 
 std::vector<std::unique_ptr<vke_render::RenderPassBase>> customPasses;
 
-int main(int argc, char **argv)
+int wmain(int argc, wchar_t **argv)
 {
     vke_common::Logger::Init(vke_common::LoggerOutput::EngineUI);
     VKE_FATAL_IF(argc != 2, "Usage: editor.exe <path/to/editorconfig.json>")
 
-    const std::string configPath(argv[1]);
+    const auto configPath = std::filesystem::absolute(std::filesystem::path(argv[1]));
     const nlohmann::json &configJSON = vke_common::LoadJSON(configPath);
+    vke_common::Paths::Init(configPath,
+        vke_common::PathFromUTF8(configJSON.value("projectRoot", ".")),
+        vke_common::PathFromUTF8(configJSON.value("engineRoot", "")));
     vke_editor::EditorConfig *editorConfig = vke_editor::EditorConfig::Init(configJSON);
 
     GLFWwindow *window = initWindow(editorConfig->windowWidth, editorConfig->windowHeight);
@@ -39,7 +42,7 @@ int main(int argc, char **argv)
 
     const std::string &scenePath = editorConfig->gameConfig->defaultScenePath;
     {
-        auto sceneData = vke_common::AssetManager::LoadSceneFile(scenePath);
+        auto sceneData = vke_common::AssetManager::LoadSceneFile(vke_common::Paths::Project(vke_common::PathFromUTF8(scenePath)));
         VKE_FATAL_IF(!sceneData, "Cannot read scene: {}", sceneData.error())
         auto prepared = vke_common::AssetManager::PrepareSceneData(*sceneData);
         VKE_FATAL_IF(!prepared, "Cannot prepare scene: {}", prepared.error())

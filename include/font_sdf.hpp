@@ -62,6 +62,7 @@ namespace vke_common
         static constexpr int SDF_SPREAD = 8;
 
         AssetHandle handle = 0;
+        std::vector<char> fontData;
         FT_Face face = nullptr;
         std::string familyName;
         std::string styleName;

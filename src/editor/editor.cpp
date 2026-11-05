@@ -71,10 +71,9 @@ namespace vke_editor
         vke_render::VulkanResourceManager::Init();
         vke_common::AssetManager::Init(
             std::make_unique<vke_common::AssetDBSQLite>(
-                EditorConfig::GetFullPath(editorConfig.assetDBPath),
-                vke_common::CUSTOM_ASSET_ID_ST),
-            editorConfig.workingDirectory);
-        VKE_FATAL_IF(!vke_common::AssetManager::BulkLoad(EditorAssetLUTPath, true),
+                vke_common::Paths::Project(editorConfig.assetDBPath),
+                vke_common::CUSTOM_ASSET_ID_ST));
+        VKE_FATAL_IF(!vke_common::AssetManager::BulkLoad(vke_common::Paths::Engine(EditorAssetLUTPath), true),
                      "Failed to load editor assets from {}", EditorAssetLUTPath.string())
         vke_render::RenderContext *ctx = &(vke_render::RenderEnvironment::GetInstance()->rootRenderContext);
         EditorRenderer::Init(window, ctx, sceneViewportWidth, sceneViewportHeight);
@@ -282,7 +281,7 @@ namespace vke_editor
                         auto json = data->ToJSON();
                         if (json)
                         {
-                            std::ofstream ofs(scenePath);
+                            std::ofstream ofs(vke_common::Paths::Project(vke_common::PathFromUTF8(scenePath)));
                             ofs << json->dump(4);
                         }
                         else

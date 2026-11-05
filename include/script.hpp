@@ -20,7 +20,6 @@
 
 namespace vke_common
 {
-    extern const std::string EngineCSharpPath;
 
     struct CSharpScriptLoadData
     {
@@ -210,7 +209,7 @@ namespace vke_common
         std::unordered_map<std::string, TypeInfoPtr> typeInfos;
 
         void init();
-        void loadTypeInfos(const std::string &path);
+        void loadTypeInfos(const std::filesystem::path &path);
 
         void registerNativeFunctions();
         void getCSharpExports();

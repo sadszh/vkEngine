@@ -41,8 +41,7 @@ def launch_editor(config_path: str) -> subprocess.Popen | None:
     """Launch editor.exe with the given config path.
 
     Returns the Popen object, or None on failure.
-    The working directory is set to the repo root so that relative asset
-    paths (builtin_assets/, editor_assets/, csharp/) resolve correctly.
+    The editor resolves content from its executable and project config locations.
     """
     global _editor_process
 
@@ -64,8 +63,7 @@ def launch_editor(config_path: str) -> subprocess.Popen | None:
 
     try:
         proc = subprocess.Popen(
-            [exe, config_path],
-            cwd=get_repo_root(),
+            [exe, os.path.abspath(config_path)],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -86,13 +84,12 @@ def launch_editor(config_path: str) -> subprocess.Popen | None:
 def create_project_files(project_dir: str, width: int, height: int) -> None:
     """Create editorconfig.json, gameconfig.json and scene.json inside *project_dir*.
 
-    The file contents match those produced by the C++
-    ``Editor::finalizeProjectCreation()`` exactly.
+    Paths in generated configuration files are relative to the project root.
     """
     editor_config = {
         "windowWidth": width,
         "windowHeight": height,
-        "workingDirectory": project_dir,
+        "projectRoot": ".",
         "assetDBPath": "asset_db.db",
         "gameConfigPath": "gameconfig.json",
     }
@@ -103,8 +100,8 @@ def create_project_files(project_dir: str, width: int, height: int) -> None:
         "windowWidth": width,
         "windowHeight": height,
         "enableVulkanValidationLayers": False,
-        "assetLUTPath": os.path.join(project_dir, "asset_db.db"),
-        "defaultScenePath": os.path.join(project_dir, "scene.json"),
+        "assetLUTPath": "asset_db.db",
+        "defaultScenePath": "scene.json",
         "gameScriptPath": "",
         "physicsConfig": {},
         "renderConfig": {},

@@ -7,11 +7,11 @@ namespace vke_common
     SceneResult<SceneData> AssetManager::LoadSceneFile(const std::filesystem::path &path)
     {
         std::ifstream input(path);
-        if (!input) return std::unexpected(path.string() + ": cannot open scene");
+        if (!input) return std::unexpected(PathToUTF8(path) + ": cannot open scene");
         auto json = nlohmann::json::parse(input, nullptr, false);
-        if (json.is_discarded()) return std::unexpected(path.string() + ": invalid JSON");
+        if (json.is_discarded()) return std::unexpected(PathToUTF8(path) + ": invalid JSON");
         auto result = SceneData::FromJSON(json);
-        if (!result) return std::unexpected(path.string() + ": " + result.error());
+        if (!result) return std::unexpected(PathToUTF8(path) + ": " + result.error());
         return result;
     }
 
@@ -32,7 +32,7 @@ namespace vke_common
         auto *asset = GetSceneAsset(handle);
         if (!asset || handle == 0) return std::unexpected(context + "asset not found");
         if (asset->val) return asset->val;
-        auto parsed = LoadSceneFile((handle < CUSTOM_ASSET_ID_ST ? RelDir : pathPrefix) / asset->path);
+        auto parsed = LoadSceneFile(resolveAssetPath(handle, asset->path));
         if (!parsed) return std::unexpected(context + parsed.error());
         if (auto valid = parsed->ValidatePrefab(); !valid) return std::unexpected(context + valid.error());
         std::unordered_set<AssetHandle> dependencies;

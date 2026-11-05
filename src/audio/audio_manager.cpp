@@ -64,7 +64,7 @@ namespace vke_audio
         if (GetEngine() == nullptr)
             return nullptr;
         auto *sound = new ma_sound;
-        const ma_result result = ma_sound_init_from_file(instance->engine, path, flags, nullptr, nullptr, sound);
+        const ma_result result = ma_sound_init_from_file_w(instance->engine, vke_common::PathFromUTF8(path).c_str(), flags, nullptr, nullptr, sound);
         if (result != MA_SUCCESS)
         {
             VKE_LOG_ERROR("AudioManager: failed to load '{}' (error {})", path, (int)result);
