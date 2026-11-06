@@ -1,7 +1,7 @@
 #ifndef TIME_H
 #define TIME_H
 
-#include <common.hpp>
+#include <render/render_common.hpp>
 
 namespace vke_common
 {

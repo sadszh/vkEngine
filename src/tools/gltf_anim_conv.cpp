@@ -140,7 +140,7 @@ static bool checkSkin(const tinygltf::Model &model, int meshID)
     return true;
 }
 
-static vke_common::SceneResult<int> findSkinNode(const tinygltf::Model &model, const tinygltf::Scene &scene)
+static vke_common::Result<int> findSkinNode(const tinygltf::Model &model, const tinygltf::Scene &scene)
 {
     std::vector<bool> visited(model.nodes.size(), false);
     std::vector<int> pending(scene.nodes);
@@ -492,7 +492,7 @@ static std::vector<float> readFloatAccessor(const tinygltf::Model &model,
     return out;
 }
 
-static vke_common::SceneResult<std::vector<float>> readAnimationValues(
+static vke_common::Result<std::vector<float>> readAnimationValues(
     const tinygltf::Model &model, const tinygltf::AnimationSampler &sampler, int type)
 {
     if (sampler.interpolation != "LINEAR" && sampler.interpolation != "STEP")
@@ -531,7 +531,7 @@ static vke_common::SceneResult<std::vector<float>> readAnimationValues(
     return values;
 }
 
-static vke_common::SceneResult<ozz::animation::offline::RawAnimation> buildRawAnimation(
+static vke_common::Result<ozz::animation::offline::RawAnimation> buildRawAnimation(
     const tinygltf::Model &model,
     const tinygltf::Animation &gltfAnimation,
     const ozz::animation::Skeleton &skeleton,
@@ -603,7 +603,7 @@ static vke_common::SceneResult<ozz::animation::offline::RawAnimation> buildRawAn
     return raw;
 }
 
-static vke_common::SceneResult<int> rootJointIndex(const ozz::animation::Skeleton &skeleton,
+static vke_common::Result<int> rootJointIndex(const ozz::animation::Skeleton &skeleton,
                                                  const tinygltf::Skin &skin,
                                                  const std::vector<int> &nodeToJoint,
                                                  const std::string &rootJointName)
@@ -648,7 +648,7 @@ static vke_common::SceneResult<int> rootJointIndex(const ozz::animation::Skeleto
     return root;
 }
 
-static vke_common::SceneResult<void> extractRootMotion(
+static vke_common::Result<void> extractRootMotion(
     const ozz::animation::offline::RawAnimation &raw,
     const ozz::animation::Skeleton &skeleton, int rootJoint,
     ozz::animation::offline::RawFloat3Track &position,
@@ -766,7 +766,7 @@ static vke_common::SceneResult<void> extractRootMotion(
     return {};
 }
 
-static vke_common::SceneResult<void> saveAnimation(
+static vke_common::Result<void> saveAnimation(
     const std::filesystem::path &output,
     const ozz::animation::offline::RawAnimation &raw,
     const ozz::animation::Skeleton &skeleton,

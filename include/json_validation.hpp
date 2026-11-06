@@ -73,11 +73,11 @@ namespace vke_common::json_validation
         {
             return check(fields, [size](const JSON &v) { return Vector(v, size); });
         }
-        SceneResult<void> Result() const { return result; }
+        vke_common::Result<void> Result() const { return result; }
 
     private:
         const JSON &value;
-        SceneResult<void> result;
+        vke_common::Result<void> result;
 
         template <typename Predicate>
         Object &check(std::initializer_list<const char *> fields, Predicate predicate)

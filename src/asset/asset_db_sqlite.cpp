@@ -337,7 +337,7 @@ namespace vke_common
     }
 
     template <typename T>
-    static SceneResult<T> parseAssetRecord(const char *raw, int size, AssetHandle id)
+    static Result<T> parseAssetRecord(const char *raw, int size, AssetHandle id)
     {
         if (!raw || size <= 0) return std::unexpected("empty JSON record");
         auto json = nlohmann::json::parse(raw, raw + size, nullptr, false);

@@ -3,7 +3,7 @@
 
 #include <array>
 
-#include <common.hpp>
+#include <render/render_common.hpp>
 #include <glm/vec2.hpp>
 
 namespace vke_common

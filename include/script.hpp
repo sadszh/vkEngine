@@ -187,10 +187,10 @@ namespace vke_common
             return instance->csharpExports.uiFunctions;
         }
 
-        static SceneResult<std::vector<std::string>> GetScriptList(entt::entity entity);
-        static SceneResult<TypeInfoData> GetScriptData(entt::entity entity, const std::string &className);
-        static SceneResult<void> SetScriptData(entt::entity entity, const std::string &className, const TypeInfoData &data);
-        static SceneResult<std::vector<vke_component::ScriptStateData>> GetEntityScriptsData(entt::entity entity);
+        static Result<std::vector<std::string>> GetScriptList(entt::entity entity);
+        static Result<TypeInfoData> GetScriptData(entt::entity entity, const std::string &className);
+        static Result<void> SetScriptData(entt::entity entity, const std::string &className, const TypeInfoData &data);
+        static Result<std::vector<vke_component::ScriptStateData>> GetEntityScriptsData(entt::entity entity);
 
         TypeInfoPtr FindTypeInfo(std::string_view name) const
         {

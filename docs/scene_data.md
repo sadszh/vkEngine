@@ -2,7 +2,7 @@
 
 SceneData 统一表示场景和预制体的数据，由加载、展开、资源解析三个阶段逐步准备。AssetManager 管理预制体及其依赖资源，SceneManager 根据准备好的数据创建运行时实体和组件。
 
-接口返回 `SceneResult<T>`，即 `std::expected<T, std::string>`。
+接口返回 `Result<T>`，即 `std::expected<T, std::string>`。
 
 ## 加载入口与生命周期
 
@@ -115,16 +115,16 @@ Transform 覆盖替换根的完整 local transform；内部子实体保留各自
 
 ```cpp
 // 获取只读 Expanded 数据，缓存缺失时加载并展开。
-SceneResult<std::shared_ptr<const SceneData>> LoadSceneData(AssetHandle handle);
+Result<std::shared_ptr<const SceneData>> LoadSceneData(AssetHandle handle);
 
 // 读取普通场景文件，返回调用方持有的 Parsed 数据。
-SceneResult<SceneData> LoadSceneFile(const std::filesystem::path& path);
+Result<SceneData> LoadSceneFile(const std::filesystem::path& path);
 
 // 统一执行展开和最终资源解析。
-SceneResult<void> PrepareSceneData(SceneData& data);
+Result<void> PrepareSceneData(SceneData& data);
 
 void InvalidateSceneData(AssetHandle handle);
-SceneResult<std::shared_ptr<const SceneData>> ReloadSceneData(AssetHandle handle);
+Result<std::shared_ptr<const SceneData>> ReloadSceneData(AssetHandle handle);
 ```
 
 PrepareSceneData 按当前阶段执行展开和资源解析，Ready 数据直接返回成功。展开和资源解析分别由私有 expandSceneData、resolveSceneAssets 实现。依赖资源在覆盖完成后加载，仅解析最终组件数据中的引用。
@@ -135,7 +135,7 @@ PrepareSceneData 按当前阶段执行展开和资源解析，Ready 数据直接
 
 缓存数据通过 `Clone()` 复制为可修改的 SceneData，再调用 PrepareSceneData。ReloadSceneData 清除自身及传递依赖缓存，并立即重建指定资源；其他受影响资源在下次请求时重建。缓存失效由调用方显式触发，旧 shared_ptr 持有的快照继续有效。
 
-ScriptStateData 持有 className 和二进制状态，预制体复制和 SceneData 快照使用这一数据表示。文件读取时由 FromJSON 按脚本元数据编码，文件输出时由 ToJSON 转回 JSON。SceneData::ToJSON 返回 SceneResult，以传播类型缺失或二进制无效等错误。脚本元数据必须在读取含脚本的场景文件前加载。
+ScriptStateData 持有 className 和二进制状态，预制体复制和 SceneData 快照使用这一数据表示。文件读取时由 FromJSON 按脚本元数据编码，文件输出时由 ToJSON 转回 JSON。SceneData::ToJSON 返回 Result，以传播类型缺失或二进制无效等错误。脚本元数据必须在读取含脚本的场景文件前加载。
 
 ## 运行时实例化
 
@@ -147,7 +147,7 @@ struct InstantiateOptions
 };
 
 // SceneManager 接口。
-SceneResult<void> Instantiate(
+Result<void> Instantiate(
     const SceneData& data,
     const InstantiateOptions& options);
 ```

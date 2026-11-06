@@ -56,7 +56,7 @@ namespace vke_ui
         updateLayout();
     }
 
-    vke_common::SceneResult<void> UIText::SetLayoutOptions(const TextLayoutOptions &value)
+    vke_common::Result<void> UIText::SetLayoutOptions(const TextLayoutOptions &value)
     {
         if (auto valid = value.Validate(); !valid)
             return valid;
@@ -80,7 +80,7 @@ namespace vke_ui
         return {result.width, result.height};
     }
 
-    vke_common::SceneResult<glm::vec2> UIText::Measure(float maxWidth) const
+    vke_common::Result<glm::vec2> UIText::Measure(float maxWidth) const
     {
         if (!std::isfinite(maxWidth) || maxWidth < 0)
             return std::unexpected("measurement width must be finite and nonnegative");

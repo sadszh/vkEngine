@@ -8,7 +8,7 @@
 namespace vke_editor
 {
     // Edit-mode mutation on the main thread. Failure preserves the existing body.
-    inline vke_common::SceneResult<void> RebuildRigidBodyMotionType(
+    inline vke_common::Result<void> RebuildRigidBodyMotionType(
         vke_component::RigidBody &body, JPH::EMotionType motionType)
     {
         auto settings = body.GetSettings();

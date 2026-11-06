@@ -11,52 +11,52 @@
 
 namespace vke_common
 {
-    SceneResult<void> AssetManager::ValidateTexture2D(AssetHandle handle)
+    Result<void> AssetManager::ValidateTexture2D(AssetHandle handle)
     {
         return validateAsset(handle, GetTextureAsset);
     }
 
-    SceneResult<void> AssetManager::ValidateMesh(AssetHandle handle)
+    Result<void> AssetManager::ValidateMesh(AssetHandle handle)
     {
         return validateAsset(handle, GetMeshAsset);
     }
 
-    SceneResult<void> AssetManager::ValidateVertFragShader(AssetHandle handle)
+    Result<void> AssetManager::ValidateVertFragShader(AssetHandle handle)
     {
         return validateAsset(handle, GetVFShaderAsset);
     }
 
-    SceneResult<void> AssetManager::ValidateComputeShader(AssetHandle handle)
+    Result<void> AssetManager::ValidateComputeShader(AssetHandle handle)
     {
         return validateAsset(handle, GetComputeShaderAsset);
     }
 
-    SceneResult<void> AssetManager::ValidateMaterial(AssetHandle handle)
+    Result<void> AssetManager::ValidateMaterial(AssetHandle handle)
     {
         return validateAsset(handle, GetMaterialAsset);
     }
 
-    SceneResult<void> AssetManager::ValidateSkeleton(AssetHandle handle)
+    Result<void> AssetManager::ValidateSkeleton(AssetHandle handle)
     {
         return validateAsset(handle, GetSkeletonAsset);
     }
 
-    SceneResult<void> AssetManager::ValidateAnimation(AssetHandle handle)
+    Result<void> AssetManager::ValidateAnimation(AssetHandle handle)
     {
         return validateAsset(handle, GetAnimationAsset);
     }
 
-    SceneResult<void> AssetManager::ValidateFont(AssetHandle handle)
+    Result<void> AssetManager::ValidateFont(AssetHandle handle)
     {
         return validateAsset(handle, GetFontAsset);
     }
 
-    SceneResult<void> AssetManager::ValidateAudioClip(AssetHandle handle)
+    Result<void> AssetManager::ValidateAudioClip(AssetHandle handle)
     {
         return validateAsset(handle, GetAudioClipAsset);
     }
 
-    SceneResult<void> AssetManager::checkPath(AssetHandle handle, const std::filesystem::path &path) const
+    Result<void> AssetManager::checkPath(AssetHandle handle, const std::filesystem::path &path) const
     {
         const auto full = resolveAssetPath(handle, path);
         std::error_code error;
@@ -65,7 +65,7 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<void> AssetManager::checkAsset(const MaterialAsset *material) const
+    Result<void> AssetManager::checkAsset(const MaterialAsset *material) const
     {
         if (!material) return std::unexpected("material not found");
         if (material->val) return {};
@@ -77,7 +77,7 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<void> AssetManager::checkAsset(const VFShaderAsset *shader) const
+    Result<void> AssetManager::checkAsset(const VFShaderAsset *shader) const
     {
         if (!shader) return std::unexpected("shader not found");
         if (shader->val) return {};

@@ -3,7 +3,7 @@
 
 namespace vke_ui
 {
-    vke_common::SceneResult<void> UINodeData::ValidateJSON(const nlohmann::json &json)
+    vke_common::Result<void> UINodeData::ValidateJSON(const nlohmann::json &json)
     {
         using namespace vke_common::json_validation;
         if (auto valid = Object(json).Require({"type"}).Strings({"type"}).Result(); !valid) return valid;

@@ -5,7 +5,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <expected>
 #include <memory>
 #include <optional>
 #include <span>
@@ -39,6 +38,9 @@ namespace vke_common
         ValueViewErrorCode code;
         uint32_t offset;
     };
+
+    template <typename T>
+    using ValueViewResult = Result<T, ValueViewError>;
 
     constexpr std::string_view ToString(ValueViewErrorCode code) noexcept
     {
@@ -91,14 +93,12 @@ namespace vke_common
         static constexpr uint32_t MaxArrayElementCount = 16'777'216;
         static constexpr uint32_t MaxByteArrayElementCount = 1'073'741'824;
 
-        using Result = std::expected<ValueView, ValueViewError>;
-
         // The returned view does not own data. The memory must remain valid and
         // at a stable address for the complete lifetime of every copied child view.
-        static Result Parse(TypeInfoPtr rootType, std::span<const std::byte> data);
+        static ValueViewResult<ValueView> Parse(TypeInfoPtr rootType, std::span<const std::byte> data);
 
         // Takes ownership of data. Every copied child view keeps the allocation alive.
-        static Result Parse(TypeInfoPtr rootType, TypeInfoDataPtr data);
+        static ValueViewResult<ValueView> Parse(TypeInfoPtr rootType, TypeInfoDataPtr data);
 
         bool Valid() const noexcept { return static_cast<bool>(state); }
         const TypeInfoPtr &Type() const noexcept { return state->type; }
@@ -106,18 +106,18 @@ namespace vke_common
         uint32_t Size() const noexcept { return state->size; }
         std::span<const std::byte> Bytes() const noexcept;
 
-        std::expected<ValueView, ValueViewError> Field(std::string_view name) const;
-        std::expected<ValueView, ValueViewError> Field(std::size_t index) const;
-        std::expected<uint32_t, ValueViewError> Count() const noexcept;
-        std::expected<ValueView, ValueViewError> Element(uint32_t index) const;
-        std::expected<ValueView, ValueViewError> Component(uint32_t index) const;
+        ValueViewResult<ValueView> Field(std::string_view name) const;
+        ValueViewResult<ValueView> Field(std::size_t index) const;
+        ValueViewResult<uint32_t> Count() const noexcept;
+        ValueViewResult<ValueView> Element(uint32_t index) const;
+        ValueViewResult<ValueView> Component(uint32_t index) const;
 
-        std::expected<uint8_t, ValueViewError> AsByte() const;
-        std::expected<int32_t, ValueViewError> AsInt32() const;
-        std::expected<int64_t, ValueViewError> AsInt64() const;
-        std::expected<float, ValueViewError> AsFloat32() const;
-        std::expected<double, ValueViewError> AsFloat64() const;
-        std::expected<std::string_view, ValueViewError> AsString() const;
+        ValueViewResult<uint8_t> AsByte() const;
+        ValueViewResult<int32_t> AsInt32() const;
+        ValueViewResult<int64_t> AsInt64() const;
+        ValueViewResult<float> AsFloat32() const;
+        ValueViewResult<double> AsFloat64() const;
+        ValueViewResult<std::string_view> AsString() const;
 
         nlohmann::json ToJSON() const;
 
@@ -151,16 +151,16 @@ namespace vke_common
         explicit ValueView(std::shared_ptr<State> state) noexcept;
         std::unexpected<ValueViewError> error(ValueViewErrorCode code) const noexcept;
 
-        static Result parseImpl(TypeInfoPtr rootType, std::span<const std::byte> data,
+        static ValueViewResult<ValueView> parseImpl(TypeInfoPtr rootType, std::span<const std::byte> data,
                                 std::shared_ptr<const TypeInfoData> ownedData);
 
-        static std::expected<uint32_t, ValueViewError> parseValue(
+        static ValueViewResult<uint32_t> parseValue(
             ParseContext &context, TypeInfoPtr type, uint32_t cursor, uint32_t limit,
             uint32_t depth, std::shared_ptr<State> *output);
-        static std::expected<std::optional<uint32_t>, ValueViewError> fixedSize(
+        static ValueViewResult<std::optional<uint32_t>> fixedSize(
             const TypeInfoPtr &type, uint32_t depth);
         static bool needsPaddingValidation(const TypeInfoPtr &type, uint32_t depth);
-        static std::expected<uint32_t, ValueViewError> alignCursor(
+        static ValueViewResult<uint32_t> alignCursor(
             std::span<const std::byte> data, uint32_t cursor, uint32_t alignment, uint32_t limit);
         static bool advance(uint32_t &cursor, uint32_t size, uint32_t limit) noexcept;
         static bool rangeInBounds(uint32_t offset, uint32_t size, uint32_t limit) noexcept;

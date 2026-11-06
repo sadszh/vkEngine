@@ -39,12 +39,12 @@ namespace vke_common
         return nullptr;
     }
 
-    ValueView::Result ValueView::Parse(TypeInfoPtr rootType, std::span<const std::byte> data)
+    ValueViewResult<ValueView> ValueView::Parse(TypeInfoPtr rootType, std::span<const std::byte> data)
     {
         return parseImpl(std::move(rootType), data, {});
     }
 
-    ValueView::Result ValueView::Parse(TypeInfoPtr rootType, TypeInfoDataPtr data)
+    ValueViewResult<ValueView> ValueView::Parse(TypeInfoPtr rootType, TypeInfoDataPtr data)
     {
         if (!data)
             return std::unexpected(ValueViewError{ValueViewErrorCode::NullData, 0});
@@ -54,7 +54,7 @@ namespace vke_common
         return parseImpl(std::move(rootType), bytes, std::move(ownedData));
     }
 
-    ValueView::Result ValueView::parseImpl(
+    ValueViewResult<ValueView> ValueView::parseImpl(
         TypeInfoPtr rootType, std::span<const std::byte> data,
         std::shared_ptr<const TypeInfoData> ownedData)
     {
@@ -85,7 +85,7 @@ namespace vke_common
         return state->data.subspan(state->offset, state->size);
     }
 
-    std::expected<ValueView, ValueViewError> ValueView::Field(std::string_view name) const
+    ValueViewResult<ValueView> ValueView::Field(std::string_view name) const
     {
         const auto *structInfo = state->type->GetIf<StructTypeInfo>();
         if (!structInfo)
@@ -100,7 +100,7 @@ namespace vke_common
         return error(ValueViewErrorCode::FieldNotFound);
     }
 
-    std::expected<ValueView, ValueViewError> ValueView::Field(std::size_t index) const
+    ValueViewResult<ValueView> ValueView::Field(std::size_t index) const
     {
         if (state->type->Kind() != TypeKind::Struct)
             return error(ValueViewErrorCode::WrongType);
@@ -109,14 +109,14 @@ namespace vke_common
         return state->children[index];
     }
 
-    std::expected<uint32_t, ValueViewError> ValueView::Count() const noexcept
+    ValueViewResult<uint32_t> ValueView::Count() const noexcept
     {
         if (state->type->Kind() != TypeKind::Array)
             return error(ValueViewErrorCode::WrongType);
         return state->count;
     }
 
-    std::expected<ValueView, ValueViewError> ValueView::Element(uint32_t index) const
+    ValueViewResult<ValueView> ValueView::Element(uint32_t index) const
     {
         const auto *arrayInfo = state->type->GetIf<ArrayTypeInfo>();
         if (!arrayInfo)
@@ -151,7 +151,7 @@ namespace vke_common
         return ValueView(std::move(elementState));
     }
 
-    std::expected<ValueView, ValueViewError> ValueView::Component(uint32_t index) const
+    ValueViewResult<ValueView> ValueView::Component(uint32_t index) const
     {
         const auto *vectorInfo = state->type->GetIf<VectorTypeInfo>();
         if (!vectorInfo)
@@ -179,42 +179,42 @@ namespace vke_common
         return ValueView(std::move(componentState));
     }
 
-    std::expected<uint8_t, ValueViewError> ValueView::AsByte() const
+    ValueViewResult<uint8_t> ValueView::AsByte() const
     {
         if (state->type->Kind() != TypeKind::Byte)
             return error(ValueViewErrorCode::WrongType);
         return std::to_integer<uint8_t>(state->data[state->offset]);
     }
 
-    std::expected<int32_t, ValueViewError> ValueView::AsInt32() const
+    ValueViewResult<int32_t> ValueView::AsInt32() const
     {
         if (state->type->Kind() != TypeKind::Int32)
             return error(ValueViewErrorCode::WrongType);
         return std::bit_cast<int32_t>(loadLittle32(state->data, state->offset));
     }
 
-    std::expected<int64_t, ValueViewError> ValueView::AsInt64() const
+    ValueViewResult<int64_t> ValueView::AsInt64() const
     {
         if (state->type->Kind() != TypeKind::Int64)
             return error(ValueViewErrorCode::WrongType);
         return std::bit_cast<int64_t>(loadLittle64(state->data, state->offset));
     }
 
-    std::expected<float, ValueViewError> ValueView::AsFloat32() const
+    ValueViewResult<float> ValueView::AsFloat32() const
     {
         if (state->type->Kind() != TypeKind::Float32)
             return error(ValueViewErrorCode::WrongType);
         return std::bit_cast<float>(loadLittle32(state->data, state->offset));
     }
 
-    std::expected<double, ValueViewError> ValueView::AsFloat64() const
+    ValueViewResult<double> ValueView::AsFloat64() const
     {
         if (state->type->Kind() != TypeKind::Float64)
             return error(ValueViewErrorCode::WrongType);
         return std::bit_cast<double>(loadLittle64(state->data, state->offset));
     }
 
-    std::expected<std::string_view, ValueViewError> ValueView::AsString() const
+    ValueViewResult<std::string_view> ValueView::AsString() const
     {
         if (state->type->Kind() != TypeKind::String)
             return error(ValueViewErrorCode::WrongType);
@@ -237,7 +237,7 @@ namespace vke_common
         return std::unexpected(ValueViewError{code, state ? state->offset : 0});
     }
 
-    std::expected<uint32_t, ValueViewError> ValueView::parseValue(
+    ValueViewResult<uint32_t> ValueView::parseValue(
         ParseContext &context, TypeInfoPtr type, uint32_t cursor, uint32_t limit,
         uint32_t depth, std::shared_ptr<State> *output)
     {
@@ -453,7 +453,7 @@ namespace vke_common
         return cursor;
     }
 
-    std::expected<std::optional<uint32_t>, ValueViewError> ValueView::fixedSize(
+    ValueViewResult<std::optional<uint32_t>> ValueView::fixedSize(
         const TypeInfoPtr &type, uint32_t depth)
     {
         if (!type)
@@ -537,7 +537,7 @@ namespace vke_common
         return !checkedAlignUp(cursor, type->Alignment(), aligned) || aligned != cursor;
     }
 
-    std::expected<uint32_t, ValueViewError> ValueView::alignCursor(
+    ValueViewResult<uint32_t> ValueView::alignCursor(
         std::span<const std::byte> data, uint32_t cursor, uint32_t alignment, uint32_t limit)
     {
         uint32_t aligned;

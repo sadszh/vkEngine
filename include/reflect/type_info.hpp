@@ -1,9 +1,10 @@
 #ifndef VKE_REFLECT_TYPE_INFO_H
 #define VKE_REFLECT_TYPE_INFO_H
 
+#include <common.hpp>
+
 #include <cstddef>
 #include <cstdint>
-#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -115,14 +116,17 @@ namespace vke_common
         return "unknown TypeInfo JSON error";
     }
 
+    template <typename T>
+    using TypeInfoJsonResult = Result<T, TypeInfoJsonError>;
+
     using TypeInfoData = std::vector<std::byte>;
     using TypeInfoDataPtr = std::unique_ptr<TypeInfoData>;
-    using EncodeBinaryResult = std::expected<TypeInfoDataPtr, TypeInfoJsonError>;
+    using EncodeBinaryResult = TypeInfoJsonResult<TypeInfoDataPtr>;
 
     class TypeInfo;
     using TypeInfoPtr = std::shared_ptr<const TypeInfo>;
-    using TypeInfoResult = std::expected<TypeInfoPtr, TypeInfoError>;
-    using DecodeTypeInfoJsonResult = std::expected<TypeInfoPtr, TypeInfoJsonError>;
+    using TypeInfoResult = Result<TypeInfoPtr, TypeInfoError>;
+    using DecodeTypeInfoJsonResult = TypeInfoJsonResult<TypeInfoPtr>;
 
     struct FieldInfo
     {

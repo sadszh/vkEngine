@@ -128,7 +128,7 @@ namespace vke_editor
         vke_common::EventSystem::DispatchEvent(vke_common::EVENT_WINDOW_RESIZE, nullptr);
     }
 
-    vke_common::SceneResult<void> Editor::startRun()
+    vke_common::Result<void> Editor::startRun()
     {
         if (EditorStateManager::GetState() != EditorState::Edit || editSnapshot)
             return std::unexpected("editor is not ready to start");
@@ -148,7 +148,7 @@ namespace vke_editor
         return {};
     }
 
-    vke_common::SceneResult<void> Editor::stopRun()
+    vke_common::Result<void> Editor::stopRun()
     {
         if (EditorStateManager::GetState() != EditorState::Run || !editSnapshot)
             return std::unexpected("no edit snapshot to restore");

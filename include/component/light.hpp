@@ -12,7 +12,7 @@ namespace vke_component
         glm::vec3 color{1.0f};
         float intensity = 1.0f;
         // Call before constructing from JSON; asset checks happen in LoadAssets where applicable.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             return Object(json).Require({"color", "intensity"}).Vectors({"color"}, 3)
@@ -34,7 +34,7 @@ namespace vke_component
         float radius = 5.0f;
         float intensity = 1.0f;
         // Call before constructing from JSON; asset checks happen in LoadAssets where applicable.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             return Object(json).Require({"color", "intensity", "radius"}).Vectors({"color"}, 3)
@@ -60,7 +60,7 @@ namespace vke_component
         float outerConeCos = glm::cos(glm::radians(30.0f));
         bool castShadow = false;
         // Call before constructing from JSON; asset checks happen in LoadAssets where applicable.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             return Object(json).Require({"color", "intensity", "radius", "innerCone", "outerCone"}).Vectors({"color"}, 3)

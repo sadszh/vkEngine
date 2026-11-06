@@ -57,23 +57,23 @@ namespace vke_common
         SceneData() = default;
         SceneData(const nlohmann::json &json);
 
-        static SceneResult<SceneData> FromJSON(const nlohmann::json &json);
+        static Result<SceneData> FromJSON(const nlohmann::json &json);
         // Requires validated input; checks the additional prefab contract only.
-        SceneResult<void> ValidatePrefab() const;
+        Result<void> ValidatePrefab() const;
         // Expansion postcondition, checked before advancing to Expanded.
-        SceneResult<void> ValidateExpanded() const;
+        Result<void> ValidateExpanded() const;
         // Runtime prerequisites only; does not revalidate the source hierarchy.
-        SceneResult<void> ValidateReady(bool requireSingleRoot = false) const;
+        Result<void> ValidateReady(bool requireSingleRoot = false) const;
         SceneData Clone() const;
         void CopyComponents(entt::entity source, SceneData &target, entt::entity destination) const;
 
-        SceneResult<nlohmann::json> ToJSON() const;
+        Result<nlohmann::json> ToJSON() const;
 
     private:
         // Full structural check at ingestion; later stages preserve these invariants.
-        SceneResult<void> validateParsed() const;
-        SceneResult<void> loadComponent(entt::entity entity, const nlohmann::json &component); // component.cpp
-        SceneResult<void> componentToJSON(entt::entity entity, nlohmann::json &components) const; // component.cpp
+        Result<void> validateParsed() const;
+        Result<void> loadComponent(entt::entity entity, const nlohmann::json &component); // component.cpp
+        Result<void> componentToJSON(entt::entity entity, nlohmann::json &components) const; // component.cpp
     };
 
     struct InstantiateOptions
@@ -136,9 +136,9 @@ namespace vke_common
         // No component Unload or script Unload/Dispose hooks are dispatched.
         static void Reset();
 
-        static SceneResult<void> Instantiate(
+        static Result<void> Instantiate(
             const SceneData &data, const InstantiateOptions &options = {});
-        static SceneResult<void> RequestInstantiate(AssetHandle prefab, const InstantiateOptions &options = {});
+        static Result<void> RequestInstantiate(AssetHandle prefab, const InstantiateOptions &options = {});
         void ProcessInstantiationRequests();
 
         static bool IsRunning();
@@ -151,20 +151,20 @@ namespace vke_common
 
         // Synchronous, main-thread structural changes; do not call while iterating affected pools.
         // Transform is mandatory. Scripts use a separate managed lifecycle and are not supported here.
-        SceneResult<void> AddComponent(entt::entity entity, ComponentType componentType);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::CameraData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::RenderableObjectData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::SkeletonAnimatorData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::RigidBodyData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::SensorData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::CharacterControllerData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::DirectionalLightData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::PointLightData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::SpotLightData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::CanvasData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::AudioSourceData &data);
-        SceneResult<void> AddComponent(entt::entity entity, const vke_component::AudioListenerData &data);
-        SceneResult<void> RemoveComponent(entt::entity entity, ComponentType componentType);
+        Result<void> AddComponent(entt::entity entity, ComponentType componentType);
+        Result<void> AddComponent(entt::entity entity, const vke_component::CameraData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::RenderableObjectData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::SkeletonAnimatorData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::RigidBodyData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::SensorData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::CharacterControllerData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::DirectionalLightData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::PointLightData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::SpotLightData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::CanvasData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::AudioSourceData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::AudioListenerData &data);
+        Result<void> RemoveComponent(entt::entity entity, ComponentType componentType);
 
         entt::entity CreateEntity(std::string &name, glm::vec3 pos, glm::vec3 scl, glm::quat rot, bool isStatic)
         {
@@ -182,8 +182,8 @@ namespace vke_common
 
         bool IsPendingDestroy(entt::entity entity) const { return pendingDestroy.contains(entity); }
 
-        SceneResult<SceneData> ExportAllEntities() const;                    // scene.cpp
-        SceneResult<SceneData> ExportEntitySubtree(entt::entity root) const; // scene.cpp
+        Result<SceneData> ExportAllEntities() const;                    // scene.cpp
+        Result<SceneData> ExportEntitySubtree(entt::entity root) const; // scene.cpp
 
     private:
         template <typename Visitor>
@@ -204,9 +204,9 @@ namespace vke_common
             visit.template operator()<vke_component::AudioListener>();
         }
 
-        SceneResult<void> validateComponentMutation(entt::entity entity) const;
+        Result<void> validateComponentMutation(entt::entity entity) const;
         template <typename Component, typename Data>
-        SceneResult<void> addComponent(entt::entity entity, Data data);
+        Result<void> addComponent(entt::entity entity, Data data);
         void removeNativeComponent(entt::entity entity, ComponentType componentType);
 
         // Data resources are already resolved. Shared by scene instantiation and individual additions.
@@ -233,7 +233,7 @@ namespace vke_common
         EntityMap instantiateSceneData(const SceneData &data, const InstantiateOptions &options);
         void loadScripts(const EntityMap &dataToRuntime, const SceneData &data);
         void unloadEntityFromEngine(entt::entity entity);
-        SceneResult<SceneData> exportEntities(const std::vector<entt::entity> &entities) const; // scene.cpp
+        Result<SceneData> exportEntities(const std::vector<entt::entity> &entities) const; // scene.cpp
         void dispose();
 
         static void physicsUpdateCallback(void *self, void *info);

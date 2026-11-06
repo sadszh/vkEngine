@@ -43,14 +43,14 @@ namespace vke_component
                 for (const auto &child : json["children"]) children.push_back(vke_ui::UINodeData::FromJSON(child));
         }
 
-        static vke_common::SceneResult<void> ValidateResolution(const glm::vec2 &value)
+        static vke_common::Result<void> ValidateResolution(const glm::vec2 &value)
         {
             if (value.x <= 0 || value.y <= 0)
                 return std::unexpected("reference resolution must be positive");
             return {};
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             if (auto valid = vke_common::json_validation::Object(json).Vectors({"referenceResolution"}, 2).Strings({"mode"}).Result(); !valid)
                 return valid;
@@ -65,7 +65,7 @@ namespace vke_component
             return vke_ui::UINodeData::ValidateChildrenJSON(json);
         }
 
-        vke_common::SceneResult<void> Validate() const
+        vke_common::Result<void> Validate() const
         {
             if (auto valid = ValidateResolution(referenceResolution); !valid) return valid;
             for (const auto &child : children)
@@ -76,14 +76,14 @@ namespace vke_component
             return {};
         }
 
-        vke_common::SceneResult<void> ValidateAssets() const
+        vke_common::Result<void> ValidateAssets() const
         {
             for (const auto &child : children)
                 if (auto valid = child->ValidateAssets(); !valid) return valid;
             return {};
         }
 
-        vke_common::SceneResult<void> LoadAssets()
+        vke_common::Result<void> LoadAssets()
         {
             for (auto &child : children)
                 if (auto loaded = child->LoadAssets(); !loaded) return loaded;
@@ -145,7 +145,7 @@ namespace vke_component
         }
 
         const auto &GetChildren() const { return children; }
-        vke_common::SceneResult<vke_ui::UIComponent *> Add(const vke_ui::UINodeData &data, vke_ui::UIHandle parent = 0)
+        vke_common::Result<vke_ui::UIComponent *> Add(const vke_ui::UINodeData &data, vke_ui::UIHandle parent = 0)
         {
             auto *parentNode = Get(parent);
             if (parent && !parentNode) return std::unexpected("invalid UI parent");
@@ -156,7 +156,7 @@ namespace vke_component
             return addPrepared(*prepared, parentNode);
         }
 
-        vke_common::SceneResult<void> Remove(vke_ui::UIHandle handle)
+        vke_common::Result<void> Remove(vke_ui::UIHandle handle)
         {
             auto *node = Get(handle);
             if (!node) return std::unexpected("invalid UI handle");
@@ -167,7 +167,7 @@ namespace vke_component
             return {};
         }
 
-        vke_common::SceneResult<void> SetParent(vke_ui::UIHandle handle, vke_ui::UIHandle parent)
+        vke_common::Result<void> SetParent(vke_ui::UIHandle handle, vke_ui::UIHandle parent)
         {
             auto *node = Get(handle);
             auto *parentNode = Get(parent);
@@ -185,7 +185,7 @@ namespace vke_component
             return {};
         }
 
-        vke_common::SceneResult<void> SetSiblingIndex(vke_ui::UIHandle handle, size_t index)
+        vke_common::Result<void> SetSiblingIndex(vke_ui::UIHandle handle, size_t index)
         {
             auto *node = Get(handle);
             if (!node) return std::unexpected("invalid UI handle");
@@ -199,7 +199,7 @@ namespace vke_component
             return {};
         }
 
-        vke_common::SceneResult<void> SetReferenceResolution(const glm::vec2 &value)
+        vke_common::Result<void> SetReferenceResolution(const glm::vec2 &value)
         {
             if (auto valid = CanvasData::ValidateResolution(value); !valid) return valid;
             referenceResolution = value;

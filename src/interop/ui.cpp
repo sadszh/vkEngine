@@ -245,7 +245,7 @@ namespace vke_interop
         auto *text = getText(entity, handle);
         if (!text || !value) return 0;
         // -1 is the ABI's unconstrained measurement sentinel.
-        auto size = maxWidth == -1 ? vke_common::SceneResult<glm::vec2>(text->Measure()) : text->Measure(maxWidth);
+        auto size = maxWidth == -1 ? vke_common::Result<glm::vec2>(text->Measure()) : text->Measure(maxWidth);
         if (!size) return 0;
         *value = {size->x, size->y};
         return 1;

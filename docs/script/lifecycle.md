@@ -30,7 +30,7 @@ C++ 原生组件和 C# EntityScript 共用同一生命周期：从 Data 构造�
 
 C++ 通过 `ScriptManager::GetEntityScriptsData(entity)` 同步获取该实体全部已注册脚本的当前状态。托管端先生成快照，再通过回调借出类名与字节；原生端用 TypeInfo / ValueView 校验并复制为持有二进制的 ScriptStateData。指针仅在回调内有效。
 
-`ExportAllEntities()` 和 `ExportEntitySubtree(root)` 返回 `SceneResult<SceneData>`。原生组件和脚本均导出实时状态；脚本导出失败时整个操作返回错误，编辑器保留原场景文件。脚本导出仅采集标记 Export 的字段和属性，保持生命周期状态不变。
+`ExportAllEntities()` 和 `ExportEntitySubtree(root)` 返回 `Result<SceneData>`。原生组件和脚本均导出实时状态；脚本导出失败时整个操作返回错误，编辑器保留原场景文件。脚本导出仅采集标记 Export 的字段和属性，保持生命周期状态不变。
 
 脚本实时状态由 C# 实例持有。编辑器通过托管注册表查询脚本名称并读取展开脚本的字段，场景保存从实例导出当前状态。
 

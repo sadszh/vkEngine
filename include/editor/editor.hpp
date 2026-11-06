@@ -70,8 +70,8 @@ namespace vke_editor
         bool Update();
 
     private:
-        vke_common::SceneResult<void> startRun();
-        vke_common::SceneResult<void> stopRun();
+        vke_common::Result<void> startRun();
+        vke_common::Result<void> stopRun();
 
         void drawGUI(vke_ui::UIPointerInput &pointer);
         void drawSceneViewport(vke_ui::UIPointerInput &pointer);

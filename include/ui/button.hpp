@@ -21,7 +21,7 @@ namespace vke_ui
                 if (json.contains(names[i]))
                     for (int j = 0; j < 4; ++j) (*colors[i])[j] = json[names[i]][j].get<float>();
         }
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             if (auto valid = vke_common::json_validation::Object(json)
                 .Vectors({"hoverColor", "pressedColor", "disabledColor"}, 4).Result(); !valid) return valid;
@@ -56,9 +56,9 @@ namespace vke_ui
             return data;
         }
         glm::vec4 GetColor() const override { return colors[0]; }
-        vke_common::SceneResult<void> SetColor(const glm::vec4 &value) override { return SetStateColor(0, value); }
+        vke_common::Result<void> SetColor(const glm::vec4 &value) override { return SetStateColor(0, value); }
         const glm::vec4 &GetStateColor(size_t state) const { return colors[state]; }
-        vke_common::SceneResult<void> SetStateColor(size_t state, const glm::vec4 &value)
+        vke_common::Result<void> SetStateColor(size_t state, const glm::vec4 &value)
         {
             if (quadIDs.empty()) return std::unexpected("button quad is not allocated");
             colors[state] = value;

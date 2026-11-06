@@ -13,10 +13,10 @@ namespace vke_component
         std::string className;
         vke_common::TypeInfoData data;
 
-        static vke_common::SceneResult<ScriptStateData> FromJSON(const nlohmann::json &json);
-        vke_common::SceneResult<nlohmann::json> ToJSON() const;
+        static vke_common::Result<ScriptStateData> FromJSON(const nlohmann::json &json);
+        vke_common::Result<nlohmann::json> ToJSON() const;
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             auto result = Object(json).Require({"className", "data"}).Strings({"className"}).Result();

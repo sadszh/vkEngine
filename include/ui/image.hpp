@@ -24,7 +24,7 @@ namespace vke_ui
                 for (int i = 0; i < 4; ++i) uvRect[i] = json["uvRect"][i].get<float>();
         }
 
-        static vke_common::SceneResult<void> ValidateUVRect(const glm::vec4 &value)
+        static vke_common::Result<void> ValidateUVRect(const glm::vec4 &value)
         {
             for (int i = 0; i < 4; ++i)
                 if (value[i] < 0 || value[i] > 1)
@@ -34,7 +34,7 @@ namespace vke_ui
             return {};
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             if (auto valid = Object(json).Unsigneds({"texture"}).Vectors({"color", "uvRect"}, 4)
@@ -51,13 +51,13 @@ namespace vke_ui
         UIType GetType() const override { return UIType::Image; }
         std::unique_ptr<UINodeData> Clone() const override { return std::make_unique<UIImageData>(*this); }
 
-        vke_common::SceneResult<void> Validate() const override
+        vke_common::Result<void> Validate() const override
         {
             if (auto valid = ValidateUVRect(uvRect); !valid) return valid;
             return UINodeData::Validate();
         }
 
-        vke_common::SceneResult<void> ValidateAssets() const override
+        vke_common::Result<void> ValidateAssets() const override
         {
             if (texture.Handle() != 0 && !texture.Get())
                 if (auto valid = vke_common::AssetManager::ValidateTexture2D(texture.Handle()); !valid)
@@ -65,7 +65,7 @@ namespace vke_ui
             return UINodeData::ValidateAssets();
         }
 
-        vke_common::SceneResult<void> LoadAssets() override
+        vke_common::Result<void> LoadAssets() override
         {
             if (texture.Handle() != 0 && !texture.Get())
             {
@@ -115,7 +115,7 @@ namespace vke_ui
             return data;
         }
 
-        vke_common::SceneResult<void> SetTexture(vke_common::AssetHandle handle)
+        vke_common::Result<void> SetTexture(vke_common::AssetHandle handle)
         {
             using vke_common::AssetManager;
             if (handle != 0)
@@ -136,14 +136,14 @@ namespace vke_ui
             return {};
         }
 
-        virtual vke_common::SceneResult<void> SetColor(const glm::vec4 &value)
+        virtual vke_common::Result<void> SetColor(const glm::vec4 &value)
         {
             if (quadIDs.empty()) return std::unexpected("image quad is not allocated");
             setQuadColor(value);
             return {};
         }
 
-        vke_common::SceneResult<void> SetUVRect(const glm::vec4 &value)
+        vke_common::Result<void> SetUVRect(const glm::vec4 &value)
         {
             if (auto valid = UIImageData::ValidateUVRect(value); !valid) return valid;
             if (quadIDs.empty()) return std::unexpected("image quad is not allocated");

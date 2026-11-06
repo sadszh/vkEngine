@@ -141,7 +141,7 @@ JSON 中两组对象均可省略；默认自身使用 RectTransform 尺寸并参
 - `uvRect`：`(minU, minV, maxU, maxV)`，默认 `(0, 0, 1, 1)`。各分量在 `[0, 1]` 内，每轴 minimum 不大于 maximum；坐标原点为图片左上角。
 - `preserveAspect`：默认 false，填满布局矩形；true 时根据纹理尺寸和 UV 区域计算宽高比，居中等比缩放到布局矩形内。空 UV 区域在等比模式下生成零尺寸几何。子节点始终按完整布局矩形定位。
 
-原生 `SetTexture(AssetHandle)` 校验、加载并注册纹理，成功后替换图片，失败保留原纹理和几何。`SetColor` 修改颜色，`SetUVRect` 校验并修改 UV；三者返回 `SceneResult<void>`。`SetPreserveAspect(bool)` 更新适配方式。
+原生 `SetTexture(AssetHandle)` 校验、加载并注册纹理，成功后替换图片，失败保留原纹理和几何。`SetColor` 修改颜色，`SetUVRect` 校验并修改 UV；三者返回 `Result<void>`。`SetPreserveAspect(bool)` 更新适配方式。
 
 构造时纹理注册失败会记录错误，节点保留颜色和 UV，但不显示图片，可通过成功的 `SetTexture` 恢复。Quad 分配失败时记录错误，后续纹理、颜色和 UV 修改返回错误。纹理表容量、共享索引和逐帧资源释放见 [2D 渲染系统](2d.md#图片纹理表与逐帧更新)。
 

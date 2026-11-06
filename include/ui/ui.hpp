@@ -63,10 +63,10 @@ namespace vke_ui
         virtual UIType GetType() const = 0;
         virtual std::unique_ptr<UINodeData> Clone() const = 0;
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json);
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json);
         static std::unique_ptr<UINodeData> FromJSON(const nlohmann::json &json);
 
-        virtual vke_common::SceneResult<void> Validate() const
+        virtual vke_common::Result<void> Validate() const
         {
             if (auto valid = rectTransform.Validate(); !valid)
                 return valid;
@@ -84,7 +84,7 @@ namespace vke_ui
             return {};
         }
 
-        virtual vke_common::SceneResult<void> ValidateAssets() const
+        virtual vke_common::Result<void> ValidateAssets() const
         {
             for (const auto &child : children)
                 if (auto valid = child->ValidateAssets(); !valid)
@@ -92,7 +92,7 @@ namespace vke_ui
             return {};
         }
 
-        virtual vke_common::SceneResult<void> LoadAssets()
+        virtual vke_common::Result<void> LoadAssets()
         {
             for (auto &child : children)
                 if (auto loaded = child->LoadAssets(); !loaded)
@@ -110,7 +110,7 @@ namespace vke_ui
             return json;
         }
 
-        static vke_common::SceneResult<void> ValidateChildrenJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateChildrenJSON(const nlohmann::json &json)
         {
             if (!json.contains("children"))
                 return {};
@@ -123,7 +123,7 @@ namespace vke_ui
         }
 
     protected:
-        static vke_common::SceneResult<void> validateCommonJSON(const nlohmann::json &json)
+        static vke_common::Result<void> validateCommonJSON(const nlohmann::json &json)
         {
             if (auto valid = vke_common::json_validation::Object(json).Strings({"name"}).Booleans({"hitTestEnabled", "interactable"}).Result(); !valid)
                 return valid;
@@ -218,7 +218,7 @@ namespace vke_ui
         UIComponent &operator=(const UIComponent &) = delete;
 
         virtual UIType GetType() const = 0;
-        vke_common::SceneResult<void> SetRectTransform(const RectTransform &value)
+        vke_common::Result<void> SetRectTransform(const RectTransform &value)
         {
             if (auto valid = value.Validate(); !valid)
                 return valid;
@@ -228,7 +228,7 @@ namespace vke_ui
         }
         virtual std::unique_ptr<UINodeData> ToData() const = 0;
         const UISelfLayoutOptions &GetSelfLayout() const { return selfLayout; }
-        vke_common::SceneResult<void> SetSelfLayout(const UISelfLayoutOptions &value)
+        vke_common::Result<void> SetSelfLayout(const UISelfLayoutOptions &value)
         {
             if (auto valid = value.Validate(); !valid) return valid;
             selfLayout = value;
@@ -237,7 +237,7 @@ namespace vke_ui
         }
 
         const UIGroupLayoutOptions &GetGroupLayout() const { return groupLayout; }
-        vke_common::SceneResult<void> SetGroupLayout(const UIGroupLayoutOptions &value)
+        vke_common::Result<void> SetGroupLayout(const UIGroupLayoutOptions &value)
         {
             if (auto valid = value.Validate(); !valid) return valid;
             groupLayout = value;
@@ -293,7 +293,7 @@ namespace vke_ui
         UIContainerData() = default;
         explicit UIContainerData(const nlohmann::json &json) : UINodeData(json) {}
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             return validateCommonJSON(json);
         }

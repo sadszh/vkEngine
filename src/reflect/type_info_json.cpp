@@ -27,7 +27,7 @@ namespace vke_common
             TypeInfoData *output = nullptr;
         };
 
-        using EncodeResult = std::expected<uint64_t, TypeInfoJsonError>;
+        using EncodeResult = TypeInfoJsonResult<uint64_t>;
 
         constexpr uint32_t MaxTypeInfoDepth = 64;
 
@@ -45,7 +45,7 @@ namespace vke_common
 
         bool IsValidUtf8(std::string_view bytes) noexcept;
 
-        std::expected<std::string, TypeInfoJsonError> ReadRequiredString(
+        TypeInfoJsonResult<std::string> ReadRequiredString(
             const nlohmann::json &json, std::string_view field, const std::string &path)
         {
             const auto value = json.find(field);
@@ -60,7 +60,7 @@ namespace vke_common
             return text;
         }
 
-        std::expected<std::string, TypeInfoJsonError> ReadOptionalName(
+        TypeInfoJsonResult<std::string> ReadOptionalName(
             const nlohmann::json &json, const std::string &path)
         {
             const auto value = json.find("name");
@@ -337,7 +337,7 @@ namespace vke_common
             WriteLittle(output, offset, std::bit_cast<uint64_t>(value));
         }
 
-        std::expected<int64_t, TypeInfoJsonError> ReadInteger(
+        TypeInfoJsonResult<int64_t> ReadInteger(
             const nlohmann::json &json, int64_t minimum, int64_t maximum,
             const std::string &path)
         {

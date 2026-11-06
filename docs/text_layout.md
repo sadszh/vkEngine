@@ -114,13 +114,13 @@ glyphY = baseline - glyph.bearingY * scale
 
 ```cpp
 const TextLayoutOptions &GetLayoutOptions() const;
-SceneResult<void> SetLayoutOptions(const TextLayoutOptions &value);
+Result<void> SetLayoutOptions(const TextLayoutOptions &value);
 glm::vec2 Measure() const;
-SceneResult<glm::vec2> Measure(float maxWidth) const;
+Result<glm::vec2> Measure(float maxWidth) const;
 glm::vec2 GetTextSize() const;
 ```
 
-这里的 `SceneResult` 位于 `vke_common` 命名空间。
+这里的 `Result` 位于 `vke_common` 命名空间。
 
 `Measure()` 返回只有显式换行的自然尺寸。`Measure(maxWidth)` 始终按给定宽度换行，不受节点 `wordWrap` 开关影响；宽度须为有限非负数，非法值返回错误。测量只读取字符缓存，不改变节点矩形、当前排版、atlas 或 GPU 几何。
 

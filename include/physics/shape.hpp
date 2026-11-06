@@ -36,7 +36,7 @@ namespace vke_physics
         float c = 0.0f;
 
         // Call before constructing from JSON; asset checks happen in LoadAssets where applicable.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             if (!json.is_object() || !json.contains("type") || !Unsigned(json["type"], 5))

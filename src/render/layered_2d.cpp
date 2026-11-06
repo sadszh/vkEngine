@@ -234,7 +234,7 @@ namespace vke_render
         imageTexturesDirty.fill(true);
     }
 
-    vke_common::SceneResult<uint32_t> Layered2DRenderer::RegisterImageTexture(const std::shared_ptr<Texture2D> &texture)
+    vke_common::Result<uint32_t> Layered2DRenderer::RegisterImageTexture(const std::shared_ptr<Texture2D> &texture)
     {
         if (!texture)
             return 0;

@@ -23,7 +23,7 @@ namespace vke_ui
         bool wordWrap = false;
 
         bool operator==(const TextLayoutOptions &) const = default;
-        vke_common::SceneResult<void> Validate() const
+        vke_common::Result<void> Validate() const
         {
             if (!std::isfinite(fontSize) || fontSize <= 0)
                 return std::unexpected("fontSize must be finite and positive");
@@ -41,7 +41,7 @@ namespace vke_ui
         glm::vec4 color{1.0f};
         vke_common::AssetRef<vke_render::Material> material;
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             if (auto valid = Object(json).Strings({"text", "horizontalAlignment", "verticalAlignment"})
@@ -82,13 +82,13 @@ namespace vke_ui
         UIType GetType() const override { return UIType::Text; }
         std::unique_ptr<UINodeData> Clone() const override { return std::make_unique<UITextData>(*this); }
 
-        vke_common::SceneResult<void> Validate() const override
+        vke_common::Result<void> Validate() const override
         {
             if (auto valid = layout.Validate(); !valid) return valid;
             return UINodeData::Validate();
         }
 
-        vke_common::SceneResult<void> ValidateAssets() const override
+        vke_common::Result<void> ValidateAssets() const override
         {
             using vke_common::AssetManager;
             if (material.Handle() != 0 && !material.Get())
@@ -99,7 +99,7 @@ namespace vke_ui
             return UINodeData::ValidateAssets();
         }
 
-        vke_common::SceneResult<void> LoadAssets() override
+        vke_common::Result<void> LoadAssets() override
         {
             using vke_common::AssetManager;
             if (material.Handle() != 0 && !material.Get())
@@ -148,10 +148,10 @@ namespace vke_ui
         }
 
         void SetText(std::string_view newText);
-        vke_common::SceneResult<void> SetLayoutOptions(const TextLayoutOptions &value);
+        vke_common::Result<void> SetLayoutOptions(const TextLayoutOptions &value);
         const TextLayoutOptions &GetLayoutOptions() const { return options; }
         glm::vec2 Measure() const;
-        vke_common::SceneResult<glm::vec2> Measure(float maxWidth) const;
+        vke_common::Result<glm::vec2> Measure(float maxWidth) const;
         glm::vec2 GetTextSize() const { return {layout.width, layout.height}; }
 
         void SetColor(const glm::vec4 &newColor)

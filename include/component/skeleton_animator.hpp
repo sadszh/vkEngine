@@ -37,7 +37,7 @@ namespace vke_component
         bool loop = true;
 
         // Call before constructing from JSON; asset checks happen in ValidateAssets.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             return Object(json).Require({"animation"}).Unsigneds({"animation"}).Numbers({"weight", "speed", "timeRatio"}).Booleans({"playing", "loop"}).Result();
@@ -49,7 +49,7 @@ namespace vke_component
               weight(json.value("weight", 0.0f)), playbackSpeed(json.value("speed", 1.0f)),
               timeRatio(json.value("timeRatio", 0.0f)), playing(json.value("playing", true)),
               loop(json.value("loop", true)) {}
-        vke_common::SceneResult<void> ValidateAssets() const
+        vke_common::Result<void> ValidateAssets() const
         {
             using vke_common::AssetManager;
             if (!animation.Get())
@@ -59,7 +59,7 @@ namespace vke_component
         }
 
         // Requires successful ValidateAssets() before loading.
-        vke_common::SceneResult<void> LoadAssets()
+        vke_common::Result<void> LoadAssets()
         {
             using vke_common::AssetManager;
             if (!animation.Get())
@@ -86,7 +86,7 @@ namespace vke_component
         bool castsShadow = true;
 
         // Call before constructing from JSON; asset checks happen in ValidateAssets.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             auto result = Object(json).Require({"material", "mesh", "skeleton"}).Unsigneds({"material", "mesh", "skeleton", "animation"}).Booleans({"castsShadow"}).Result();
@@ -130,7 +130,7 @@ namespace vke_component
                 animations.push_back(std::move(state));
             }
         }
-        vke_common::SceneResult<void> ValidateAssets() const
+        vke_common::Result<void> ValidateAssets() const
         {
             using vke_common::AssetManager;
             if (!material.Get())
@@ -149,7 +149,7 @@ namespace vke_component
         }
 
         // Requires successful ValidateAssets() before loading.
-        vke_common::SceneResult<void> LoadAssets()
+        vke_common::Result<void> LoadAssets()
         {
             using vke_common::AssetManager;
             if (!material.Get())
@@ -409,7 +409,7 @@ namespace vke_component
             return {skinningMatrices.data(), skinningMatrices.size()};
         }
 
-        vke_common::SceneResult<void> AddAnimation(
+        vke_common::Result<void> AddAnimation(
             std::shared_ptr<vke_common::Animation> anim,
             float weight = 0.0f,
             float speed = 1.0f,

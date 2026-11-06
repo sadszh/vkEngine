@@ -20,7 +20,7 @@
 
 namespace vke_common
 {
-    SceneResult<std::vector<std::string>> ScriptManager::GetScriptList(entt::entity entity)
+    Result<std::vector<std::string>> ScriptManager::GetScriptList(entt::entity entity)
     {
         std::vector<std::string> scripts;
         const auto receive = +[](void *opaque, const char *className)
@@ -32,12 +32,12 @@ namespace vke_common
         return scripts;
     }
 
-    SceneResult<TypeInfoData> ScriptManager::GetScriptData(entt::entity entity, const std::string &className)
+    Result<TypeInfoData> ScriptManager::GetScriptData(entt::entity entity, const std::string &className)
     {
-        SceneResult<TypeInfoData> result = std::unexpected("managed script export returned no data");
+        Result<TypeInfoData> result = std::unexpected("managed script export returned no data");
         const auto receive = +[](void *opaque, const std::byte *bytes, int32_t size)
         {
-            auto &result = *static_cast<SceneResult<TypeInfoData> *>(opaque);
+            auto &result = *static_cast<Result<TypeInfoData> *>(opaque);
             if (size < 0 || (size != 0 && !bytes))
             {
                 result = std::unexpected("invalid script export buffer");
@@ -52,7 +52,7 @@ namespace vke_common
         return result;
     }
 
-    SceneResult<void> ScriptManager::SetScriptData(entt::entity entity, const std::string &className, const TypeInfoData &data)
+    Result<void> ScriptManager::SetScriptData(entt::entity entity, const std::string &className, const TypeInfoData &data)
     {
         if (!instance->csharpExports.sceneManagerFunctions.setScriptData(
                 entity, className.c_str(), data.data(), static_cast<int32_t>(data.size())))
@@ -60,7 +60,7 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<std::vector<vke_component::ScriptStateData>> ScriptManager::GetEntityScriptsData(entt::entity entity)
+    Result<std::vector<vke_component::ScriptStateData>> ScriptManager::GetEntityScriptsData(entt::entity entity)
     {
         struct ExportContext
         {

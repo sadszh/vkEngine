@@ -15,12 +15,11 @@ namespace vke_common
     class ValueEditor final
     {
     public:
-        using Result = std::expected<void, ValueViewError>;
-        static std::expected<ValueEditor, ValueViewError> Parse(TypeInfoPtr type, TypeInfoData &data);
+        static ValueViewResult<ValueEditor> Parse(TypeInfoPtr type, TypeInfoData &data);
         const ValueView &Root() const noexcept { return root; }
 
         template <typename T>
-        Result SetScalar(const ValueView &value, T scalar)
+        ValueViewResult<void> SetScalar(const ValueView &value, T scalar)
         {
             constexpr TypeKind kind = [] {
                 if constexpr (std::is_same_v<T, uint8_t>) return TypeKind::Byte;
@@ -40,16 +39,16 @@ namespace vke_common
             return {};
         }
 
-        Result SetString(const ValueView &value, std::string_view text);
-        Result AppendElement(const ValueView &array);
-        Result RemoveElement(const ValueView &array, uint32_t index);
+        ValueViewResult<void> SetString(const ValueView &value, std::string_view text);
+        ValueViewResult<void> AppendElement(const ValueView &array);
+        ValueViewResult<void> RemoveElement(const ValueView &array, uint32_t index);
 
     private:
         TypeInfoData *data;
         ValueView root;
         ValueEditor(TypeInfoData &data, ValueView root) : data(&data), root(std::move(root)) {}
-        Result check(const ValueView &value, TypeKind kind) const;
-        Result replace(const ValueView &value, const TypeInfoData &replacement);
+        ValueViewResult<void> check(const ValueView &value, TypeKind kind) const;
+        ValueViewResult<void> replace(const ValueView &value, const TypeInfoData &replacement);
     };
 }
 

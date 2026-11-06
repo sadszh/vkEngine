@@ -31,7 +31,7 @@ namespace vke_component
         float dopplerFactor = 1.0f;
 
         // Call before constructing from JSON; asset checks happen in ValidateAssets.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             return Object(json).Unsigneds({"clip"}).Unsigneds({"attenuationModel"}, 3)
@@ -57,7 +57,7 @@ namespace vke_component
             dopplerFactor = json.value("dopplerFactor", 1.0f);
         }
 
-        vke_common::SceneResult<void> ValidateAssets() const
+        vke_common::Result<void> ValidateAssets() const
         {
             using vke_common::AssetManager;
             if (clip.Handle() != 0 && !clip.Get())
@@ -67,7 +67,7 @@ namespace vke_component
         }
 
         // Requires successful ValidateAssets() before loading.
-        vke_common::SceneResult<void> LoadAssets()
+        vke_common::Result<void> LoadAssets()
         {
             using vke_common::AssetManager;
             if (clip.Handle() != 0 && !clip.Get())

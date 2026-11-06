@@ -36,7 +36,7 @@ namespace vke_render
             LoadJSON(json);
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             if (json.is_null())
@@ -78,7 +78,7 @@ namespace vke_render
         float groundHorizonWidthDegrees = 25.0f;
         float groundCurve = 1.0f;
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             if (json.is_null())
@@ -118,7 +118,7 @@ namespace vke_render
             LoadJSON(json);
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             if (json.is_null())
@@ -149,7 +149,7 @@ namespace vke_render
             LoadJSON(json);
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             if (json.is_null())
@@ -180,7 +180,7 @@ namespace vke_render
             LoadJSON(json);
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             if (json.is_null())
@@ -214,7 +214,7 @@ namespace vke_render
             LoadJSON(json);
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             if (json.is_null())
@@ -262,7 +262,7 @@ namespace vke_render
             LoadJSON(json);
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             if (json.is_null())
                 return {};

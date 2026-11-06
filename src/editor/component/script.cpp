@@ -10,7 +10,7 @@ namespace vke_editor
         using namespace vke_common;
         // Commit after drawing so a resized buffer cannot invalidate views that
         // are still being traversed by this frame's widgets.
-        using PendingEdit = std::function<ValueEditor::Result()>;
+        using PendingEdit = std::function<ValueViewResult<void>()>;
 
         template <typename T>
         void DrawScalar(const ValueView &value, T scalar, ImGuiDataType dataType,

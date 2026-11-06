@@ -18,7 +18,7 @@ namespace vke_common
         glm::vec3 localScale = glm::vec3(1);
 
         // Call before constructing from JSON; asset checks happen in LoadAssets where applicable.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             auto result = Object(json).Require({"pos", "scl", "rot"})

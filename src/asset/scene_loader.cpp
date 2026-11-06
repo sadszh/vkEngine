@@ -3,7 +3,7 @@
 
 namespace vke_common
 {
-    SceneResult<SceneData> AssetManager::LoadSceneFile(const std::filesystem::path &path)
+    Result<SceneData> AssetManager::LoadSceneFile(const std::filesystem::path &path)
     {
         auto json = LoadJSON(path);
         if (!json) return std::unexpected(json.error());
@@ -12,14 +12,14 @@ namespace vke_common
         return result;
     }
 
-    SceneResult<std::shared_ptr<const SceneData>> AssetManager::LoadSceneData(AssetHandle handle)
+    Result<std::shared_ptr<const SceneData>> AssetManager::LoadSceneData(AssetHandle handle)
     {
         if (!instance) return std::unexpected("AssetManager is not initialized");
         std::vector<AssetHandle> stack;
         return instance->loadSceneData(handle, stack);
     }
 
-    SceneResult<std::shared_ptr<const SceneData>> AssetManager::loadSceneData(
+    Result<std::shared_ptr<const SceneData>> AssetManager::loadSceneData(
         AssetHandle handle, std::vector<AssetHandle> &stack)
     {
         const std::string context = "prefab " + std::to_string(handle) + ": ";
@@ -74,13 +74,13 @@ namespace vke_common
         for (auto current : affected) instance->sceneDependents.erase(current);
     }
 
-    SceneResult<std::shared_ptr<const SceneData>> AssetManager::ReloadSceneData(AssetHandle handle)
+    Result<std::shared_ptr<const SceneData>> AssetManager::ReloadSceneData(AssetHandle handle)
     {
         InvalidateSceneData(handle);
         return LoadSceneData(handle);
     }
 
-    SceneResult<void> AssetManager::expandSceneData(SceneData &data, std::vector<AssetHandle> &stack)
+    Result<void> AssetManager::expandSceneData(SceneData &data, std::vector<AssetHandle> &stack)
     {
         if (data.stage == SceneDataStage::Expanded || data.stage == SceneDataStage::Ready) return {};
         // Parsed data has already passed ingestion checks.
@@ -146,22 +146,22 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<void> AssetManager::resolveSceneAssets(SceneData &data)
+    Result<void> AssetManager::resolveSceneAssets(SceneData &data)
     {
         if (data.stage == SceneDataStage::Ready) return {};
         if (data.stage != SceneDataStage::Expanded) return std::unexpected("expand SceneData before resolving assets");
-        auto visitComponents = [&](auto operation) -> SceneResult<void>
+        auto visitComponents = [&](auto operation) -> Result<void>
         {
             for (const auto &[id, entity] : data.idToEntity)
             {
-                auto visitComponent = [&]<typename T>() -> SceneResult<void>
+                auto visitComponent = [&]<typename T>() -> Result<void>
                 {
                     if (auto *component = data.registry.try_get<T>(entity))
                         return operation(*component);
                     return {};
                 };
                 using namespace vke_component;
-                SceneResult<void> result;
+                Result<void> result;
                 if (!(result = visitComponent.operator()<RenderableObjectData>()) ||
                     !(result = visitComponent.operator()<SkeletonAnimatorData>()) ||
                     !(result = visitComponent.operator()<CanvasData>()) ||
@@ -179,7 +179,7 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<void> AssetManager::PrepareSceneData(SceneData &data)
+    Result<void> AssetManager::PrepareSceneData(SceneData &data)
     {
         if (!instance) return std::unexpected("AssetManager is not initialized");
         std::vector<AssetHandle> stack;

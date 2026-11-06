@@ -133,7 +133,7 @@ namespace vke_render
         Layered2DRenderUnit *GetUnit(vke_ds::id32_t unitID);
         std::shared_ptr<Material> GetDefaultMaterial() const { return defaultMaterial; }
         std::shared_ptr<Material> GetImageMaterial() const { return imageMaterial; }
-        vke_common::SceneResult<uint32_t> RegisterImageTexture(const std::shared_ptr<Texture2D> &texture);
+        vke_common::Result<uint32_t> RegisterImageTexture(const std::shared_ptr<Texture2D> &texture);
         void UnregisterImageTexture(uint32_t index);
         std::shared_ptr<vke_common::Font> GetFont() const { return font; }
 

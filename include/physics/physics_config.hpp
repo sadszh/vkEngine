@@ -56,7 +56,7 @@ namespace vke_physics
         void SetObjectLayerBroadPhaseLayer(JPH::ObjectLayer objectLayer, JPH::BroadPhaseLayer broadPhaseLayer);
         void SetObjectLayerCollision(JPH::ObjectLayer layer1, JPH::ObjectLayer layer2, bool shouldCollide);
         void SetObjectVsBroadPhaseLayerCollision(JPH::ObjectLayer objectLayer, JPH::BroadPhaseLayer broadPhaseLayer, bool shouldCollide);
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json);
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json);
         void LoadJSON(const nlohmann::json &json);
 
     private:

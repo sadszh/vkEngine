@@ -22,7 +22,7 @@ namespace vke_editor
         std::filesystem::path gameConfigPath; // relative to project root
         vke_common::GameConfig *gameConfig;
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             auto valid = Object(json).Require({"windowWidth", "windowHeight", "assetDBPath"}).Unsigneds({"windowWidth", "windowHeight"}, INT32_MAX).Strings({"projectRoot", "engineRoot"}).RelativePaths({"assetDBPath", "gameConfigPath"}).Result();
@@ -47,7 +47,7 @@ namespace vke_editor
             return instance;
         }
 
-        static vke_common::SceneResult<EditorConfig *> Init(const nlohmann::json &json)
+        static vke_common::Result<EditorConfig *> Init(const nlohmann::json &json)
         {
             auto config = std::make_unique<EditorConfig>(json);
             auto gameConfigJSON = vke_common::LoadJSON(

@@ -16,7 +16,7 @@ namespace vke_ui
         glm::vec2 scale{1.0f};
         float rotation = 0.0f;
 
-        vke_common::SceneResult<void> Validate() const
+        vke_common::Result<void> Validate() const
         {
             for (int axis = 0; axis < 2; ++axis)
             {
@@ -28,7 +28,7 @@ namespace vke_ui
             return {};
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             auto valid = vke_common::json_validation::Object(json)
                 .Vectors({"anchorMin", "anchorMax", "offsetMin", "offsetMax", "pivot", "scale"}, 2).Numbers({"rotation"}).Result();

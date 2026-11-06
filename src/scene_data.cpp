@@ -11,7 +11,7 @@ namespace vke_common
         *this = std::move(*parsed);
     }
 
-    SceneResult<SceneData> SceneData::FromJSON(const nlohmann::json &json)
+    Result<SceneData> SceneData::FromJSON(const nlohmann::json &json)
     {
         if (!json.is_object() || !json.contains("objects") || !json["objects"].is_array())
             return std::unexpected("scene requires an objects array");
@@ -78,7 +78,7 @@ namespace vke_common
         return data;
     }
 
-    SceneResult<void> SceneData::validateParsed() const
+    Result<void> SceneData::validateParsed() const
     {
         std::unordered_set<entt::entity> entities;
         size_t roots = 0;
@@ -112,7 +112,7 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<void> SceneData::ValidatePrefab() const
+    Result<void> SceneData::ValidatePrefab() const
     {
         // validateParsed already checked any declared root and its hierarchy.
         if (prefabRoot == entt::null)
@@ -120,14 +120,14 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<void> SceneData::ValidateExpanded() const
+    Result<void> SceneData::ValidateExpanded() const
     {
         if (!registry.view<const PrefabReference>().empty())
             return std::unexpected("SceneData contains unexpanded prefab references");
         return {};
     }
 
-    SceneResult<void> SceneData::ValidateReady(bool requireSingleRoot) const
+    Result<void> SceneData::ValidateReady(bool requireSingleRoot) const
     {
         if (stage != SceneDataStage::Ready)
             return std::unexpected("SceneData must be Ready");
@@ -144,7 +144,7 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<nlohmann::json> SceneData::ToJSON() const
+    Result<nlohmann::json> SceneData::ToJSON() const
     {
         nlohmann::json result = {{"maxid", maxID}, {"objects", nlohmann::json::array()}};
         std::unordered_map<entt::entity, vke_ds::id32_t> ids;

@@ -30,7 +30,7 @@ namespace vke_common
         vke_render::RenderConfig renderConfig;
         nlohmann::json sourceJSON;
 
-        static SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace json_validation;
             auto valid = Object(json).Unsigneds({"windowWidth", "windowHeight"}, INT32_MAX).Booleans({"enableVulkanValidationLayers"}).Strings({"projectRoot", "engineRoot"}).RelativePaths({"assetLUTPath", "defaultScenePath", "gameScriptPath", "gameScriptTypeInfoPath"}).Result();

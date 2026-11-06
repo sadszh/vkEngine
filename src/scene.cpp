@@ -76,7 +76,7 @@ namespace vke_common
         ScriptManager::LateUpdate();
     }
 
-    SceneResult<void> SceneManager::RequestInstantiate(AssetHandle prefab, const InstantiateOptions &options)
+    Result<void> SceneManager::RequestInstantiate(AssetHandle prefab, const InstantiateOptions &options)
     {
         if (!instance || instance->shuttingDown)
             return std::unexpected("SceneManager is unavailable");
@@ -111,7 +111,7 @@ namespace vke_common
         // Requests issued by Start stay in the next batch.
         for (const auto &request : requests)
         {
-            auto result = [&]() -> SceneResult<void>
+            auto result = [&]() -> Result<void>
             {
                 if (request.options.parent != entt::null &&
                     (!registry.valid(request.options.parent) || IsPendingDestroy(request.options.parent)))
@@ -130,7 +130,7 @@ namespace vke_common
         processingInstantiations = false;
     }
 
-    SceneResult<void> SceneManager::Instantiate(const SceneData &data, const InstantiateOptions &options)
+    Result<void> SceneManager::Instantiate(const SceneData &data, const InstantiateOptions &options)
     {
         if (!instance || instance->shuttingDown)
             return std::unexpected("SceneManager is unavailable");
@@ -167,7 +167,7 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<SceneData> SceneManager::ExportAllEntities() const
+    Result<SceneData> SceneManager::ExportAllEntities() const
     {
         auto view = registry.view<const GameObject>();
         std::vector<entt::entity> entities;
@@ -177,7 +177,7 @@ namespace vke_common
         return exportEntities(entities);
     }
 
-    SceneResult<SceneData> SceneManager::ExportEntitySubtree(entt::entity root) const
+    Result<SceneData> SceneManager::ExportEntitySubtree(entt::entity root) const
     {
         std::vector<entt::entity> entities{root};
         transformSystem.CollectEntitySubtree(entities);
@@ -190,7 +190,7 @@ namespace vke_common
         return data;
     }
 
-    SceneResult<SceneData> SceneManager::exportEntities(const std::vector<entt::entity> &entities) const
+    Result<SceneData> SceneManager::exportEntities(const std::vector<entt::entity> &entities) const
     {
         SceneData data;
 

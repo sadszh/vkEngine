@@ -41,7 +41,7 @@ namespace vke_common
             return animation.duration();
         }
 
-        SceneResult<void> ValidateSkeleton(const ozz::animation::Skeleton &skeleton) const
+        Result<void> ValidateSkeleton(const ozz::animation::Skeleton &skeleton) const
         {
             if (animation.num_tracks() != skeleton.num_joints())
                 return std::unexpected("animation: track count must match skeleton joint count");

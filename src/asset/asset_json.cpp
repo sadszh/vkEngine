@@ -3,7 +3,7 @@
 
 namespace vke_common
 {
-    SceneResult<nlohmann::json> LoadJSON(const std::filesystem::path &path)
+    Result<nlohmann::json> LoadJSON(const std::filesystem::path &path)
     {
         std::ifstream input(path, std::ios::binary);
         if (!input) return std::unexpected(PathToUTF8(path) + ": cannot open JSON file");
@@ -13,7 +13,7 @@ namespace vke_common
         return json;
     }
 
-    SceneResult<void> ValidateAssetJSON(const nlohmann::json &json)
+    Result<void> ValidateAssetJSON(const nlohmann::json &json)
     {
         using namespace json_validation;
         auto common = Object(json).Require({"type", "id", "name", "path"})
@@ -101,7 +101,7 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<void> ValidateAssetListJSON(const nlohmann::json &json)
+    Result<void> ValidateAssetListJSON(const nlohmann::json &json)
     {
         if (!json.is_array()) return std::unexpected("asset list must be an array");
         for (size_t i = 0; i < json.size(); ++i)

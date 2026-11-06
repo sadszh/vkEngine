@@ -19,7 +19,7 @@ namespace vke_component
         bool castsShadow = true;
 
         // Call before constructing from JSON; asset checks happen in ValidateAssets.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             auto result = Object(json).Require({"material", "mesh"}).Unsigneds({"material", "mesh"}).Booleans({"castsShadow"}).Result();
@@ -61,7 +61,7 @@ namespace vke_component
                 for (const auto &index : json["textureIndices"])
                     textureIndices.emplace_back(index[0].get<int>(), index[1].get<int>(), index[2].get<int>(), 0);
         }
-        vke_common::SceneResult<void> ValidateAssets() const
+        vke_common::Result<void> ValidateAssets() const
         {
             using vke_common::AssetManager;
             if (!material.Get())
@@ -74,7 +74,7 @@ namespace vke_component
         }
 
         // Requires successful ValidateAssets() before loading.
-        vke_common::SceneResult<void> LoadAssets()
+        vke_common::Result<void> LoadAssets()
         {
             using vke_common::AssetManager;
             if (!material.Get())

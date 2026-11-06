@@ -12,7 +12,7 @@
 
 namespace vke_component
 {
-    vke_common::SceneResult<ScriptStateData> ScriptStateData::FromJSON(const nlohmann::json &json)
+    vke_common::Result<ScriptStateData> ScriptStateData::FromJSON(const nlohmann::json &json)
     {
         using namespace vke_common;
         if (auto valid = ValidateJSON(json); !valid)
@@ -32,7 +32,7 @@ namespace vke_component
         return ScriptStateData{className, std::move(**encoded)};
     }
 
-    vke_common::SceneResult<nlohmann::json> ScriptStateData::ToJSON() const
+    vke_common::Result<nlohmann::json> ScriptStateData::ToJSON() const
     {
         using namespace vke_common;
         auto *manager = ScriptManager::GetInstance();
@@ -50,11 +50,11 @@ namespace vke_component
 
 namespace vke_common
 {
-    SceneResult<void> SceneData::loadComponent(const entt::entity entity,
+    Result<void> SceneData::loadComponent(const entt::entity entity,
                                                const nlohmann::json &component)
     {
         const std::string type = component["type"];
-        auto load = [&]<typename T>() -> SceneResult<void>
+        auto load = [&]<typename T>() -> Result<void>
         {
             if (auto valid = T::ValidateJSON(component); !valid)
                 return valid;
@@ -97,7 +97,7 @@ namespace vke_common
         return std::unexpected("unknown component type: " + type);
     }
 
-    SceneResult<void> SceneData::componentToJSON(entt::entity entity, nlohmann::json &components) const
+    Result<void> SceneData::componentToJSON(entt::entity entity, nlohmann::json &components) const
     {
         if (registry.all_of<vke_component::CameraData>(entity))
             components.push_back(registry.get<vke_component::CameraData>(entity).ToJSON());
@@ -146,7 +146,7 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<void> SceneManager::validateComponentMutation(entt::entity entity) const
+    Result<void> SceneManager::validateComponentMutation(entt::entity entity) const
     {
         if (shuttingDown)
             return std::unexpected("SceneManager is shutting down");
@@ -160,7 +160,7 @@ namespace vke_common
     }
 
     template <typename Component, typename Data>
-    SceneResult<void> SceneManager::addComponent(entt::entity entity, Data data)
+    Result<void> SceneManager::addComponent(entt::entity entity, Data data)
     {
         if (auto valid = validateComponentMutation(entity); !valid)
             return valid;
@@ -182,67 +182,67 @@ namespace vke_common
         return {};
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::CameraData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::CameraData &data)
     {
         return addComponent<vke_component::Camera>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::RenderableObjectData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::RenderableObjectData &data)
     {
         return addComponent<vke_component::RenderableObject>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::SkeletonAnimatorData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::SkeletonAnimatorData &data)
     {
         return addComponent<vke_component::SkeletonAnimator>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::RigidBodyData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::RigidBodyData &data)
     {
         return addComponent<vke_component::RigidBody>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::SensorData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::SensorData &data)
     {
         return addComponent<vke_component::Sensor>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::CharacterControllerData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::CharacterControllerData &data)
     {
         return addComponent<vke_component::CharacterController>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::DirectionalLightData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::DirectionalLightData &data)
     {
         return addComponent<vke_component::DirectionalLight>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::PointLightData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::PointLightData &data)
     {
         return addComponent<vke_component::PointLight>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::SpotLightData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::SpotLightData &data)
     {
         return addComponent<vke_component::SpotLight>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::CanvasData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::CanvasData &data)
     {
         return addComponent<vke_component::Canvas>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::AudioSourceData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::AudioSourceData &data)
     {
         return addComponent<vke_component::AudioSource>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, const vke_component::AudioListenerData &data)
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::AudioListenerData &data)
     {
         return addComponent<vke_component::AudioListener>(entity, data);
     }
 
-    SceneResult<void> SceneManager::AddComponent(entt::entity entity, ComponentType componentType)
+    Result<void> SceneManager::AddComponent(entt::entity entity, ComponentType componentType)
     {
         if (auto valid = validateComponentMutation(entity); !valid)
             return valid;
@@ -284,7 +284,7 @@ namespace vke_common
         }
     }
 
-    SceneResult<void> SceneManager::RemoveComponent(entt::entity entity, ComponentType componentType)
+    Result<void> SceneManager::RemoveComponent(entt::entity entity, ComponentType componentType)
     {
         if (auto valid = validateComponentMutation(entity); !valid)
             return valid;

@@ -96,21 +96,21 @@ namespace vke_common
         static std::shared_ptr<vke_audio::AudioClip> LoadAudioClip(const AssetHandle hdl);
 
         // Preflight checks only: these never load assets or populate caches.
-        static SceneResult<void> ValidateTexture2D(AssetHandle handle);
-        static SceneResult<void> ValidateMesh(AssetHandle handle);
-        static SceneResult<void> ValidateVertFragShader(AssetHandle handle);
-        static SceneResult<void> ValidateComputeShader(AssetHandle handle);
-        static SceneResult<void> ValidateMaterial(AssetHandle handle);
-        static SceneResult<void> ValidateSkeleton(AssetHandle handle);
-        static SceneResult<void> ValidateAnimation(AssetHandle handle);
-        static SceneResult<void> ValidateFont(AssetHandle handle);
-        static SceneResult<void> ValidateAudioClip(AssetHandle handle);
+        static Result<void> ValidateTexture2D(AssetHandle handle);
+        static Result<void> ValidateMesh(AssetHandle handle);
+        static Result<void> ValidateVertFragShader(AssetHandle handle);
+        static Result<void> ValidateComputeShader(AssetHandle handle);
+        static Result<void> ValidateMaterial(AssetHandle handle);
+        static Result<void> ValidateSkeleton(AssetHandle handle);
+        static Result<void> ValidateAnimation(AssetHandle handle);
+        static Result<void> ValidateFont(AssetHandle handle);
+        static Result<void> ValidateAudioClip(AssetHandle handle);
 
-        static SceneResult<std::shared_ptr<const SceneData>> LoadSceneData(AssetHandle handle);
-        static SceneResult<std::shared_ptr<const SceneData>> ReloadSceneData(AssetHandle handle);
+        static Result<std::shared_ptr<const SceneData>> LoadSceneData(AssetHandle handle);
+        static Result<std::shared_ptr<const SceneData>> ReloadSceneData(AssetHandle handle);
         static void InvalidateSceneData(AssetHandle handle);
-        static SceneResult<SceneData> LoadSceneFile(const std::filesystem::path &path);
-        static SceneResult<void> PrepareSceneData(SceneData &data);
+        static Result<SceneData> LoadSceneFile(const std::filesystem::path &path);
+        static Result<void> PrepareSceneData(SceneData &data);
 
     private:
         static std::filesystem::path resolveAssetPath(AssetHandle handle, const std::filesystem::path &path);
@@ -119,15 +119,15 @@ namespace vke_common
         std::unordered_map<AssetHandle, std::unordered_set<AssetHandle>> sceneDependencies;
         std::unordered_map<AssetHandle, std::unordered_set<AssetHandle>> sceneDependents;
 
-        SceneResult<std::shared_ptr<const SceneData>> loadSceneData(
+        Result<std::shared_ptr<const SceneData>> loadSceneData(
             AssetHandle handle, std::vector<AssetHandle> &stack);
-        SceneResult<void> expandSceneData(SceneData &data, std::vector<AssetHandle> &stack);
-        SceneResult<void> resolveSceneAssets(SceneData &data);
+        Result<void> expandSceneData(SceneData &data, std::vector<AssetHandle> &stack);
+        Result<void> resolveSceneAssets(SceneData &data);
 
-        SceneResult<void> checkPath(AssetHandle handle, const std::filesystem::path &path) const;
+        Result<void> checkPath(AssetHandle handle, const std::filesystem::path &path) const;
 
         template <typename Get>
-        static SceneResult<void> validateAsset(AssetHandle handle, Get get)
+        static Result<void> validateAsset(AssetHandle handle, Get get)
         {
             if (!instance) return std::unexpected("AssetManager is not initialized");
             if (handle == 0) return std::unexpected("required asset is empty");
@@ -137,7 +137,7 @@ namespace vke_common
         }
 
         template <typename Asset>
-        SceneResult<void> checkAsset(const Asset *asset) const
+        Result<void> checkAsset(const Asset *asset) const
         {
             if (!asset) return std::unexpected("asset not found");
             if (asset->val) return {};
@@ -146,8 +146,8 @@ namespace vke_common
             return checkPath(asset->id, asset->path);
         }
 
-        SceneResult<void> checkAsset(const MaterialAsset *material) const;
-        SceneResult<void> checkAsset(const VFShaderAsset *shader) const;
+        Result<void> checkAsset(const MaterialAsset *material) const;
+        Result<void> checkAsset(const VFShaderAsset *shader) const;
 
         void initBuiltinAssets();
     };

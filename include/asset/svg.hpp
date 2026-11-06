@@ -1,8 +1,9 @@
 #ifndef ASSET_SVG_H
 #define ASSET_SVG_H
 
+#include <common.hpp>
+
 #include <cstdint>
-#include <expected>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -20,8 +21,8 @@ namespace vke_common
     };
 
     bool IsSVGPath(const std::filesystem::path &path);
-    std::expected<SVGImage, std::string> RasterizeSVG(std::string_view source, int width = 0, int height = 0);
-    std::expected<SVGImage, std::string> LoadSVG(const std::filesystem::path &path, int width = 0, int height = 0);
+    Result<SVGImage> RasterizeSVG(std::string_view source, int width = 0, int height = 0);
+    Result<SVGImage> LoadSVG(const std::filesystem::path &path, int width = 0, int height = 0);
 }
 
 #endif

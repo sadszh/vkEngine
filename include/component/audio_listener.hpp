@@ -12,7 +12,7 @@ namespace vke_component
         bool enabled = true;
 
         // Call before constructing from JSON; asset checks happen in LoadAssets where applicable.
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
             return Object(json).Booleans({"enabled"}).Result();

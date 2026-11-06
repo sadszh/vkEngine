@@ -15,7 +15,7 @@ namespace vke_ui
         SizeMode height = SizeMode::Rect;
         bool ignoreLayout = false;
 
-        vke_common::SceneResult<void> Validate() const
+        vke_common::Result<void> Validate() const
         {
             if (width < SizeMode::Rect || width > SizeMode::Content ||
                 height < SizeMode::Rect || height > SizeMode::Content)
@@ -23,7 +23,7 @@ namespace vke_ui
             return {};
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             if (auto valid = vke_common::json_validation::Object(json)
                 .Strings({"width", "height"}).Booleans({"ignoreLayout"}).Result(); !valid)
@@ -58,7 +58,7 @@ namespace vke_ui
         LayoutAlignment mainAlignment = LayoutAlignment::Start;
         LayoutAlignment crossAlignment = LayoutAlignment::Start;
 
-        vke_common::SceneResult<void> Validate() const
+        vke_common::Result<void> Validate() const
         {
             if (direction < LayoutDirection::None || direction > LayoutDirection::Vertical ||
                 mainAlignment < LayoutAlignment::Start || mainAlignment > LayoutAlignment::End ||
@@ -72,7 +72,7 @@ namespace vke_ui
             return {};
         }
 
-        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             if (auto valid = vke_common::json_validation::Object(json)
                 .Strings({"direction", "mainAlignment", "crossAlignment"})

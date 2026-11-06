@@ -92,14 +92,14 @@ namespace vke_common
         };
     }
 
-    std::expected<ValueEditor, ValueViewError> ValueEditor::Parse(TypeInfoPtr type, TypeInfoData &data)
+    ValueViewResult<ValueEditor> ValueEditor::Parse(TypeInfoPtr type, TypeInfoData &data)
     {
         auto root = ValueView::Parse(std::move(type), data);
         if (!root) return std::unexpected(root.error());
         return ValueEditor(data, std::move(*root));
     }
 
-    ValueEditor::Result ValueEditor::check(const ValueView &value, TypeKind kind) const
+    ValueViewResult<void> ValueEditor::check(const ValueView &value, TypeKind kind) const
     {
         if (!value.Valid() || value.Type()->Kind() != kind)
             return std::unexpected(ValueViewError{ValueViewErrorCode::WrongType, 0});
@@ -108,7 +108,7 @@ namespace vke_common
         return {};
     }
 
-    ValueEditor::Result ValueEditor::replace(const ValueView &value, const TypeInfoData &replacement)
+    ValueViewResult<void> ValueEditor::replace(const ValueView &value, const TypeInfoData &replacement)
     {
         Writer writer;
         writer.rewrite(root, value, replacement);
@@ -123,7 +123,7 @@ namespace vke_common
         return {};
     }
 
-    ValueEditor::Result ValueEditor::SetString(const ValueView &value, std::string_view text)
+    ValueViewResult<void> ValueEditor::SetString(const ValueView &value, std::string_view text)
     {
         if (auto valid = check(value, TypeKind::String); !valid) return valid;
         if (text.size() > ValueView::MaxStringByteLength)
@@ -142,7 +142,7 @@ namespace vke_common
         return replace(value, writer.bytes);
     }
 
-    ValueEditor::Result ValueEditor::AppendElement(const ValueView &array)
+    ValueViewResult<void> ValueEditor::AppendElement(const ValueView &array)
     {
         if (auto valid = check(array, TypeKind::Array); !valid) return valid;
         const auto &element = array.Type()->GetIf<ArrayTypeInfo>()->elementType;
@@ -160,7 +160,7 @@ namespace vke_common
         return replace(array, writer.bytes);
     }
 
-    ValueEditor::Result ValueEditor::RemoveElement(const ValueView &array, uint32_t index)
+    ValueViewResult<void> ValueEditor::RemoveElement(const ValueView &array, uint32_t index)
     {
         if (auto valid = check(array, TypeKind::Array); !valid) return valid;
         const auto count = *array.Count();

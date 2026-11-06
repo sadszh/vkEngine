@@ -121,7 +121,7 @@ namespace vke_physics
         }
     }
 
-    vke_common::SceneResult<void> PhysicsConfig::ValidateJSON(const nlohmann::json &json)
+    vke_common::Result<void> PhysicsConfig::ValidateJSON(const nlohmann::json &json)
     {
         using namespace vke_common::json_validation;
         if (json.is_null()) return {};
@@ -141,7 +141,7 @@ namespace vke_physics
                 return std::unexpected("gravity: " + result.error());
         }
 
-        auto validateLayers = [&](const char *field, uint32_t maximum) -> vke_common::SceneResult<uint32_t>
+        auto validateLayers = [&](const char *field, uint32_t maximum) -> vke_common::Result<uint32_t>
         {
             auto layers = json.find(field);
             if (layers == json.end()) return 2;

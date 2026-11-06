@@ -21,13 +21,6 @@
             VKE_FATAL(__VA_ARGS__) \
     }
 
-#define VKE_VK_CHECK(op, ...) VKE_FATAL_IF(op != VK_SUCCESS, __VA_ARGS__)
-
-#ifndef GLFW_INCLUDE_VULKAN
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#endif
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
@@ -36,8 +29,9 @@
 namespace vke_common
 {
     using AssetHandle = uint64_t;
-    template <typename T>
-    using SceneResult = std::expected<T, std::string>;
+
+    template <typename T, typename E = std::string>
+    using Result = std::expected<T, E>;
 
 }
 

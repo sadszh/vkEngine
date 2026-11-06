@@ -17,7 +17,7 @@ namespace vke_common
                (extension[3] == 'g' || extension[3] == 'G');
     }
 
-    std::expected<SVGImage, std::string> RasterizeSVG(std::string_view source, int width, int height)
+    Result<SVGImage> RasterizeSVG(std::string_view source, int width, int height)
     {
         if (width < 0 || height < 0 || width > MaxSVGDimension || height > MaxSVGDimension)
             return std::unexpected("SVG raster dimensions must be between 0 and 4096");
@@ -52,7 +52,7 @@ namespace vke_common
         return result;
     }
 
-    std::expected<SVGImage, std::string> LoadSVG(const std::filesystem::path &path, int width, int height)
+    Result<SVGImage> LoadSVG(const std::filesystem::path &path, int width, int height)
     {
         std::ifstream stream(path, std::ios::binary);
         if (!stream)

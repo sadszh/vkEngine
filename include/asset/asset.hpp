@@ -76,9 +76,9 @@ namespace vke_common
 
     void ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer);
 
-    [[nodiscard]] SceneResult<nlohmann::json> LoadJSON(const std::filesystem::path &pth);
-    [[nodiscard]] SceneResult<void> ValidateAssetJSON(const nlohmann::json &json);
-    [[nodiscard]] SceneResult<void> ValidateAssetListJSON(const nlohmann::json &json);
+    [[nodiscard]] Result<nlohmann::json> LoadJSON(const std::filesystem::path &pth);
+    [[nodiscard]] Result<void> ValidateAssetJSON(const nlohmann::json &json);
+    [[nodiscard]] Result<void> ValidateAssetListJSON(const nlohmann::json &json);
 
     template <AssetType TID, typename T, typename VT>
     class Asset
