@@ -1,7 +1,7 @@
 #ifndef RENDER_CONFIG_H
 #define RENDER_CONFIG_H
 
-#include <common.hpp>
+#include <json_validation.hpp>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -34,6 +34,14 @@ namespace vke_render
         explicit AtmosphereParameter(const nlohmann::json &json)
         {
             LoadJSON(json);
+        }
+
+        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        {
+            using namespace vke_common::json_validation;
+            if (json.is_null())
+                return {};
+            return Object(json).Numbers({"seaLevel", "planetRadius", "atmosphereHeight", "sunDiskAngle", "sunLightIntensityFactor", "rayleighScatteringScale", "rayleighScatteringScalarHeight", "mieScatteringScale", "mieAnisotropy", "mieScatteringScalarHeight", "ozoneAbsorptionScale", "ozoneLevelCenterHeight", "ozoneLevelWidth", "aerialPerspectiveDistance", "aerialPerspectiveScale"}).Result();
         }
 
         void LoadJSON(const nlohmann::json &json)
@@ -70,6 +78,14 @@ namespace vke_render
         float groundHorizonWidthDegrees = 25.0f;
         float groundCurve = 1.0f;
 
+        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        {
+            using namespace vke_common::json_validation;
+            if (json.is_null())
+                return {};
+            return Object(json).Numbers({"sunDirectionThresholdDegrees", "sunColorThreshold", "sunIntensityThreshold", "cameraHeightThreshold", "groundBrightness", "groundHorizonWidthDegrees", "groundCurve"}).Vectors({"groundColor"}, 3).Result();
+        }
+
         void LoadJSON(const nlohmann::json &json)
         {
             if (json.is_null())
@@ -81,8 +97,6 @@ namespace vke_render
             cameraHeightThreshold = json.value("cameraHeightThreshold", cameraHeightThreshold);
             if (auto color = json.find("groundColor"); color != json.end())
             {
-                VKE_FATAL_IF(!color->is_array() || color->size() != 3,
-                             "Sky LUT groundColor must contain three linear RGB components")
                 groundColor = color->get<std::array<float, 3>>();
             }
             groundBrightness = json.value("groundBrightness", groundBrightness);
@@ -102,6 +116,14 @@ namespace vke_render
         explicit BloomConfig(const nlohmann::json &json)
         {
             LoadJSON(json);
+        }
+
+        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        {
+            using namespace vke_common::json_validation;
+            if (json.is_null())
+                return {};
+            return Object(json).Numbers({"threshold", "intensity", "radius", "knee"}).Result();
         }
 
         void LoadJSON(const nlohmann::json &json)
@@ -127,6 +149,14 @@ namespace vke_render
             LoadJSON(json);
         }
 
+        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        {
+            using namespace vke_common::json_validation;
+            if (json.is_null())
+                return {};
+            return Object(json).Numbers({"exposure"}).Unsigneds({"toneMappingMode"}, UINT32_MAX).Result();
+        }
+
         void LoadJSON(const nlohmann::json &json)
         {
             if (json.is_null())
@@ -148,6 +178,14 @@ namespace vke_render
         explicit SSAOConfig(const nlohmann::json &json)
         {
             LoadJSON(json);
+        }
+
+        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        {
+            using namespace vke_common::json_validation;
+            if (json.is_null())
+                return {};
+            return Object(json).Numbers({"radius", "bias", "intensity", "power"}).Result();
         }
 
         void LoadJSON(const nlohmann::json &json)
@@ -176,6 +214,20 @@ namespace vke_render
             LoadJSON(json);
         }
 
+        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        {
+            using namespace vke_common::json_validation;
+            if (json.is_null())
+                return {};
+            auto valid = Object(json).Numbers({"maxDistance", "splitLambda", "depthMargin"}).Unsigneds({"mapSize", "cascadeCnt"}, UINT32_MAX).Result();
+            if (!valid)
+                return valid;
+            const auto count = json.value("cascadeCnt", MAX_DIRECTIONAL_SHADOW_CASCADE_CNT);
+            if (count < 1 || count > MAX_DIRECTIONAL_SHADOW_CASCADE_CNT)
+                return std::unexpected("cascadeCnt must be between 1 and 4");
+            return {};
+        }
+
         void LoadJSON(const nlohmann::json &json)
         {
             if (json.is_null())
@@ -183,8 +235,6 @@ namespace vke_render
 
             mapSize = json.value("mapSize", mapSize);
             cascadeCnt = json.value("cascadeCnt", cascadeCnt);
-            VKE_FATAL_IF(cascadeCnt < 1 || cascadeCnt > MAX_DIRECTIONAL_SHADOW_CASCADE_CNT,
-                         "Directional shadow cascade cnt must be between 1 and {}", MAX_DIRECTIONAL_SHADOW_CASCADE_CNT)
             maxDistance = json.value("maxDistance", maxDistance);
             splitLambda = json.value("splitLambda", splitLambda);
             depthMargin = json.value("depthMargin", depthMargin);
@@ -210,6 +260,33 @@ namespace vke_render
         explicit RenderConfig(const nlohmann::json &json)
         {
             LoadJSON(json);
+        }
+
+        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        {
+            if (json.is_null())
+                return {};
+            if (!json.is_object())
+                return std::unexpected("expected an object");
+            if (auto field = json.find("bloom"); field != json.end())
+                if (auto valid = BloomConfig::ValidateJSON(*field); !valid)
+                    return std::unexpected("bloom: " + valid.error());
+            if (auto field = json.find("toneMapping"); field != json.end())
+                if (auto valid = ToneMappingConfig::ValidateJSON(*field); !valid)
+                    return std::unexpected("toneMapping: " + valid.error());
+            if (auto field = json.find("ssao"); field != json.end())
+                if (auto valid = SSAOConfig::ValidateJSON(*field); !valid)
+                    return std::unexpected("ssao: " + valid.error());
+            if (auto field = json.find("directionalShadow"); field != json.end())
+                if (auto valid = DirectionalShadowConfig::ValidateJSON(*field); !valid)
+                    return std::unexpected("directionalShadow: " + valid.error());
+            if (auto field = json.find("atmosphere"); field != json.end())
+                if (auto valid = AtmosphereParameter::ValidateJSON(*field); !valid)
+                    return std::unexpected("atmosphere: " + valid.error());
+            if (auto field = json.find("skyLUT"); field != json.end())
+                if (auto valid = SkyLUTConfig::ValidateJSON(*field); !valid)
+                    return std::unexpected("skyLUT: " + valid.error());
+            return {};
         }
 
         void LoadJSON(const nlohmann::json &json)

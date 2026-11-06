@@ -45,22 +45,33 @@ namespace vke_common::json_validation
             return *this;
         }
 
-        Object &Numbers(std::initializer_list<const char *> fields) { return Check(fields, Number); }
+        Object &Numbers(std::initializer_list<const char *> fields) { return check(fields, Number); }
         Object &Booleans(std::initializer_list<const char *> fields)
         {
-            return Check(fields, [](const JSON &v) { return v.is_boolean(); });
+            return check(fields, [](const JSON &v) { return v.is_boolean(); });
         }
         Object &Strings(std::initializer_list<const char *> fields)
         {
-            return Check(fields, [](const JSON &v) { return v.is_string(); });
+            return check(fields, [](const JSON &v) { return v.is_string(); });
+        }
+        Object &RelativePaths(std::initializer_list<const char *> fields)
+        {
+            return check(fields, [](const JSON &v)
+            {
+                if (!v.is_string()) return false;
+                const auto &text = v.get_ref<const std::string &>();
+                if (text.find('\0') != std::string::npos) return false;
+                const auto path = PathFromUTF8(text).lexically_normal();
+                return !path.has_root_path() && (path.empty() || *path.begin() != "..");
+            });
         }
         Object &Unsigneds(std::initializer_list<const char *> fields, uint64_t maximum = UINT64_MAX)
         {
-            return Check(fields, [maximum](const JSON &v) { return Unsigned(v, maximum); });
+            return check(fields, [maximum](const JSON &v) { return Unsigned(v, maximum); });
         }
         Object &Vectors(std::initializer_list<const char *> fields, size_t size)
         {
-            return Check(fields, [size](const JSON &v) { return Vector(v, size); });
+            return check(fields, [size](const JSON &v) { return Vector(v, size); });
         }
         SceneResult<void> Result() const { return result; }
 
@@ -69,7 +80,7 @@ namespace vke_common::json_validation
         SceneResult<void> result;
 
         template <typename Predicate>
-        Object &Check(std::initializer_list<const char *> fields, Predicate predicate)
+        Object &check(std::initializer_list<const char *> fields, Predicate predicate)
         {
             for (auto field : fields)
                 if (result && value.contains(field) && !predicate(value[field]))

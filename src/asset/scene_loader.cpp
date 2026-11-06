@@ -1,16 +1,13 @@
 #include <scene.hpp>
 #include <algorithm>
-#include <fstream>
 
 namespace vke_common
 {
     SceneResult<SceneData> AssetManager::LoadSceneFile(const std::filesystem::path &path)
     {
-        std::ifstream input(path);
-        if (!input) return std::unexpected(PathToUTF8(path) + ": cannot open scene");
-        auto json = nlohmann::json::parse(input, nullptr, false);
-        if (json.is_discarded()) return std::unexpected(PathToUTF8(path) + ": invalid JSON");
-        auto result = SceneData::FromJSON(json);
+        auto json = LoadJSON(path);
+        if (!json) return std::unexpected(json.error());
+        auto result = SceneData::FromJSON(*json);
         if (!result) return std::unexpected(PathToUTF8(path) + ": " + result.error());
         return result;
     }

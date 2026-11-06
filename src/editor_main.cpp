@@ -24,16 +24,23 @@ std::vector<std::unique_ptr<vke_render::RenderPassBase>> customPasses;
 
 int wmain(int argc, wchar_t **argv)
 {
-    vke_common::Logger::Init(vke_common::LoggerOutput::EngineUI);
+    vke_common::Logger::Init(vke_common::LoggerOutput::Console);
     VKE_FATAL_IF(argc != 2, "Usage: editor.exe <path/to/editorconfig.json>")
 
     const auto configPath = std::filesystem::absolute(std::filesystem::path(argv[1]));
-    const nlohmann::json &configJSON = vke_common::LoadJSON(configPath);
+    auto loadedConfig = vke_common::LoadJSON(configPath);
+    VKE_FATAL_IF(!loadedConfig, "{}", loadedConfig.error())
+    const auto &configJSON = *loadedConfig;
+    auto validConfig = vke_editor::EditorConfig::ValidateJSON(configJSON);
+    VKE_FATAL_IF(!validConfig, "{}: {}", vke_common::PathToUTF8(configPath), validConfig.error())
     vke_common::Paths::Init(configPath,
         vke_common::PathFromUTF8(configJSON.value("projectRoot", ".")),
         vke_common::PathFromUTF8(configJSON.value("engineRoot", "")));
-    vke_editor::EditorConfig *editorConfig = vke_editor::EditorConfig::Init(configJSON);
+    auto initializedConfig = vke_editor::EditorConfig::Init(configJSON);
+    VKE_FATAL_IF(!initializedConfig, "{}", initializedConfig.error())
+    auto *editorConfig = *initializedConfig;
 
+    vke_common::Logger::SetOutput(vke_common::LoggerOutput::EngineUI);
     GLFWwindow *window = initWindow(editorConfig->windowWidth, editorConfig->windowHeight);
     vke_editor::Editor *editor = vke_editor::Editor::Init(
         window, *editorConfig,

@@ -145,6 +145,7 @@ commonsrc = (
         "./src/render/environment.cpp",
         "./src/paths.cpp",
         "./src/asset/asset.cpp",
+        "./src/asset/asset_json.cpp",
         "./src/asset/loader.cpp",
         "./src/asset/svg.cpp",
         "./src/asset/scene_loader.cpp",

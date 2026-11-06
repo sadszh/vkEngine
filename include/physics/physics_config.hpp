@@ -4,7 +4,7 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Math/Vec3.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
-#include <nlohmann/json.hpp>
+#include <json_validation.hpp>
 #include <array>
 #include <cstdint>
 #include <string>
@@ -56,6 +56,7 @@ namespace vke_physics
         void SetObjectLayerBroadPhaseLayer(JPH::ObjectLayer objectLayer, JPH::BroadPhaseLayer broadPhaseLayer);
         void SetObjectLayerCollision(JPH::ObjectLayer layer1, JPH::ObjectLayer layer2, bool shouldCollide);
         void SetObjectVsBroadPhaseLayerCollision(JPH::ObjectLayer objectLayer, JPH::BroadPhaseLayer broadPhaseLayer, bool shouldCollide);
+        static vke_common::SceneResult<void> ValidateJSON(const nlohmann::json &json);
         void LoadJSON(const nlohmann::json &json);
 
     private:

@@ -236,75 +236,25 @@ namespace vke_common
 
     bool AssetDBSQLite::BulkLoad(const std::filesystem::path &pth)
     {
-        const nlohmann::json assets = LoadJSON(pth);
-
-        if (!assets.is_array())
+        auto loaded = LoadJSON(pth);
+        if (!loaded)
         {
-            VKE_LOG_ERROR("AssetDBSQLite::BulkLoad - '{}' must contain a JSON array",
-                          pth.string());
+            VKE_LOG_ERROR("{}", loaded.error())
+            return false;
+        }
+        const auto &assets = *loaded;
+        if (auto valid = ValidateAssetListJSON(assets); !valid)
+        {
+            VKE_LOG_ERROR("{}: {}", PathToUTF8(pth), valid.error())
             return false;
         }
 
-        bool valid = true;
         for (const auto &asset : assets)
-        {
-            if (!asset.is_object() || !asset.contains("type") || !asset["type"].is_number_integer() ||
-                !asset.contains("id") || !asset["id"].is_number_integer())
+            if (asset["id"].get<AssetHandle>() > INT64_MAX)
             {
-                VKE_LOG_ERROR("AssetDBSQLite::BulkLoad - asset in '{}' must have integer type and id fields",
-                              pth.string());
-                valid = false;
-                break;
+                VKE_LOG_ERROR("{}: asset id exceeds SQLite integer range", PathToUTF8(pth))
+                return false;
             }
-
-            const int type = asset["type"].get<int>();
-            const AssetHandle id = asset["id"].get<AssetHandle>();
-            if (type < 0 || type >= ASSET_CNT_FLAG)
-            {
-                VKE_LOG_ERROR("AssetDBSQLite::BulkLoad - asset {} has invalid type {}",
-                              id, type);
-                valid = false;
-                break;
-            }
-
-            // Validate the complete batch before changing any cache.
-            switch (type)
-            {
-            case ASSET_TEXTURE:
-                (void)TextureAsset(id, asset);
-                break;
-            case ASSET_MESH:
-                (void)MeshAsset(id, asset);
-                break;
-            case ASSET_VF_SHADER:
-                (void)VFShaderAsset(id, asset);
-                break;
-            case ASSET_COMPUTE_SHADER:
-                (void)ComputeShaderAsset(id, asset);
-                break;
-            case ASSET_MATERIAL:
-                (void)MaterialAsset(id, asset);
-                break;
-            case ASSET_SKELETON:
-                (void)SkeletonAsset(id, asset);
-                break;
-            case ASSET_ANIMATION:
-                (void)AnimationAsset(id, asset);
-                break;
-            case ASSET_SCENE:
-                (void)SceneAsset(id, asset);
-                break;
-            case ASSET_FONT:
-                (void)FontAsset(id, asset);
-                break;
-            case ASSET_AUDIO_CLIP:
-                (void)AudioClipAsset(id, asset);
-                break;
-            }
-        }
-
-        if (!valid)
-            return false;
 
         // BulkLoad only changes the in-memory layer. SyncAll/Sync* persists the
         // imported dirty entries to SQLite later.
@@ -387,6 +337,18 @@ namespace vke_common
     }
 
     template <typename T>
+    static SceneResult<T> parseAssetRecord(const char *raw, int size, AssetHandle id)
+    {
+        if (!raw || size <= 0) return std::unexpected("empty JSON record");
+        auto json = nlohmann::json::parse(raw, raw + size, nullptr, false);
+        if (json.is_discarded()) return std::unexpected("invalid JSON");
+        if (auto valid = ValidateAssetJSON(json); !valid) return std::unexpected(valid.error());
+        if (json["type"].get<AssetType>() != T::type || json["id"].get<AssetHandle>() != id)
+            return std::unexpected("JSON type or id does not match the database record");
+        return T(id, json);
+    }
+
+    template <typename T>
     bool AssetDBSQLite::loadAssetFromDB(const std::string &table, AssetHandle id, T &outAsset)
     {
         const std::string sql = "SELECT data FROM " + table + " WHERE id = ?1";
@@ -407,11 +369,15 @@ namespace vke_common
             const char *raw = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
             const int rawBytes = sqlite3_column_bytes(stmt, 0);
 
-            if (raw != nullptr && rawBytes > 0)
+            auto parsed = parseAssetRecord<T>(raw, rawBytes, id);
+            if (parsed)
             {
-                const nlohmann::json &json = nlohmann::json::parse(raw, raw + rawBytes);
-                outAsset = T(id, json);
+                outAsset = std::move(*parsed);
                 found = true;
+            }
+            else
+            {
+                VKE_LOG_ERROR("AssetDBSQLite {} asset {}: {}", table, id, parsed.error())
             }
         }
         else if (stepResult != SQLITE_DONE)
@@ -449,11 +415,14 @@ namespace vke_common
 
             const char *raw = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
             const int rawBytes = sqlite3_column_bytes(stmt, 1);
-            if (raw == nullptr || rawBytes <= 0)
-                continue;
-
-            const nlohmann::json &json = nlohmann::json::parse(raw, raw + rawBytes);
-            cache[id] = T(id, json);
+            auto parsed = parseAssetRecord<T>(raw, rawBytes, id);
+            if (!parsed)
+            {
+                VKE_LOG_ERROR("AssetDBSQLite {} asset {}: {}", table, id, parsed.error())
+                sqlite3_finalize(stmt);
+                return false;
+            }
+            cache[id] = std::move(*parsed);
         }
 
         if (stepResult != SQLITE_DONE)

@@ -103,15 +103,6 @@ namespace vke_common
         file.close();
     }
 
-    nlohmann::json LoadJSON(const std::filesystem::path &pth)
-    {
-        nlohmann::json ret;
-        std::ifstream ifs(pth, std::ios::in);
-        ifs >> ret;
-        ifs.close();
-        return ret;
-    }
-
     template <typename T, typename AT>
     static inline std::shared_ptr<T> loadFromCacheOrUpdate(
         AT *asset,

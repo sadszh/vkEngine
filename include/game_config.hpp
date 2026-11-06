@@ -30,6 +30,24 @@ namespace vke_common
         vke_render::RenderConfig renderConfig;
         nlohmann::json sourceJSON;
 
+        static SceneResult<void> ValidateJSON(const nlohmann::json &json)
+        {
+            using namespace json_validation;
+            auto valid = Object(json).Unsigneds({"windowWidth", "windowHeight"}, INT32_MAX).Booleans({"enableVulkanValidationLayers"}).Strings({"projectRoot", "engineRoot"}).RelativePaths({"assetLUTPath", "defaultScenePath", "gameScriptPath", "gameScriptTypeInfoPath"}).Result();
+            if (!valid)
+                return valid;
+            for (auto field : {"windowWidth", "windowHeight"})
+                if (json.contains(field) && json[field] == 0)
+                    return std::unexpected(std::string(field) + " must be positive");
+            if (json.contains("physicsConfig"))
+                if (auto result = vke_physics::PhysicsConfig::ValidateJSON(json["physicsConfig"]); !result)
+                    return std::unexpected("physicsConfig: " + result.error());
+            if (json.contains("renderConfig"))
+                if (auto result = vke_render::RenderConfig::ValidateJSON(json["renderConfig"]); !result)
+                    return std::unexpected("renderConfig: " + result.error());
+            return {};
+        }
+
         GameConfig() : windowWidth(1920), windowHeight(1080), enableVulkanValidationLayers(true),
                        assetLUTPath(), defaultScenePath(), gameScriptPath(),
                        gameScriptTypeInfoPath(), physicsConfig(), renderConfig() {}

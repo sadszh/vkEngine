@@ -13,7 +13,6 @@
 #include <iostream>
 #include <map>
 #include <cstring>
-#include <stdexcept>
 #include <unordered_map>
 #include <filesystem>
 
@@ -77,7 +76,9 @@ namespace vke_common
 
     void ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer);
 
-    nlohmann::json LoadJSON(const std::filesystem::path &pth);
+    [[nodiscard]] SceneResult<nlohmann::json> LoadJSON(const std::filesystem::path &pth);
+    [[nodiscard]] SceneResult<void> ValidateAssetJSON(const nlohmann::json &json);
+    [[nodiscard]] SceneResult<void> ValidateAssetListJSON(const nlohmann::json &json);
 
     template <AssetType TID, typename T, typename VT>
     class Asset
@@ -288,16 +289,12 @@ namespace vke_common
                 renderMode = vke_render::MaterialRenderMode::CUTOFF_MODE;
             else if (renderModeName == "blend")
                 renderMode = vke_render::MaterialRenderMode::BLEND_MODE;
-            else if (renderModeName != "opaque")
-                throw std::invalid_argument("material renderMode must be opaque, cutoff or blend");
 
             const std::string blendModeName = json.value("blendMode", "alpha");
             if (blendModeName == "premultipliedAlpha")
                 blendMode = vke_render::MaterialBlendMode::PREMULTIPLIED_ALPHA;
             else if (blendModeName == "additive")
                 blendMode = vke_render::MaterialBlendMode::ADDITIVE;
-            else if (blendModeName != "alpha")
-                throw std::invalid_argument("material blendMode must be alpha, premultipliedAlpha or additive");
 
             auto &texs = json["textures"];
             for (auto &tex : texs)
@@ -320,10 +317,6 @@ namespace vke_common
                 const uint32_t componentCnt = constantInfo["component_cnt"];
                 const std::string componentType = constantInfo["component_type"];
                 const auto &data = constantInfo["data"];
-                if (data.size() != componentCnt)
-                    throw std::invalid_argument("push constant data size does not match component_cnt");
-                if (componentType != "float" && componentType != "int")
-                    throw std::invalid_argument("push constant component_type must be \"float\" or \"int\"");
 
                 const bool isFloat = componentType == "float";
                 auto constantData = std::make_unique<uint32_t[]>(componentCnt);

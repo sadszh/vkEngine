@@ -9,8 +9,10 @@ namespace vke_common
     Logger *Logger::Init(LoggerOutput output)
     {
         if (instance == nullptr)
+        {
             instance = new Logger();
-        instance->init(output);
+            instance->init(output);
+        }
         return instance;
     }
 
@@ -47,30 +49,36 @@ namespace vke_common
 
     void Logger::init(LoggerOutput output)
     {
-        spdlog::drop("vkEngine");
-        {
-            std::lock_guard<std::mutex> lock(entriesMutex);
-            entries.clear();
-            entries.reserve(MaxBufferedEntries);
-            nextEntryIndex = 0;
-        }
-
-        if (output == LoggerOutput::EngineUI)
-        {
-            auto sink = std::make_shared<spdlog::sinks::callback_sink_mt>(
-                [this](const spdlog::details::log_msg &message)
-                { appendEntry(message); });
-            logger = std::make_shared<spdlog::logger>("vkEngine", sink);
-            spdlog::register_logger(logger);
-        }
-        else
-        {
-            logger = spdlog::stdout_color_mt("vkEngine");
-        }
+        entries.reserve(MaxBufferedEntries);
+        outputSink = std::make_shared<spdlog::sinks::dist_sink_mt>();
+        setOutput(output);
+        logger = std::make_shared<spdlog::logger>("vkEngine", outputSink);
+        spdlog::register_logger(logger);
 
 #ifdef VKE_DEBUG
         logger->set_level(spdlog::level::debug);
 #endif
+    }
+
+    void Logger::SetOutput(LoggerOutput output)
+    {
+        GetInstance()->setOutput(output);
+    }
+
+    void Logger::setOutput(LoggerOutput output)
+    {
+        spdlog::sink_ptr sink;
+        if (output == LoggerOutput::EngineUI)
+        {
+            sink = std::make_shared<spdlog::sinks::callback_sink_mt>(
+                [this](const spdlog::details::log_msg &message)
+                { appendEntry(message); });
+        }
+        else
+        {
+            sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        }
+        outputSink->set_sinks({std::move(sink)});
     }
 
     void Logger::appendEntry(const spdlog::details::log_msg &message)

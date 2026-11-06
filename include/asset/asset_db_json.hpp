@@ -69,7 +69,7 @@ namespace vke_common
 
         virtual ~AssetDBJSON() {}
 
-        virtual void Init() override { bulkLoad(path); }
+        virtual void Init() override { VKE_FATAL_IF(!bulkLoad(path), "Cannot initialize asset list: {}", PathToUTF8(path)) }
         virtual bool ClearAll() override;
         virtual bool BulkLoad(const std::filesystem::path &pth) override { return bulkLoad(pth); }
         virtual bool SyncAll() override { return saveAll(path); }

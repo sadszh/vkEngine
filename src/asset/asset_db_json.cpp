@@ -27,7 +27,18 @@ namespace vke_common
 
     bool AssetDBJSON::bulkLoad(const std::filesystem::path &pth)
     {
-        const nlohmann::json &json = LoadJSON(pth);
+        auto loaded = LoadJSON(pth);
+        if (!loaded)
+        {
+            VKE_LOG_ERROR("{}", loaded.error())
+            return false;
+        }
+        const auto &json = *loaded;
+        if (auto valid = ValidateAssetListJSON(json); !valid)
+        {
+            VKE_LOG_ERROR("{}: {}", PathToUTF8(pth), valid.error())
+            return false;
+        }
         for (const auto &asset : json)
         {
             AssetType type = asset["type"];

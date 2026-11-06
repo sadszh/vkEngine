@@ -2,6 +2,7 @@
 #define LOGGER_H
 
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/dist_sink.h>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -41,13 +42,13 @@ namespace vke_common
         static Logger *Init(LoggerOutput output);
         static Logger *GetInstance();
         static void Dispose();
-
+        static void SetOutput(LoggerOutput output);
         static LogID GetLatestEntryID();
         static void ClearEntries();
 
         // Visits retained entries in ascending ID order. Entries older than the
         // ring buffer's current oldest entry are silently skipped. The callback
-        // runs while the log buffer is locked and must not write another log.
+        // runs while the log buffer is locked and must not log or change output.
         template <typename Operation>
         static size_t IterateEntries(LogID startID, LogID endID, Operation &&operation)
         {
@@ -120,12 +121,14 @@ namespace vke_common
         static constexpr size_t MaxBufferedEntries = 8192;
 
         std::shared_ptr<spdlog::logger> logger;
+        std::shared_ptr<spdlog::sinks::dist_sink_mt> outputSink;
         std::mutex entriesMutex;
         std::vector<LogEntry> entries;
         size_t nextEntryIndex = 0;
         LogID nextEntryID = 1;
 
         void init(LoggerOutput output);
+        void setOutput(LoggerOutput output);
         void appendEntry(const spdlog::details::log_msg &message);
     };
 

@@ -11,7 +11,11 @@ int wmain(int argc, wchar_t **argv)
 {
     VKE_FATAL_IF(argc != 2, "arg count mismatch")
     const auto configPath = std::filesystem::absolute(std::filesystem::path(argv[1]));
-    const nlohmann::json &configJSON = vke_common::LoadJSON(configPath);
+    auto loadedConfig = vke_common::LoadJSON(configPath);
+    VKE_FATAL_IF(!loadedConfig, "{}", loadedConfig.error())
+    const auto &configJSON = *loadedConfig;
+    auto validConfig = vke_common::GameConfig::ValidateJSON(configJSON);
+    VKE_FATAL_IF(!validConfig, "{}: {}", vke_common::PathToUTF8(configPath), validConfig.error())
     vke_common::Paths::Init(configPath,
         vke_common::PathFromUTF8(configJSON.value("projectRoot", ".")),
         vke_common::PathFromUTF8(configJSON.value("engineRoot", "")));
