@@ -38,10 +38,10 @@ namespace vke_editor
         }
 
         template <typename Fn>
-        void AddAssetsToDirectoryTree(AssetTreeNode &root, vke_common::AssetType type, Fn &&iterate)
+        vke_common::Result<void> AddAssetsToDirectoryTree(AssetTreeNode &root, vke_common::AssetType type, Fn &&iterate)
         {
-            iterate([&](auto &asset)
-                    {
+            return iterate([&](auto &asset)
+                           {
                 AssetTreeNode *node = &root;
                 const std::filesystem::path assetPath = asset.path.lexically_normal();
                 std::vector<std::string> directoryParts =
@@ -59,58 +59,100 @@ namespace vke_editor
         }
     }
 
-    void Editor::rebuildAssetDirectoryTree(vke_common::AssetManager *assetManager)
+    vke_common::Result<void> Editor::rebuildAssetDirectoryTree(vke_common::AssetManager *assetManager)
     {
-        assetDirectoryTree = {};
-        assetDirectoryTree.name = "Assets";
+        AssetTreeNode tree;
+        tree.name = "Assets";
 
-        AssetTreeNode &builtinRoot = assetDirectoryTree.children["Built-in"];
+        AssetTreeNode &builtinRoot = tree.children["Built-in"];
         builtinRoot.name = "Built-in";
         vke_common::AssetDBBase *builtinDB = vke_common::AssetManager::GetBuiltinAssets();
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_TEXTURE, [&](auto &&op)
-                                 { builtinDB->IterateTextureAsset(op); });
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_MESH, [&](auto &&op)
-                                 { builtinDB->IterateMeshAsset(op); });
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_VF_SHADER, [&](auto &&op)
-                                 { builtinDB->IterateVFShaderAsset(op); });
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_COMPUTE_SHADER, [&](auto &&op)
-                                 { builtinDB->IterateComputeShaderAsset(op); });
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_MATERIAL, [&](auto &&op)
-                                 { builtinDB->IterateMaterialAsset(op); });
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_SKELETON, [&](auto &&op)
-                                 { builtinDB->IterateSkeletonAsset(op); });
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_ANIMATION, [&](auto &&op)
-                                 { builtinDB->IterateAnimationAsset(op); });
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_SCENE, [&](auto &&op)
-                                 { builtinDB->IterateSceneAsset(op); });
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_FONT, [&](auto &&op)
-                                 { builtinDB->IterateFontAsset(op); });
-        AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_AUDIO_CLIP, [&](auto &&op)
-                                 { builtinDB->IterateAudioClipAsset(op); });
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_TEXTURE, [&](auto &&op)
+                                                   { return builtinDB->IterateTextureAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_MESH, [&](auto &&op)
+                                                   { return builtinDB->IterateMeshAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_VF_SHADER, [&](auto &&op)
+                                                   { return builtinDB->IterateVFShaderAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_COMPUTE_SHADER, [&](auto &&op)
+                                                   { return builtinDB->IterateComputeShaderAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_MATERIAL, [&](auto &&op)
+                                                   { return builtinDB->IterateMaterialAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_SKELETON, [&](auto &&op)
+                                                   { return builtinDB->IterateSkeletonAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_ANIMATION, [&](auto &&op)
+                                                   { return builtinDB->IterateAnimationAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_SCENE, [&](auto &&op)
+                                                   { return builtinDB->IterateSceneAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_FONT, [&](auto &&op)
+                                                   { return builtinDB->IterateFontAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(builtinRoot, vke_common::ASSET_AUDIO_CLIP, [&](auto &&op)
+                                                   { return builtinDB->IterateAudioClipAsset(op); });
+            !result)
+            return result;
 
-        AssetTreeNode &projectRoot = assetDirectoryTree.children["Project"];
+        AssetTreeNode &projectRoot = tree.children["Project"];
         projectRoot.name = "Project";
         vke_common::AssetDBBase *projectDB = vke_common::AssetManager::GetAssetDB();
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_TEXTURE, [&](auto &&op)
-                                 { projectDB->IterateTextureAsset(op); });
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_MESH, [&](auto &&op)
-                                 { projectDB->IterateMeshAsset(op); });
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_VF_SHADER, [&](auto &&op)
-                                 { projectDB->IterateVFShaderAsset(op); });
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_COMPUTE_SHADER, [&](auto &&op)
-                                 { projectDB->IterateComputeShaderAsset(op); });
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_MATERIAL, [&](auto &&op)
-                                 { projectDB->IterateMaterialAsset(op); });
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_SKELETON, [&](auto &&op)
-                                 { projectDB->IterateSkeletonAsset(op); });
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_ANIMATION, [&](auto &&op)
-                                 { projectDB->IterateAnimationAsset(op); });
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_SCENE, [&](auto &&op)
-                                 { projectDB->IterateSceneAsset(op); });
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_FONT, [&](auto &&op)
-                                 { projectDB->IterateFontAsset(op); });
-        AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_AUDIO_CLIP, [&](auto &&op)
-                                 { projectDB->IterateAudioClipAsset(op); });
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_TEXTURE, [&](auto &&op)
+                                                   { return projectDB->IterateTextureAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_MESH, [&](auto &&op)
+                                                   { return projectDB->IterateMeshAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_VF_SHADER, [&](auto &&op)
+                                                   { return projectDB->IterateVFShaderAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_COMPUTE_SHADER, [&](auto &&op)
+                                                   { return projectDB->IterateComputeShaderAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_MATERIAL, [&](auto &&op)
+                                                   { return projectDB->IterateMaterialAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_SKELETON, [&](auto &&op)
+                                                   { return projectDB->IterateSkeletonAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_ANIMATION, [&](auto &&op)
+                                                   { return projectDB->IterateAnimationAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_SCENE, [&](auto &&op)
+                                                   { return projectDB->IterateSceneAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_FONT, [&](auto &&op)
+                                                   { return projectDB->IterateFontAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_AUDIO_CLIP, [&](auto &&op)
+                                                   { return projectDB->IterateAudioClipAsset(op); });
+            !result)
+            return result;
+        assetDirectoryTree = std::move(tree);
+        return {};
     }
 
 }

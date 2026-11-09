@@ -47,7 +47,8 @@ namespace vke_common
             vke_audio::AudioManager::Init();
             vke_render::RenderEnvironment::Init(window, gameConfig.enableVulkanValidationLayers);
             vke_render::VulkanResourceManager::Init();
-            AssetManager::Init(std::make_unique<AssetDBJSON>(Paths::Project(PathFromUTF8(gameConfig.assetLUTPath)), CUSTOM_ASSET_ID_ST));
+            if (auto result = AssetManager::Init(std::make_unique<AssetDBJSON>(Paths::Project(PathFromUTF8(gameConfig.assetLUTPath)), CUSTOM_ASSET_ID_ST)); !result)
+                VKE_FATAL("{}", result.error())
             vke_physics::PhysicsManager::Init(gameConfig.physicsConfig);
             if (ctx == nullptr)
                 ctx = &(vke_render::RenderEnvironment::GetInstance()->rootRenderContext);

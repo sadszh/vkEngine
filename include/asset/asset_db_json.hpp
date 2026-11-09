@@ -7,24 +7,23 @@
 namespace vke_common
 {
 
-#define DBJSON_GET_ASSET_FUNC(tp, cache)         \
-    virtual tp *Get##tp(AssetHandle id) override \
-    {                                            \
-        auto it = cache.find(id);                \
-        if (it != cache.end())                   \
-            return &it->second;                  \
-        return nullptr;                          \
+#define DBJSON_GET_ASSET_FUNC(tp, cache)                  \
+    virtual Result<tp *> Get##tp(AssetHandle id) override \
+    {                                                     \
+        auto it = cache.find(id);                         \
+        if (it != cache.end())                            \
+            return &it->second;                           \
+        return nullptr;                                   \
     }
 
 #define DBJSON_SET_ASSET_FUNC(tp, cache)     \
-    virtual bool Set##tp(tp &asset) override \
+    virtual void Set##tp(tp &asset) override \
     {                                        \
         cache[asset.id] = asset;             \
-        return true;                         \
     }
 
 #define DBJSON_SYNC_ASSET_FUNC(tp, cache) \
-    virtual bool Sync##tp(AssetHandle id) override { return false; } // json db cannot sync single
+    virtual Result<void> Sync##tp(AssetHandle id) override { return std::unexpected("JSON asset database does not support syncing a single asset"); }
 
 #define DBJSON_CREATE_ASSET_FUNC(tp, cache)            \
     virtual AssetHandle Create##tp(tp &asset) override \
@@ -35,14 +34,18 @@ namespace vke_common
         return newId;                                  \
     }
 
-#define DBJSON_REMOVE_ASSET_FUNC(tp, cache) \
-    virtual bool Remove##tp(AssetHandle id) override { return cache.erase(id) > 0; }
+#define DBJSON_REMOVE_ASSET_FUNC(tp, cache)          \
+    virtual void Remove##tp(AssetHandle id) override \
+    {                                                \
+        cache.erase(id);                             \
+    }
 
-#define DBJSON_ITERATE_ASSET_FUNC(tp, cache)                              \
-    virtual void Iterate##tp(std::function<void(const tp &)> op) override \
-    {                                                                     \
-        for (auto &kv : cache)                                            \
-            op(kv.second);                                                \
+#define DBJSON_ITERATE_ASSET_FUNC(tp, cache)                                      \
+    virtual Result<void> Iterate##tp(std::function<void(const tp &)> op) override \
+    {                                                                             \
+        for (auto &kv : cache)                                                    \
+            op(kv.second);                                                        \
+        return {};                                                                \
     }
 
 #define DBJSON_MARKDIRTY_ASSET_FUNC(tp) \
@@ -69,10 +72,10 @@ namespace vke_common
 
         virtual ~AssetDBJSON() {}
 
-        virtual void Init() override { VKE_FATAL_IF(!bulkLoad(path), "Cannot initialize asset list: {}", PathToUTF8(path)) }
-        virtual bool ClearAll() override;
-        virtual bool BulkLoad(const std::filesystem::path &pth) override { return bulkLoad(pth); }
-        virtual bool SyncAll() override { return saveAll(path); }
+        virtual Result<void> Init() override { return bulkLoad(path); }
+        virtual Result<void> ClearAll() override;
+        virtual Result<void> BulkLoad(const std::filesystem::path &pth) override { return bulkLoad(pth); }
+        virtual Result<void> SyncAll() override { return saveAll(path); }
 
         DBJSON_ASSET_OP_FUNCS(TextureAsset, textureCache)
         DBJSON_ASSET_OP_FUNCS(MeshAsset, meshCache)
@@ -98,8 +101,8 @@ namespace vke_common
         std::map<AssetHandle, FontAsset> fontCache;
         std::map<AssetHandle, AudioClipAsset> audioCache;
 
-        bool bulkLoad(const std::filesystem::path &pth);
-        bool saveAll(const std::filesystem::path &pth);
+        Result<void> bulkLoad(const std::filesystem::path &pth);
+        Result<void> saveAll(const std::filesystem::path &pth);
     };
 }
 

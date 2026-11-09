@@ -29,12 +29,12 @@ namespace vke_editor
                 : renderable.renderUnit->mesh->handle;
 
         {
-            auto *mat = vke_common::AssetManager::GetMaterialAsset(materialHandle);
+            auto *mat = ShowAssetReadResult(vke_common::AssetManager::GetMaterialAsset(materialHandle));
             const std::string selectedMaterial = AssetDisplayName(materialHandle, mat ? mat->name.c_str() : nullptr);
             if (ImGui::BeginCombo("Material", selectedMaterial.c_str()))
             {
-                vke_common::AssetManager::IterateMaterialAsset([&](const vke_common::MaterialAsset &asset)
-                                                               {
+                ShowAssetIterationResult(vke_common::AssetManager::IterateMaterialAsset([&](const vke_common::MaterialAsset &asset)
+                                                                                        {
                     const vke_common::AssetHandle assetHandle = asset.id;
                     const bool selected = assetHandle == materialHandle;
                     const std::string materialLabel = std::to_string(assetHandle) + "  " + asset.name;
@@ -45,7 +45,7 @@ namespace vke_editor
                         renderable.SetMaterial(material);
                     }
                     if (selected)
-                        ImGui::SetItemDefaultFocus(); });
+                        ImGui::SetItemDefaultFocus(); }));
                 ImGui::EndCombo();
             }
         }
@@ -55,12 +55,12 @@ namespace vke_editor
             renderable.SetCastShadow(castsShadow);
 
         {
-            auto *meshAsset = vke_common::AssetManager::GetMeshAsset(meshHandle);
+            auto *meshAsset = ShowAssetReadResult(vke_common::AssetManager::GetMeshAsset(meshHandle));
             const std::string selectedMesh = AssetDisplayName(meshHandle, meshAsset ? meshAsset->name.c_str() : nullptr);
             if (ImGui::BeginCombo("Mesh", selectedMesh.c_str()))
             {
-                vke_common::AssetManager::IterateMeshAsset([&](const vke_common::MeshAsset &asset)
-                                                           {
+                ShowAssetIterationResult(vke_common::AssetManager::IterateMeshAsset([&](const vke_common::MeshAsset &asset)
+                                                                                    {
                     const vke_common::AssetHandle assetHandle = asset.id;
                     const bool selected = assetHandle == meshHandle;
                     const std::string meshLabel = std::to_string(assetHandle) + "  " + asset.name;
@@ -71,7 +71,7 @@ namespace vke_editor
                         renderable.SetMesh(mesh);
                     }
                     if (selected)
-                        ImGui::SetItemDefaultFocus(); });
+                        ImGui::SetItemDefaultFocus(); }));
                 ImGui::EndCombo();
             }
         }

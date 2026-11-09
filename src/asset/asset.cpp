@@ -12,15 +12,21 @@ namespace vke_common
     extern const std::vector<vke_render::Vertex> planeVertices;
     extern const std::vector<uint32_t> planeIndices;
 
-    AssetManager *AssetManager::Init(std::unique_ptr<AssetDBBase> &&db)
+    Result<AssetManager *> AssetManager::Init(std::unique_ptr<AssetDBBase> &&db)
     {
-        instance = new AssetManager();
-        instance->assetDB = std::move(db);
-        instance->assetDB->Init();
-        instance->ftLibrary = nullptr;
-        VKE_FATAL_IF(FT_Init_FreeType(&(instance->ftLibrary)), "Failed to initialize FreeType library!")
-        instance->initBuiltinAssets();
-        return instance;
+        auto *manager = new AssetManager();
+        manager->assetDB = std::move(db);
+        auto result = manager->assetDB->Init();
+        if (result && FT_Init_FreeType(&manager->ftLibrary))
+            result = std::unexpected("Failed to initialize FreeType library");
+        if (result) result = manager->initBuiltinAssets();
+        if (!result)
+        {
+            delete manager;
+            return std::unexpected(result.error());
+        }
+        instance = manager;
+        return manager;
     }
 
     std::filesystem::path AssetManager::resolveAssetPath(AssetHandle handle, const std::filesystem::path &path)
@@ -28,18 +34,19 @@ namespace vke_common
         return handle < CUSTOM_ASSET_ID_ST ? Paths::Engine(path) : Paths::Project(path);
     }
 
-    void AssetManager::initBuiltinAssets()
+    Result<void> AssetManager::initBuiltinAssets()
     {
-        builtinAssets->Init();
+        if (auto result = builtinAssets->Init(); !result) return result;
         MeshAsset plane(BUILTIN_MESH_PLANE_ID, "Plane", "");
         plane.val = std::make_shared<vke_render::Mesh>(BUILTIN_MESH_PLANE_ID,
                                                        std::span<const vke_render::Vertex>(planeVertices),
                                                        std::span<const uint32_t>(planeIndices));
         builtinAssets->SetMeshAsset(plane);
+        return {};
     }
 
 #define AM_GET_IMPL(tp)                                  \
-    tp *AssetManager::Get##tp(AssetHandle id)            \
+    Result<tp *> AssetManager::Get##tp(AssetHandle id)   \
     {                                                    \
         if (id < CUSTOM_ASSET_ID_ST)                     \
             return instance->builtinAssets->Get##tp(id); \
@@ -59,11 +66,11 @@ namespace vke_common
 
 #undef AM_GET_IMPL
 
-#define AM_ITERATE_IMPL(tp)                                            \
-    void AssetManager::Iterate##tp(std::function<void(const tp &)> op) \
-    {                                                                  \
-        instance->builtinAssets->Iterate##tp(op);                      \
-        instance->assetDB->Iterate##tp(op);                            \
+#define AM_ITERATE_IMPL(tp)                                                                 \
+    Result<void> AssetManager::Iterate##tp(std::function<void(const tp &)> op)              \
+    {                                                                                       \
+        if (auto result = instance->builtinAssets->Iterate##tp(op); !result) return result; \
+        return instance->assetDB->Iterate##tp(op);                                          \
     }
 
     AM_ITERATE_IMPL(TextureAsset)

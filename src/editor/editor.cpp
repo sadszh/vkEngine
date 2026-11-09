@@ -69,12 +69,13 @@ namespace vke_editor
         vke_editor::EditorStateManager::Init(vke_editor::EditorState::Edit);
         vke_render::RenderEnvironment::Init(window, editorConfig.gameConfig->enableVulkanValidationLayers);
         vke_render::VulkanResourceManager::Init();
-        vke_common::AssetManager::Init(
+        if (auto result = vke_common::AssetManager::Init(
             std::make_unique<vke_common::AssetDBSQLite>(
                 vke_common::Paths::Project(editorConfig.assetDBPath),
-                vke_common::CUSTOM_ASSET_ID_ST));
-        VKE_FATAL_IF(!vke_common::AssetManager::BulkLoad(vke_common::Paths::Engine(EditorAssetLUTPath), true),
-                     "Failed to load editor assets from {}", EditorAssetLUTPath.string())
+                vke_common::CUSTOM_ASSET_ID_ST)); !result)
+            VKE_FATAL("{}", result.error())
+        if (auto result = vke_common::AssetManager::BulkLoad(vke_common::Paths::Engine(EditorAssetLUTPath), true); !result)
+            VKE_FATAL("Failed to load editor assets: {}", result.error())
         vke_render::RenderContext *ctx = &(vke_render::RenderEnvironment::GetInstance()->rootRenderContext);
         EditorRenderer::Init(window, ctx, sceneViewportWidth, sceneViewportHeight);
 

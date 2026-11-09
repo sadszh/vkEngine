@@ -2,7 +2,7 @@
 
 namespace vke_common
 {
-    bool AssetDBJSON::ClearAll()
+    Result<void> AssetDBJSON::ClearAll()
     {
         textureCache.clear();
         meshCache.clear();
@@ -16,7 +16,7 @@ namespace vke_common
         audioCache.clear();
         for (auto &id : ids)
             id = stID;
-        return true;
+        return {};
     }
 
 #define LOAD_LUT_CASE(tpid, tp, assets)          \
@@ -25,20 +25,14 @@ namespace vke_common
         ids[type] = std::max(ids[type], id + 1); \
         break;
 
-    bool AssetDBJSON::bulkLoad(const std::filesystem::path &pth)
+    Result<void> AssetDBJSON::bulkLoad(const std::filesystem::path &pth)
     {
         auto loaded = LoadJSON(pth);
         if (!loaded)
-        {
-            VKE_LOG_ERROR("{}", loaded.error())
-            return false;
-        }
+            return std::unexpected(loaded.error());
         const auto &json = *loaded;
         if (auto valid = ValidateAssetListJSON(json); !valid)
-        {
-            VKE_LOG_ERROR("{}: {}", PathToUTF8(pth), valid.error())
-            return false;
-        }
+            return std::unexpected(PathToUTF8(pth) + ": " + valid.error());
         for (const auto &asset : json)
         {
             AssetType type = asset["type"];
@@ -59,7 +53,7 @@ namespace vke_common
                 break;
             }
         }
-        return true;
+        return {};
     }
 
 #define ASSET_TO_JSON(cache)                \
@@ -67,7 +61,7 @@ namespace vke_common
         if (kv.first >= CUSTOM_ASSET_ID_ST) \
             ret.push_back(kv.second.ToJSON());
 
-    bool AssetDBJSON::saveAll(const std::filesystem::path &pth)
+    Result<void> AssetDBJSON::saveAll(const std::filesystem::path &pth)
     {
         nlohmann::json ret = nlohmann::json::array();
 
@@ -83,9 +77,27 @@ namespace vke_common
         for (auto &kv : sceneCache)
             ret.push_back(kv.second.ToJSON());
 
-        std::ofstream ofs(pth);
-        ofs << ret.dump(4);
+        const std::string data = ret.dump(4);
+        auto temporary = pth;
+        temporary += ".tmp";
+        std::ofstream ofs(temporary, std::ios::out | std::ios::binary | std::ios::noreplace);
+        if (!ofs)
+            return std::unexpected(PathToUTF8(temporary) + ": cannot create temporary asset database");
+        ofs << data;
         ofs.close();
-        return !ofs.fail();
+        std::string error;
+        if (ofs.fail()) error = PathToUTF8(temporary) + ": failed to write asset database";
+        else
+        {
+            std::error_code replaceError;
+            std::filesystem::rename(temporary, pth, replaceError);
+            if (!replaceError) return {};
+            error = PathToUTF8(pth) + ": replace asset database: " + replaceError.message();
+        }
+
+        std::error_code cleanupError;
+        std::filesystem::remove(temporary, cleanupError);
+        if (cleanupError) error += "; remove temporary file: " + cleanupError.message();
+        return std::unexpected(std::move(error));
     }
 }

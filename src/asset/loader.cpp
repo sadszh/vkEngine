@@ -149,9 +149,9 @@ namespace vke_common
 
     std::unique_ptr<vke_render::Texture2D> AssetManager::LoadTexture2DUnique(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetTextureAsset(hdl)
-                          : instance->assetDB->GetTextureAsset(hdl);
+        auto result = GetTextureAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -160,9 +160,9 @@ namespace vke_common
 
     std::shared_ptr<vke_render::Texture2D> AssetManager::LoadTexture2D(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetTextureAsset(hdl)
-                          : instance->assetDB->GetTextureAsset(hdl);
+        auto result = GetTextureAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -180,9 +180,9 @@ namespace vke_common
 
     std::unique_ptr<vke_render::Mesh> AssetManager::LoadMeshUnique(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetMeshAsset(hdl)
-                          : instance->assetDB->GetMeshAsset(hdl);
+        auto result = GetMeshAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -191,9 +191,9 @@ namespace vke_common
 
     std::shared_ptr<vke_render::Mesh> AssetManager::LoadMesh(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetMeshAsset(hdl)
-                          : instance->assetDB->GetMeshAsset(hdl);
+        auto result = GetMeshAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -213,9 +213,9 @@ namespace vke_common
 
     std::unique_ptr<vke_render::ShaderModuleSet> AssetManager::LoadVertFragShaderUnique(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetVFShaderAsset(hdl)
-                          : instance->assetDB->GetVFShaderAsset(hdl);
+        auto result = GetVFShaderAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto vertPath = resolveAssetPath(hdl, asset->path);
@@ -225,9 +225,9 @@ namespace vke_common
 
     std::shared_ptr<vke_render::ShaderModuleSet> AssetManager::LoadVertFragShader(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetVFShaderAsset(hdl)
-                          : instance->assetDB->GetVFShaderAsset(hdl);
+        auto result = GetVFShaderAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto vertPath = resolveAssetPath(hdl, asset->path);
@@ -247,9 +247,9 @@ namespace vke_common
 
     std::unique_ptr<vke_render::ShaderModuleSet> AssetManager::LoadComputeShaderUnique(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetComputeShaderAsset(hdl)
-                          : instance->assetDB->GetComputeShaderAsset(hdl);
+        auto result = GetComputeShaderAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -258,9 +258,9 @@ namespace vke_common
 
     std::shared_ptr<vke_render::ShaderModuleSet> AssetManager::LoadComputeShader(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetComputeShaderAsset(hdl)
-                          : instance->assetDB->GetComputeShaderAsset(hdl);
+        auto result = GetComputeShaderAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -289,18 +289,18 @@ namespace vke_common
 
     std::unique_ptr<vke_render::Material> AssetManager::LoadMaterialUnique(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetMaterialAsset(hdl)
-                          : instance->assetDB->GetMaterialAsset(hdl);
+        auto result = GetMaterialAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
         return loadMaterial(*asset);
     }
 
     std::shared_ptr<vke_render::Material> AssetManager::LoadMaterial(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetMaterialAsset(hdl)
-                          : instance->assetDB->GetMaterialAsset(hdl);
+        auto result = GetMaterialAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         std::function<std::unique_ptr<vke_render::Material>(MaterialAsset &)> op(loadMaterial);
@@ -328,9 +328,9 @@ namespace vke_common
 
     std::unique_ptr<Skeleton> AssetManager::LoadSkeletonUnique(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetSkeletonAsset(hdl)
-                          : instance->assetDB->GetSkeletonAsset(hdl);
+        auto result = GetSkeletonAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -339,9 +339,9 @@ namespace vke_common
 
     std::shared_ptr<Skeleton> AssetManager::LoadSkeleton(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetSkeletonAsset(hdl)
-                          : instance->assetDB->GetSkeletonAsset(hdl);
+        auto result = GetSkeletonAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -413,9 +413,9 @@ namespace vke_common
 
     std::unique_ptr<Animation> AssetManager::LoadAnimationUnique(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetAnimationAsset(hdl)
-                          : instance->assetDB->GetAnimationAsset(hdl);
+        auto result = GetAnimationAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -424,9 +424,9 @@ namespace vke_common
 
     std::shared_ptr<Animation> AssetManager::LoadAnimation(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetAnimationAsset(hdl)
-                          : instance->assetDB->GetAnimationAsset(hdl);
+        auto result = GetAnimationAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -464,9 +464,9 @@ namespace vke_common
 
     std::unique_ptr<Font> AssetManager::LoadFontUnique(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetFontAsset(hdl)
-                          : instance->assetDB->GetFontAsset(hdl);
+        auto result = GetFontAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -475,9 +475,9 @@ namespace vke_common
 
     std::shared_ptr<Font> AssetManager::LoadFont(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetFontAsset(hdl)
-                          : instance->assetDB->GetFontAsset(hdl);
+        auto result = GetFontAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -493,9 +493,9 @@ namespace vke_common
 
     std::unique_ptr<vke_audio::AudioClip> AssetManager::LoadAudioClipUnique(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetAudioClipAsset(hdl)
-                          : instance->assetDB->GetAudioClipAsset(hdl);
+        auto result = GetAudioClipAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);
@@ -504,9 +504,9 @@ namespace vke_common
 
     std::shared_ptr<vke_audio::AudioClip> AssetManager::LoadAudioClip(const AssetHandle hdl)
     {
-        auto *asset = hdl < CUSTOM_ASSET_ID_ST
-                          ? instance->builtinAssets->GetAudioClipAsset(hdl)
-                          : instance->assetDB->GetAudioClipAsset(hdl);
+        auto result = GetAudioClipAsset(hdl);
+        VKE_FATAL_IF(!result, "{}", result.error())
+        auto *asset = *result;
         VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
 
         const auto path = resolveAssetPath(hdl, asset->path);

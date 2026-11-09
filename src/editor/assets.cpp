@@ -51,7 +51,7 @@ namespace vke_editor
 
     static std::string TextureDisplayName(vke_common::AssetHandle handle)
     {
-        vke_common::TextureAsset *texture = vke_common::AssetManager::GetTextureAsset(handle);
+        vke_common::TextureAsset *texture = ShowAssetReadResult(vke_common::AssetManager::GetTextureAsset(handle));
         if (texture == nullptr)
             return std::to_string(handle) + "  <missing>";
         return std::to_string(handle) + "  " + texture->name;
@@ -62,70 +62,70 @@ namespace vke_editor
         switch (type)
         {
         case vke_common::ASSET_TEXTURE:
-            if (auto *asset = vke_common::AssetManager::GetTextureAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetTextureAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
             }
             break;
         case vke_common::ASSET_MESH:
-            if (auto *asset = vke_common::AssetManager::GetMeshAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetMeshAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
             }
             break;
         case vke_common::ASSET_VF_SHADER:
-            if (auto *asset = vke_common::AssetManager::GetVFShaderAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetVFShaderAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
             }
             break;
         case vke_common::ASSET_COMPUTE_SHADER:
-            if (auto *asset = vke_common::AssetManager::GetComputeShaderAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetComputeShaderAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
             }
             break;
         case vke_common::ASSET_MATERIAL:
-            if (auto *asset = vke_common::AssetManager::GetMaterialAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetMaterialAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
             }
             break;
         case vke_common::ASSET_SKELETON:
-            if (auto *asset = vke_common::AssetManager::GetSkeletonAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetSkeletonAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
             }
             break;
         case vke_common::ASSET_ANIMATION:
-            if (auto *asset = vke_common::AssetManager::GetAnimationAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetAnimationAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
             }
             break;
         case vke_common::ASSET_SCENE:
-            if (auto *asset = vke_common::AssetManager::GetSceneAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetSceneAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
             }
             break;
         case vke_common::ASSET_FONT:
-            if (auto *asset = vke_common::AssetManager::GetFontAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetFontAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
             }
             break;
         case vke_common::ASSET_AUDIO_CLIP:
-            if (auto *asset = vke_common::AssetManager::GetAudioClipAsset(handle))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetAudioClipAsset(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
@@ -198,40 +198,45 @@ namespace vke_editor
             if (!ImGui::TreeNode(label))
                 return;
 
-            iterate([&](auto &asset)
-                    {
+            auto result = iterate([&](auto &asset)
+                                  {
                 AssetTreeEntry entry{type, asset.id, asset.name, vke_common::PathToUTF8(asset.path)};
                 drawAssetEntry(entry); });
 
+            ShowAssetIterationResult(result);
             ImGui::TreePop();
         };
 
         showAssetGroup("Textures", vke_common::ASSET_TEXTURE, [](auto &&op)
-                       { vke_common::AssetManager::IterateTextureAsset(op); });
+                       { return vke_common::AssetManager::IterateTextureAsset(op); });
         showAssetGroup("Materials", vke_common::ASSET_MATERIAL, [](auto &&op)
-                       { vke_common::AssetManager::IterateMaterialAsset(op); });
+                       { return vke_common::AssetManager::IterateMaterialAsset(op); });
         showAssetGroup("VF Shaders", vke_common::ASSET_VF_SHADER, [](auto &&op)
-                       { vke_common::AssetManager::IterateVFShaderAsset(op); });
+                       { return vke_common::AssetManager::IterateVFShaderAsset(op); });
         showAssetGroup("Compute Shaders", vke_common::ASSET_COMPUTE_SHADER, [](auto &&op)
-                       { vke_common::AssetManager::IterateComputeShaderAsset(op); });
+                       { return vke_common::AssetManager::IterateComputeShaderAsset(op); });
         showAssetGroup("Meshes", vke_common::ASSET_MESH, [](auto &&op)
-                       { vke_common::AssetManager::IterateMeshAsset(op); });
+                       { return vke_common::AssetManager::IterateMeshAsset(op); });
         showAssetGroup("Skeletons", vke_common::ASSET_SKELETON, [](auto &&op)
-                       { vke_common::AssetManager::IterateSkeletonAsset(op); });
+                       { return vke_common::AssetManager::IterateSkeletonAsset(op); });
         showAssetGroup("Scenes", vke_common::ASSET_SCENE, [](auto &&op)
-                       { vke_common::AssetManager::IterateSceneAsset(op); });
+                       { return vke_common::AssetManager::IterateSceneAsset(op); });
         showAssetGroup("Fonts", vke_common::ASSET_FONT, [](auto &&op)
-                       { vke_common::AssetManager::IterateFontAsset(op); });
+                       { return vke_common::AssetManager::IterateFontAsset(op); });
         showAssetGroup("Animations", vke_common::ASSET_ANIMATION, [](auto &&op)
-                       { vke_common::AssetManager::IterateAnimationAsset(op); });
+                       { return vke_common::AssetManager::IterateAnimationAsset(op); });
         showAssetGroup("Audio Clips", vke_common::ASSET_AUDIO_CLIP, [](auto &&op)
-                       { vke_common::AssetManager::IterateAudioClipAsset(op); });
+                       { return vke_common::AssetManager::IterateAudioClipAsset(op); });
     }
 
     void Editor::showAssetsByDirectory(vke_common::AssetManager *assetManager)
     {
         if (assetDirectoryTree.name.empty())
-            rebuildAssetDirectoryTree(assetManager);
+            if (auto result = rebuildAssetDirectoryTree(assetManager); !result)
+            {
+                ShowAssetIterationResult(result);
+                return;
+            }
 
         if (assetDirectoryTree.children.empty() && assetDirectoryTree.assets.empty())
         {
@@ -312,7 +317,7 @@ namespace vke_editor
 
     void Editor::showSelectedTextureInspector()
     {
-        vke_common::TextureAsset *asset = vke_common::AssetManager::GetTextureAsset(selectedAsset);
+        vke_common::TextureAsset *asset = ShowAssetReadResult(vke_common::AssetManager::GetTextureAsset(selectedAsset));
         if (asset == nullptr)
         {
             clearSelectedAsset();
@@ -344,7 +349,7 @@ namespace vke_editor
 
     void Editor::showSelectedMaterialInspector()
     {
-        vke_common::MaterialAsset *asset = vke_common::AssetManager::GetMaterialAsset(selectedAsset);
+        vke_common::MaterialAsset *asset = ShowAssetReadResult(vke_common::AssetManager::GetMaterialAsset(selectedAsset));
         if (asset == nullptr)
         {
             clearSelectedAsset();
@@ -467,11 +472,11 @@ namespace vke_editor
         switch (entry.type)
         {
         case vke_common::ASSET_VF_SHADER:
-            if (auto *asset = vke_common::AssetManager::GetVFShaderAsset(entry.id))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetVFShaderAsset(entry.id)))
                 ImGui::Text("Fragment Path: %s", vke_common::PathToUTF8(asset->fragPath).c_str());
             break;
         case vke_common::ASSET_FONT:
-            if (auto *asset = vke_common::AssetManager::GetFontAsset(entry.id))
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetFontAsset(entry.id)))
             {
                 ImGui::Text("Pixel Size: %u", asset->pixelSize);
                 ImGui::Text("First Codepoint: %u", asset->firstCodepoint);

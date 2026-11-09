@@ -388,9 +388,9 @@ namespace vke_editor
 
                     if (newAsset != 0)
                     {
-                        if (!assetDB->SyncAll())
+                        if (auto result = assetDB->SyncAll(); !result)
                         {
-                            importState.error = "The asset database could not persist this asset.";
+                            importState.error = result.error();
                         }
                         else
                         {

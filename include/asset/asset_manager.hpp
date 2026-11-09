@@ -10,9 +10,9 @@
 namespace vke_common
 {
 #define AM_GET_FUNC(tp) \
-    static tp *Get##tp(AssetHandle id);
+    static Result<tp *> Get##tp(AssetHandle id);
 #define AM_ITERATE_FUNC(tp) \
-    static void Iterate##tp(std::function<void(const tp &)> op);
+    static Result<void> Iterate##tp(std::function<void(const tp &)> op);
 
 #define AM_OP_FUNCS(tp) \
     AM_GET_FUNC(tp)     \
@@ -46,7 +46,7 @@ namespace vke_common
             return instance;
         }
 
-        static AssetManager *Init(std::unique_ptr<AssetDBBase> &&db);
+        static Result<AssetManager *> Init(std::unique_ptr<AssetDBBase> &&db);
 
         static void Dispose()
         {
@@ -54,7 +54,7 @@ namespace vke_common
             instance = nullptr;
         }
 
-        static bool BulkLoad(const std::filesystem::path &pth, bool builtIn = false)
+        static Result<void> BulkLoad(const std::filesystem::path &pth, bool builtIn = false)
         {
             if (builtIn)
                 return instance->builtinAssets->BulkLoad(pth);
@@ -95,7 +95,7 @@ namespace vke_common
         static std::shared_ptr<vke_common::Font> LoadFont(const AssetHandle hdl);
         static std::shared_ptr<vke_audio::AudioClip> LoadAudioClip(const AssetHandle hdl);
 
-        // Preflight checks only: these never load assets or populate caches.
+        // Preflight checks may read database metadata but do not load runtime resources.
         static Result<void> ValidateTexture2D(AssetHandle handle);
         static Result<void> ValidateMesh(AssetHandle handle);
         static Result<void> ValidateVertFragShader(AssetHandle handle);
@@ -108,7 +108,7 @@ namespace vke_common
 
         static Result<std::shared_ptr<const SceneData>> LoadSceneData(AssetHandle handle);
         static Result<std::shared_ptr<const SceneData>> ReloadSceneData(AssetHandle handle);
-        static void InvalidateSceneData(AssetHandle handle);
+        static Result<void> InvalidateSceneData(AssetHandle handle);
         static Result<SceneData> LoadSceneFile(const std::filesystem::path &path);
         static Result<void> PrepareSceneData(SceneData &data);
 
@@ -131,7 +131,9 @@ namespace vke_common
         {
             if (!instance) return std::unexpected("AssetManager is not initialized");
             if (handle == 0) return std::unexpected("required asset is empty");
-            if (auto result = instance->checkAsset(get(handle)); !result)
+            auto asset = get(handle);
+            if (!asset) return std::unexpected(asset.error());
+            if (auto result = instance->checkAsset(*asset); !result)
                 return std::unexpected("asset " + std::to_string(handle) + ": " + result.error());
             return {};
         }
@@ -149,7 +151,7 @@ namespace vke_common
         Result<void> checkAsset(const MaterialAsset *material) const;
         Result<void> checkAsset(const VFShaderAsset *shader) const;
 
-        void initBuiltinAssets();
+        Result<void> initBuiltinAssets();
     };
 }
 

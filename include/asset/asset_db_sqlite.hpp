@@ -10,51 +10,51 @@ struct sqlite3_stmt;
 namespace vke_common
 {
 
-#define DBSQLITE_GET_ASSET_FUNC(tp, cache, tbl, deleted) \
-    virtual tp *Get##tp(AssetHandle id) override         \
-    {                                                    \
-        auto it = cache.find(id);                        \
-        if (it != cache.end())                           \
-            return &it->second;                          \
-        if (deleted.contains(id))                        \
-            return nullptr;                              \
-        tp asset;                                        \
-        if (loadAssetFromDB(tbl, id, asset))             \
-        {                                                \
-            cache[id] = asset;                           \
-            return &cache[id];                           \
-        }                                                \
-        return nullptr;                                  \
+#define DBSQLITE_GET_ASSET_FUNC(tp, cache, tbl, deleted)           \
+    virtual Result<tp *> Get##tp(AssetHandle id) override          \
+    {                                                              \
+        auto it = cache.find(id);                                  \
+        if (it != cache.end())                                     \
+            return &it->second;                                    \
+        if (deleted.contains(id))                                  \
+            return nullptr;                                        \
+        tp asset;                                                  \
+        auto loaded = loadAssetFromDB(tbl, id, asset);             \
+        if (!loaded)                                               \
+            return std::unexpected(loaded.error());                \
+        if (!*loaded)                                              \
+            return nullptr;                                        \
+        return &cache.emplace(id, std::move(asset)).first->second; \
     }
 
 #define DBSQLITE_SET_ASSET_FUNC(tp, cache, dirty, deleted) \
-    virtual bool Set##tp(tp &asset) override               \
+    virtual void Set##tp(tp &asset) override               \
     {                                                      \
         cache[asset.id] = asset;                           \
         dirty.insert(asset.id);                            \
         deleted.erase(asset.id);                           \
         if (asset.id >= ids[tp::type])                     \
             ids[tp::type] = asset.id + 1;                  \
-        return true;                                       \
     }
 
-#define DBSQLITE_SYNC_ASSET_FUNC(tp, cache, dirty, deleted, tbl) \
-    virtual bool Sync##tp(AssetHandle id) override               \
-    {                                                            \
-        if (deleted.contains(id))                                \
-        {                                                        \
-            if (!removeFromDB(tbl, id))                          \
-                return false;                                    \
-            deleted.erase(id);                                   \
-            dirty.erase(id);                                     \
-            return true;                                         \
-        }                                                        \
-        auto it = cache.find(id);                                \
-        if (it == cache.end() ||                                 \
-            !saveToDB(tbl, id, it->second.ToJSON().dump()))      \
-            return false;                                        \
-        dirty.erase(id);                                         \
-        return true;                                             \
+#define DBSQLITE_SYNC_ASSET_FUNC(tp, cache, dirty, deleted, tbl)                  \
+    virtual Result<void> Sync##tp(AssetHandle id) override                        \
+    {                                                                             \
+        if (deleted.contains(id))                                                 \
+        {                                                                         \
+            if (auto result = removeFromDB(tbl, id); !result)                     \
+                return result;                                                    \
+            deleted.erase(id);                                                    \
+            return {};                                                            \
+        }                                                                         \
+        auto it = cache.find(id);                                                 \
+        if (it == cache.end())                                                    \
+            return std::unexpected(PathToUTF8(path) + ": sync " tbl " asset " +   \
+                                   std::to_string(id) + ": asset is not cached"); \
+        if (auto result = saveToDB(tbl, id, it->second.ToJSON().dump()); !result) \
+            return result;                                                        \
+        dirty.erase(id);                                                          \
+        return {};                                                                \
     }
 
 #define DBSQLITE_CREATE_ASSET_FUNC(tp, cache, dirty, deleted) \
@@ -69,21 +69,21 @@ namespace vke_common
     }
 
 #define DBSQLITE_REMOVE_ASSET_FUNC(tp, cache, dirty, deleted) \
-    virtual bool Remove##tp(AssetHandle id) override          \
+    virtual void Remove##tp(AssetHandle id) override          \
     {                                                         \
         cache.erase(id);                                      \
         dirty.erase(id);                                      \
         deleted.insert(id);                                   \
-        return true;                                          \
     }
 
-#define DBSQLITE_ITERATE_ASSET_FUNC(tp, cache, dirty, deleted, tbl)       \
-    virtual void Iterate##tp(std::function<void(const tp &)> op) override \
-    {                                                                     \
-        if (!loadCleanAssetsFromDB(tbl, cache, dirty, deleted))           \
-            return;                                                       \
-        for (auto &kv : cache)                                            \
-            op(kv.second);                                                \
+#define DBSQLITE_ITERATE_ASSET_FUNC(tp, cache, dirty, deleted, tbl)               \
+    virtual Result<void> Iterate##tp(std::function<void(const tp &)> op) override \
+    {                                                                             \
+        if (auto result = loadCleanAssetsFromDB(tbl, cache, deleted); !result)    \
+            return result;                                                        \
+        for (auto &kv : cache)                                                    \
+            op(kv.second);                                                        \
+        return {};                                                                \
     }
 
 #define DBSQLITE_MARKDIRTY_ASSET_FUNC(tp, cache, ds)    \
@@ -111,10 +111,10 @@ namespace vke_common
         AssetDBSQLite &operator=(const AssetDBSQLite &) = delete;
         virtual ~AssetDBSQLite();
 
-        virtual void Init() override;
-        virtual bool ClearAll() override;
-        virtual bool BulkLoad(const std::filesystem::path &pth) override;
-        virtual bool SyncAll() override;
+        virtual Result<void> Init() override;
+        virtual Result<void> ClearAll() override;
+        virtual Result<void> BulkLoad(const std::filesystem::path &pth) override;
+        virtual Result<void> SyncAll() override;
 
         DBSQLITE_ASSET_OP_FUNCS(TextureAsset, textureCache, dirtyTexture, deletedTexture, "texture_assets")
         DBSQLITE_ASSET_OP_FUNCS(MeshAsset, meshCache, dirtyMesh, deletedMesh, "mesh_assets")
@@ -164,25 +164,27 @@ namespace vke_common
         std::set<AssetHandle> deletedFont;
         std::set<AssetHandle> deletedAudio;
 
-        bool execSQL(const std::string &sql);
-        bool createTables();
-        bool updateNextIds();
+        std::string databaseError(const std::string &operation) const;
+        Result<void> rollback(std::string error);
 
-        bool saveToDB(const std::string &table, AssetHandle id, const std::string &jsonData);
-        bool removeFromDB(const std::string &table, AssetHandle id);
+        Result<void> execSQL(const std::string &sql);
+        Result<void> createTables();
+        Result<void> updateNextIds();
 
-        template <typename T>
-        bool loadAssetFromDB(const std::string &table, AssetHandle id, T &outAsset);
-
-        template <typename T>
-        bool loadCleanAssetsFromDB(const std::string &table, std::map<AssetHandle, T> &cache,
-                                   const std::set<AssetHandle> &dirty,
-                                   const std::set<AssetHandle> &deleted);
+        Result<void> saveToDB(const std::string &table, AssetHandle id, const std::string &jsonData);
+        Result<void> removeFromDB(const std::string &table, AssetHandle id);
 
         template <typename T>
-        bool flushChanges(const std::string &table, std::map<AssetHandle, T> &cache,
-                          const std::set<AssetHandle> &dirty,
-                          const std::set<AssetHandle> &deleted);
+        Result<bool> loadAssetFromDB(const std::string &table, AssetHandle id, T &outAsset);
+
+        template <typename T>
+        Result<void> loadCleanAssetsFromDB(const std::string &table, std::map<AssetHandle, T> &cache,
+                                           const std::set<AssetHandle> &deleted);
+
+        template <typename T>
+        Result<void> flushChanges(const std::string &table, std::map<AssetHandle, T> &cache,
+                                  const std::set<AssetHandle> &dirty,
+                                  const std::set<AssetHandle> &deleted);
     };
 
 } // namespace vke_common

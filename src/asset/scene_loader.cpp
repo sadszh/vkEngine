@@ -26,7 +26,9 @@ namespace vke_common
         if (std::find(stack.begin(), stack.end(), handle) != stack.end())
             return std::unexpected(context + "cyclic prefab reference");
         if (stack.size() >= 128) return std::unexpected(context + "prefab nesting limit exceeded");
-        auto *asset = GetSceneAsset(handle);
+        auto loaded = GetSceneAsset(handle);
+        if (!loaded) return std::unexpected(context + loaded.error());
+        auto *asset = *loaded;
         if (!asset || handle == 0) return std::unexpected(context + "asset not found");
         if (asset->val) return asset->val;
         auto parsed = LoadSceneFile(resolveAssetPath(handle, asset->path));
@@ -49,9 +51,9 @@ namespace vke_common
         return asset->val;
     }
 
-    void AssetManager::InvalidateSceneData(AssetHandle handle)
+    Result<void> AssetManager::InvalidateSceneData(AssetHandle handle)
     {
-        if (!instance) return;
+        if (!instance) return std::unexpected("AssetManager is not initialized");
         std::unordered_set<AssetHandle> affected;
         std::vector<AssetHandle> pending{handle};
         while (!pending.empty())
@@ -62,9 +64,17 @@ namespace vke_common
             if (auto it = instance->sceneDependents.find(current); it != instance->sceneDependents.end())
                 pending.insert(pending.end(), it->second.begin(), it->second.end());
         }
+        std::vector<SceneAsset *> assets;
+        assets.reserve(affected.size());
         for (auto current : affected)
         {
-            if (auto *asset = GetSceneAsset(current)) asset->val.reset();
+            auto asset = GetSceneAsset(current);
+            if (!asset) return std::unexpected(asset.error());
+            if (*asset) assets.push_back(*asset);
+        }
+        for (auto *asset : assets) asset->val.reset();
+        for (auto current : affected)
+        {
             if (auto it = instance->sceneDependencies.find(current); it != instance->sceneDependencies.end())
             {
                 for (auto dependency : it->second) instance->sceneDependents[dependency].erase(current);
@@ -72,11 +82,12 @@ namespace vke_common
             }
         }
         for (auto current : affected) instance->sceneDependents.erase(current);
+        return {};
     }
 
     Result<std::shared_ptr<const SceneData>> AssetManager::ReloadSceneData(AssetHandle handle)
     {
-        InvalidateSceneData(handle);
+        if (auto result = InvalidateSceneData(handle); !result) return std::unexpected(result.error());
         return LoadSceneData(handle);
     }
 

@@ -101,10 +101,18 @@ namespace vke_editor
             const char *typeName = nullptr;
             switch (type)
             {
-            case UIType::Container: typeName = "Container"; break;
-            case UIType::Text: typeName = "Text"; break;
-            case UIType::Image: typeName = "Image"; break;
-            case UIType::Button: typeName = "Button"; break;
+            case UIType::Container:
+                typeName = "Container";
+                break;
+            case UIType::Text:
+                typeName = "Text";
+                break;
+            case UIType::Image:
+                typeName = "Image";
+                break;
+            case UIType::Button:
+                typeName = "Button";
+                break;
             }
             ImGui::PushID(&node);
             const bool opened = ImGui::TreeNodeEx("node", ImGuiTreeNodeFlags_DefaultOpen, "%s (%s)",
@@ -113,9 +121,11 @@ namespace vke_editor
             {
                 inputString("Name", node.name);
                 bool hitTestEnabled = node.GetHitTestEnabled();
-                if (ImGui::Checkbox("Hit test enabled", &hitTestEnabled)) node.SetHitTestEnabled(hitTestEnabled);
+                if (ImGui::Checkbox("Hit test enabled", &hitTestEnabled))
+                    node.SetHitTestEnabled(hitTestEnabled);
                 bool interactable = node.GetInteractable();
-                if (ImGui::Checkbox("Interactable", &interactable)) node.SetInteractable(interactable);
+                if (ImGui::Checkbox("Interactable", &interactable))
+                    node.SetInteractable(interactable);
                 auto rect = node.rectTransform;
                 bool changed = ImGui::InputFloat2("Anchor min", glm::value_ptr(rect.anchorMin));
                 changed |= ImGui::InputFloat2("Anchor max", glm::value_ptr(rect.anchorMax));
@@ -204,9 +214,8 @@ namespace vke_editor
                 {
                     auto &image = static_cast<UIImage &>(node);
                     const auto texture = image.GetTexture();
-                    const auto *asset = vke_common::AssetManager::GetTextureAsset(texture);
-                    const std::string label = texture == 0 ? "0  <white>" :
-                        std::to_string(texture) + "  " + (asset ? asset->name : "<missing>");
+                    const auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetTextureAsset(texture));
+                    const std::string label = texture == 0 ? "0  <white>" : std::to_string(texture) + "  " + (asset ? asset->name : "<missing>");
                     if (ImGui::BeginCombo("Texture", label.c_str()))
                     {
                         auto selectTexture = [&](vke_common::AssetHandle handle, const char *name)
@@ -214,14 +223,14 @@ namespace vke_editor
                             if (ImGui::Selectable(name, handle == texture))
                                 if (auto result = image.SetTexture(handle); !result)
                                     VKE_LOG_ERROR("Cannot set image texture: {}", result.error());
-                            if (handle == texture) ImGui::SetItemDefaultFocus();
+                            if (handle == texture)
+                                ImGui::SetItemDefaultFocus();
                         };
                         selectTexture(0, "0  <white>");
-                        vke_common::AssetManager::IterateTextureAsset([&](const vke_common::TextureAsset &entry)
-                        {
+                        ShowAssetIterationResult(vke_common::AssetManager::IterateTextureAsset([&](const vke_common::TextureAsset &entry)
+                                                                                               {
                             const auto choice = std::to_string(entry.id) + "  " + entry.name;
-                            selectTexture(entry.id, choice.c_str());
-                        });
+                            selectTexture(entry.id, choice.c_str()); }));
                         ImGui::EndCombo();
                     }
                     auto color = image.GetColor();

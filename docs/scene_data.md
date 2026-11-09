@@ -123,7 +123,7 @@ Result<SceneData> LoadSceneFile(const std::filesystem::path& path);
 // 统一执行展开和最终资源解析。
 Result<void> PrepareSceneData(SceneData& data);
 
-void InvalidateSceneData(AssetHandle handle);
+Result<void> InvalidateSceneData(AssetHandle handle);
 Result<std::shared_ptr<const SceneData>> ReloadSceneData(AssetHandle handle);
 ```
 
@@ -133,7 +133,7 @@ PrepareSceneData 按当前阶段执行展开和资源解析，Ready 数据直接
 
 `AssetManager::ValidateMesh(handle)`、`ValidateMaterial(handle)` 等接口只读检查资源记录和文件。材质验证进一步检查 shader 和各纹理依赖，顶点/片元 shader 验证分别检查两个文件，错误包含相应的依赖上下文。文件存在检查不保证资源内容可被解码，实际加载仍可能失败。资源由 `AssetManager::LoadXXX(handle)` 加载，组件将结果写回 `AssetRef`。
 
-缓存数据通过 `Clone()` 复制为可修改的 SceneData，再调用 PrepareSceneData。ReloadSceneData 清除自身及传递依赖缓存，并立即重建指定资源；其他受影响资源在下次请求时重建。缓存失效由调用方显式触发，旧 shared_ptr 持有的快照继续有效。
+缓存数据通过 `Clone()` 复制为可修改的 SceneData，再调用 PrepareSceneData。ReloadSceneData 清除自身及传递依赖缓存，并立即重建指定资源；其他受影响资源在下次请求时重建。缓存失效由调用方显式触发，旧 shared_ptr 持有的快照继续有效。InvalidateSceneData 在读取所有受影响的资源记录成功后才清理缓存和依赖关系；读取失败返回错误并保留原缓存及依赖关系，ReloadSceneData 将该错误传给调用方。
 
 ScriptStateData 持有 className 和二进制状态，预制体复制和 SceneData 快照使用这一数据表示。文件读取时由 FromJSON 按脚本元数据编码，文件输出时由 ToJSON 转回 JSON。SceneData::ToJSON 返回 Result，以传播类型缺失或二进制无效等错误。脚本元数据必须在读取含脚本的场景文件前加载。
 

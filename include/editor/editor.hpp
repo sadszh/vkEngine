@@ -100,7 +100,7 @@ namespace vke_editor
         void showLog();
         void showAssetsByType(vke_common::AssetManager *assetManager);
         void showAssetsByDirectory(vke_common::AssetManager *assetManager);
-        void rebuildAssetDirectoryTree(vke_common::AssetManager *assetManager);
+        vke_common::Result<void> rebuildAssetDirectoryTree(vke_common::AssetManager *assetManager);
         void drawAssetDirectoryNode(const AssetTreeNode &node);
         void drawAssetEntry(const AssetTreeEntry &entry);
         void selectAsset(vke_common::AssetType assetType, vke_common::AssetHandle asset);

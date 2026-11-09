@@ -41,15 +41,15 @@ namespace vke_editor
             animator.skeleton == nullptr ? 0 : animator.skeleton->handle;
 
         {
-            auto *mat = vke_common::AssetManager::GetMaterialAsset(materialHandle);
+            auto *mat = ShowAssetReadResult(vke_common::AssetManager::GetMaterialAsset(materialHandle));
             DrawReadOnlyAsset("Material", AssetDisplayName(materialHandle, mat ? mat->name.c_str() : nullptr));
         }
         {
-            auto *meshAsset = vke_common::AssetManager::GetMeshAsset(meshHandle);
+            auto *meshAsset = ShowAssetReadResult(vke_common::AssetManager::GetMeshAsset(meshHandle));
             DrawReadOnlyAsset("Mesh", AssetDisplayName(meshHandle, meshAsset ? meshAsset->name.c_str() : nullptr));
         }
         {
-            auto *skel = vke_common::AssetManager::GetSkeletonAsset(skeletonHandle);
+            auto *skel = ShowAssetReadResult(vke_common::AssetManager::GetSkeletonAsset(skeletonHandle));
             DrawReadOnlyAsset("Skeleton", AssetDisplayName(skeletonHandle, skel ? skel->name.c_str() : nullptr));
         }
         if (ImGui::TreeNodeEx("Animations", ImGuiTreeNodeFlags_DefaultOpen))
@@ -61,7 +61,7 @@ namespace vke_editor
                     state.animation == nullptr ? 0 : state.animation->handle;
                 ImGui::PushID(static_cast<int>(i));
                 {
-                    auto *anim = vke_common::AssetManager::GetAnimationAsset(animationHandle);
+                    auto *anim = ShowAssetReadResult(vke_common::AssetManager::GetAnimationAsset(animationHandle));
                     DrawReadOnlyAsset("Animation", AssetDisplayName(animationHandle, anim ? anim->name.c_str() : nullptr));
                 }
                 ImGui::Text("Weight: %.3f  Speed: %.3f  Time: %.3f  Loop: %s",

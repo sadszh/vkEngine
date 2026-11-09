@@ -31,7 +31,7 @@ namespace vke_editor
             sceneManager->registry.get<vke_component::AudioSource>(selectedEntity);
         const vke_common::AssetHandle clipHandle = source.clip ? source.clip->handle : 0;
         const vke_common::AudioClipAsset *clipAsset =
-            vke_common::AssetManager::GetAudioClipAsset(clipHandle);
+            ShowAssetReadResult(vke_common::AssetManager::GetAudioClipAsset(clipHandle));
         const std::string selectedClip =
             AudioClipDisplayName(clipHandle, clipAsset ? clipAsset->name.c_str() : nullptr);
 
@@ -40,7 +40,7 @@ namespace vke_editor
             if (ImGui::Selectable("0  <none>", clipHandle == 0))
                 SetAudioClip(source, 0);
 
-            vke_common::AssetManager::IterateAudioClipAsset(
+            ShowAssetIterationResult(vke_common::AssetManager::IterateAudioClipAsset(
                 [&](const vke_common::AudioClipAsset &asset)
                 {
                     const bool selected = asset.id == clipHandle;
@@ -49,7 +49,7 @@ namespace vke_editor
                         SetAudioClip(source, asset.id);
                     if (selected)
                         ImGui::SetItemDefaultFocus();
-                });
+                }));
             ImGui::EndCombo();
         }
 
