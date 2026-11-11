@@ -191,6 +191,21 @@ namespace vke_editor
                     auto color = text.GetColor();
                     if (ImGui::ColorEdit4("Color", glm::value_ptr(color)))
                         text.SetColor(color);
+                    const auto font = text.GetFont();
+                    const auto *fontAsset = ShowAssetReadResult(vke_common::AssetManager::GetFontAsset(font));
+                    const std::string fontLabel = std::to_string(font) + "  " + (fontAsset ? fontAsset->name : "<missing>");
+                    if (ImGui::BeginCombo("Font", fontLabel.c_str()))
+                    {
+                        ShowAssetIterationResult(vke_common::AssetManager::IterateFontAsset([&](const vke_common::FontAsset &entry)
+                        {
+                            const auto choice = std::to_string(entry.id) + "  " + entry.name;
+                            if (ImGui::Selectable(choice.c_str(), entry.id == font))
+                                if (auto result = text.SetFont(entry.id); !result)
+                                    VKE_LOG_ERROR("Cannot set text font: {}", result.error());
+                            if (entry.id == font) ImGui::SetItemDefaultFocus();
+                        }));
+                        ImGui::EndCombo();
+                    }
                     auto options = text.GetLayoutOptions();
                     bool layoutChanged = ImGui::InputFloat("Font size", &options.fontSize);
                     int horizontal = static_cast<int>(options.horizontalAlignment);

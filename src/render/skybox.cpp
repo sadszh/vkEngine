@@ -95,12 +95,17 @@ namespace vke_render
             VK_FILTER_LINEAR, VK_FILTER_LINEAR,
             VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false);
 
-        std::shared_ptr<ShaderModuleSet> atmosphereLUTShader =
-            vke_common::AssetManager::LoadComputeShaderUnique(vke_common::BUILTIN_COMPUTE_SHADER_ATMOSPHERE_LUT_ID);
+        auto atmosphereLUTShaderResult = vke_common::AssetManager::LoadComputeShaderUnique(vke_common::BUILTIN_COMPUTE_SHADER_ATMOSPHERE_LUT_ID);
+        VKE_FATAL_IF(!atmosphereLUTShaderResult, "{}", atmosphereLUTShaderResult.error())
+        std::shared_ptr<ShaderModuleSet> atmosphereLUTShader = std::move(*atmosphereLUTShaderResult);
         atmosphereLUTGenerationPipeline = std::make_unique<ComputePipeline>(std::move(atmosphereLUTShader));
-        std::shared_ptr<ShaderModuleSet> skyLUTShader = vke_common::AssetManager::LoadComputeShaderUnique(vke_common::BUILTIN_COMPUTE_SHADER_SKYLUT_ID);
+        auto skyLUTShaderResult = vke_common::AssetManager::LoadComputeShaderUnique(vke_common::BUILTIN_COMPUTE_SHADER_SKYLUT_ID);
+        VKE_FATAL_IF(!skyLUTShaderResult, "{}", skyLUTShaderResult.error())
+        std::shared_ptr<ShaderModuleSet> skyLUTShader = std::move(*skyLUTShaderResult);
         skyLUTGenerationPipeline = std::make_unique<ComputePipeline>(std::move(skyLUTShader));
-        std::shared_ptr<ShaderModuleSet> iblLUTShader = vke_common::AssetManager::LoadComputeShaderUnique(vke_common::BUILTIN_COMPUTE_SHADER_IBL_LUT_ID);
+        auto iblLUTShaderResult = vke_common::AssetManager::LoadComputeShaderUnique(vke_common::BUILTIN_COMPUTE_SHADER_IBL_LUT_ID);
+        VKE_FATAL_IF(!iblLUTShaderResult, "{}", iblLUTShaderResult.error())
+        std::shared_ptr<ShaderModuleSet> iblLUTShader = std::move(*iblLUTShaderResult);
         iblLUTGenerationPipeline = std::make_unique<ComputePipeline>(std::move(iblLUTShader));
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)

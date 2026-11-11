@@ -122,9 +122,9 @@ JSON 中两组对象均可省略；默认自身使用 RectTransform 尺寸并参
 
 ## UIText
 
-`UIText` 使用内置 Arial 字体，将 UTF-8 文本转换为字形 Quad，支持字号、水平与垂直对齐、显式换行和按矩形宽度自动换行。`fontSize` 使用 Canvas 逻辑单位，默认 48；RectTransform 的缩放作用于整个节点。`selfLayout.width` / `height` 设为 `content` 时，矩形对应轴使用文字测量尺寸。
+`UIText` 将 UTF-8 文本转换为所选字体的字形 Quad，支持字号、水平与垂直对齐、显式换行和按矩形宽度自动换行。`fontSize` 使用 Canvas 逻辑单位，默认 48；RectTransform 的缩放作用于整个节点。`selfLayout.width` / `height` 设为 `content` 时，矩形对应轴使用文字测量尺寸。
 
-`UITextData` 保存 `text`、`color`、材质引用和 `layout` 排版属性。JSON 使用 `fontSize`、`horizontalAlignment`（`left/center/right`）、`verticalAlignment`（`top/middle/bottom`）和 `wordWrap` 字段，默认左上对齐且关闭自动换行。材质句柄 0 使用默认文字材质。
+`UITextData` 保存 `text`、`color`、材质与字体的 `AssetRef` 引用和 `layout` 排版属性。JSON 的 `font` 是字体资源句柄，省略时使用内置 Arial，显式传入 0 无效。加载、克隆和快照保留该字体引用。编辑器 Font 下拉框和 `UIText::SetFont(handle)` 可切换字体；加载失败返回错误并保留当前字体，成功后重新排版。JSON 使用 `fontSize`、`horizontalAlignment`（`left/center/right`）、`verticalAlignment`（`top/middle/bottom`）和 `wordWrap` 字段，默认左上对齐且关闭自动换行。材质句柄 0 使用默认文字材质。
 
 `SetText` 在内容变化时重建排版和几何，`SetLayoutOptions` 更新排版属性，`SetColor` 更新所有字形颜色。没有可见字形时保留一个零面积 Quad，使颜色在后续修改和重建中保持一致。`Measure()` 查询自然尺寸，`Measure(maxWidth)` 查询给定宽度下的换行尺寸；`GetTextSize()` 返回最近求解矩形下的排版尺寸。C# 对应 `LayoutOptions`、四个独立排版属性、两个 `Measure` 重载和 `TextSize`。
 

@@ -131,7 +131,7 @@ PrepareSceneData 按当前阶段执行展开和资源解析，Ready 数据直接
 
 各组件 Data 分别提供只读的 `ValidateAssets()` 和负责加载的 `LoadAssets()`，由组件处理可选引用和已解析引用。私有 `resolveSceneAssets` 先对全部组件调用 `ValidateAssets()`，全部通过后再对全部组件调用 `LoadAssets()`，全部成功后标记 Ready；加载接口要求此前验证成功。
 
-`AssetManager::ValidateMesh(handle)`、`ValidateMaterial(handle)` 等接口只读检查资源记录和文件。材质验证进一步检查 shader 和各纹理依赖，顶点/片元 shader 验证分别检查两个文件，错误包含相应的依赖上下文。文件存在检查不保证资源内容可被解码，实际加载仍可能失败。资源由 `AssetManager::LoadXXX(handle)` 加载，组件将结果写回 `AssetRef`。
+`AssetManager::ValidateMesh(handle)`、`ValidateMaterial(handle)` 等接口只读检查资源记录和文件。材质验证进一步检查 shader 和各纹理依赖，顶点/片元 shader 验证分别检查两个文件，错误包含相应的依赖上下文。文件存在检查不保证资源内容可被解码，实际加载仍可能失败。Mesh、纹理、材质、骨骼、动画、字体、顶点/片元 shader 和 compute shader 的共享及独占加载接口返回 `Result`，成功值非空。文件读取、图片/SVG 解码、SPIR-V 反射、shader 阶段不匹配及跨阶段 descriptor 类型或数量冲突会向上传播；材质传播纹理和 shader 依赖错误，错误包含资源 ID、文件路径或依赖位置。缓存只发布完整加载的资源；失败后可重试，已成功加载的独立纹理可以保留在缓存中。资源由 `AssetManager::LoadXXX(handle)` 加载，组件将结果写回 `AssetRef`。
 
 缓存数据通过 `Clone()` 复制为可修改的 SceneData，再调用 PrepareSceneData。ReloadSceneData 清除自身及传递依赖缓存，并立即重建指定资源；其他受影响资源在下次请求时重建。缓存失效由调用方显式触发，旧 shared_ptr 持有的快照继续有效。InvalidateSceneData 在读取所有受影响的资源记录成功后才清理缓存和依赖关系；读取失败返回错误并保留原缓存及依赖关系，ReloadSceneData 将该错误传给调用方。
 
@@ -165,7 +165,7 @@ Instantiate 接受 Ready 数据，要求脚本数据已经在读取或导出入�
 
 每次实例化创建独立的实体和组件状态。组件的构造函数接收对应的 Data 并完成系统注册，场景加载和动态添加组件共用此入口。实例化在创建阶段发生异常时不提供回滚保证。Start 的调用规则见 [组件与系统的生命周期](script/lifecycle.md)，其外部副作用由脚本负责。
 
-场景格式、引用、脚本编码和缺失资源在数据读取、展开及资源解析期间校验。C# 脚本创建异常遵循未处理异常行为。音频资源记录和路径错误、音频文件读取失败、解码接口返回的错误及零帧结果通过 Result 返回。AudioSource 构造时的音频引擎不可用或播放资源创建失败，以及其他底层资源解码器和 GPU 分配中的致命错误会使引擎退出。
+场景格式、引用、脚本编码和缺失资源在数据读取、展开及资源解析期间校验。C# 脚本创建异常遵循未处理异常行为。Mesh 文件读取和二进制格式校验、纹理文件读取及解码、shader 文件读取及反射和接口合并、骨骼和动画文件打开及类型标签检查、字体文件读取及 FreeType 加载失败通过 Result 返回。音频资源记录和路径错误、音频文件读取失败、解码接口返回的错误及零帧结果通过 Result 返回。AudioSource 构造时的音频引擎不可用或播放资源创建失败及 GPU 创建失败会使引擎退出；引擎必需的内置资源加载失败由调用方终止运行。
 
 Instantiate 返回成功或错误信息。数据实体到运行时实体的映射仅用于实例化内部，完成后释放。销毁通过 DestroyEntity 发起延迟销毁请求，按当前子树规则回收，具体顺序见 [组件与系统的生命周期](script/lifecycle.md)。
 

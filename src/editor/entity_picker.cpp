@@ -56,8 +56,12 @@ namespace vke_editor
 
     EntityPicker::EntityPicker(VkFormat depthFormat) : depthFormat(depthFormat)
     {
-        shaders[0] = vke_common::AssetManager::LoadVertFragShaderUnique(BUILTIN_VFSHADER_ENTITY_PICKING_ID);
-        shaders[1] = vke_common::AssetManager::LoadVertFragShaderUnique(BUILTIN_VFSHADER_ENTITY_PICKING_SKIN_ID);
+        auto shaderResult = vke_common::AssetManager::LoadVertFragShaderUnique(BUILTIN_VFSHADER_ENTITY_PICKING_ID);
+        VKE_FATAL_IF(!shaderResult, "{}", shaderResult.error())
+        shaders[0] = std::move(*shaderResult);
+        auto skinShaderResult = vke_common::AssetManager::LoadVertFragShaderUnique(BUILTIN_VFSHADER_ENTITY_PICKING_SKIN_ID);
+        VKE_FATAL_IF(!skinShaderResult, "{}", skinShaderResult.error())
+        shaders[1] = std::move(*skinShaderResult);
     }
 
     vke_render::GraphicsPipeline &EntityPicker::getPipeline(bool skinned, uint32_t stride)

@@ -161,8 +161,12 @@ namespace vke_render
 
     void ShadowManager::createDescriptorSets()
     {
-        std::shared_ptr<ShaderModuleSet> shadowShader = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_SHADOW_ID);
-        std::shared_ptr<ShaderModuleSet> lightingShader = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_DEFERRED_LIGHTING_ID);
+        auto shadowShaderResult = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_SHADOW_ID);
+        VKE_FATAL_IF(!shadowShaderResult, "{}", shadowShaderResult.error())
+        std::shared_ptr<ShaderModuleSet> shadowShader = std::move(*shadowShaderResult);
+        auto lightingShaderResult = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_DEFERRED_LIGHTING_ID);
+        VKE_FATAL_IF(!lightingShaderResult, "{}", lightingShaderResult.error())
+        std::shared_ptr<ShaderModuleSet> lightingShader = std::move(*lightingShaderResult);
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {

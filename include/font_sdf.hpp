@@ -167,7 +167,7 @@ namespace vke_common
             return result;
         }
 
-        void BuildStaticAtlas(std::string_view configuredCharacters, uint32_t characterCount, uint32_t startCodepoint)
+        Result<void> BuildStaticAtlas(std::string_view configuredCharacters, uint32_t characterCount, uint32_t startCodepoint)
         {
             VKE_FATAL_IF(face == nullptr, "Cannot build font atlas without a valid FreeType face!")
 
@@ -203,8 +203,9 @@ namespace vke_common
                     continue;
 
                 RasterizedGlyph rasterized;
-                if (!rasterizeGlyph(codepoint, GlyphAtlasType::STATIC_ATLAS, slot, rasterized))
-                    continue;
+                auto result = rasterizeGlyph(codepoint, GlyphAtlasType::STATIC_ATLAS, slot, rasterized);
+                if (!result) return std::unexpected(result.error());
+                if (!*result) continue;
                 blitGlyph(rasterized, staticAtlasPixels);
                 glyphs[codepoint] = rasterized.glyph;
                 ++slot;
@@ -217,6 +218,7 @@ namespace vke_common
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_FILTER_LINEAR, VK_FILTER_LINEAR,
                 VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false, false);
+            return {};
         }
 
         Glyph *GetOrCreateGlyph(uint32_t codepoint)
@@ -248,8 +250,13 @@ namespace vke_common
             }
 
             RasterizedGlyph rasterized;
-            if (!rasterizeGlyph(codepoint, GlyphAtlasType::DYNAMIC_ATLAS, slot, rasterized))
+            auto result = rasterizeGlyph(codepoint, GlyphAtlasType::DYNAMIC_ATLAS, slot, rasterized);
+            if (!result)
+            {
+                VKE_LOG_ERROR("font {}: {}", handle, result.error())
                 return nullptr;
+            }
+            if (!*result) return nullptr;
 
             if (evictedCodepoint != INVALID_CODEPOINT)
                 dynamicGlyphs.erase(evictedCodepoint);
@@ -281,15 +288,14 @@ namespace vke_common
         uint32_t dynamicAtlasUpdateCnt = 0;
         uint64_t useCounter = 0;
 
-        bool rasterizeGlyph(uint32_t codepoint, GlyphAtlasType atlasType, uint32_t slotIndex, RasterizedGlyph &out)
+        Result<bool> rasterizeGlyph(uint32_t codepoint, GlyphAtlasType atlasType, uint32_t slotIndex, RasterizedGlyph &out)
         {
             const uint32_t glyphIndex = FT_Get_Char_Index(face, codepoint);
             if (glyphIndex == 0 && codepoint != 0)
                 return false;
 
             FT_Error error = FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT);
-            if (error != FT_Err_Ok)
-                return false;
+            if (error) return std::unexpected("glyph " + std::to_string(codepoint) + ": FT_Load_Glyph failed: " + std::to_string(error));
 
             const int advanceX = static_cast<int>(face->glyph->advance.x >> 6);
             if (face->glyph->format == FT_GLYPH_FORMAT_OUTLINE && face->glyph->outline.n_contours == 0)
@@ -306,8 +312,7 @@ namespace vke_common
             error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
             if (error == FT_Err_Ok)
                 error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_SDF);
-            if (error != FT_Err_Ok)
-                return false;
+            if (error) return std::unexpected("glyph " + std::to_string(codepoint) + ": FT_Render_Glyph failed: " + std::to_string(error));
 
             FT_GlyphSlot ftGlyph = face->glyph;
             const FT_Bitmap &bitmap = ftGlyph->bitmap;

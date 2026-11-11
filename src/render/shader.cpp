@@ -3,7 +3,54 @@
 
 namespace vke_render
 {
-    void ShaderModuleSet::constructDescriptorSetInfo(SpvReflectShaderModule &reflectInfo)
+    vke_common::Result<ShaderModule> ShaderModule::Create(std::span<const char> code, VkShaderStageFlagBits stage)
+    {
+        if (code.size() < 5 * sizeof(uint32_t) || code.size() % sizeof(uint32_t) != 0)
+            return std::unexpected("invalid SPIR-V byte size");
+        ShaderModule module;
+        const auto result = spvReflectCreateShaderModule(code.size(), code.data(), &module.reflectInfo);
+        if (result != SPV_REFLECT_RESULT_SUCCESS)
+            return std::unexpected("SPIR-V reflection failed (error " + std::to_string(result) + ")");
+        if (module.reflectInfo.shader_stage != static_cast<SpvReflectShaderStageFlagBits>(stage))
+        {
+            spvReflectDestroyShaderModule(&module.reflectInfo);
+            return std::unexpected("SPIR-V execution stage does not match the requested shader stage");
+        }
+        VkShaderModuleCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        createInfo.codeSize = code.size();
+        createInfo.pCode = spvReflectGetCode(&module.reflectInfo);
+        VKE_VK_CHECK(vkCreateShaderModule(globalLogicalDevice, &createInfo, nullptr, &module.module), "Failed to create shader module!")
+        return module;
+    }
+
+    vke_common::Result<std::unique_ptr<ShaderModuleSet>> ShaderModuleSet::Create(
+        std::initializer_list<std::pair<VkShaderStageFlagBits, std::span<const char>>> shaders)
+    {
+        auto set = std::make_unique<ShaderModuleSet>();
+        for (const auto &[stage, code] : shaders)
+        {
+            const std::string context = stage == VK_SHADER_STAGE_VERTEX_BIT ? "vertex shader: " :
+                stage == VK_SHADER_STAGE_FRAGMENT_BIT ? "fragment shader: " : "compute shader: ";
+            auto loaded = ShaderModule::Create(code, stage);
+            if (!loaded) return std::unexpected(context + loaded.error());
+            set->modules.push_back(std::move(*loaded));
+            auto &module = set->modules.back();
+            VkPipelineShaderStageCreateInfo stageInfo{};
+            stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            stageInfo.stage = stage;
+            stageInfo.module = module.module;
+            stageInfo.pName = module.reflectInfo.entry_point_name;
+            set->stageCreateInfos.push_back(stageInfo);
+            if (auto result = set->constructDescriptorSetInfo(module.reflectInfo); !result)
+                return std::unexpected(context + result.error());
+            set->constructPushConstant(module.reflectInfo);
+        }
+        set->constructDescriptorSetLayout();
+        return set;
+    }
+
+    vke_common::Result<void> ShaderModuleSet::constructDescriptorSetInfo(SpvReflectShaderModule &reflectInfo)
     {
         int setCnt = reflectInfo.descriptor_set_count;
         for (int i = 0; i < setCnt; i++)
@@ -40,10 +87,10 @@ namespace vke_render
                     { return candidate.binding == binding.binding; });
                 if (existing != bindings.end())
                 {
-                    VKE_FATAL_IF(existing->descriptorType != binding.descriptorType ||
-                                     existing->descriptorCount != binding.descriptorCount,
-                                 "Descriptor set {} binding {} differs between shader stages",
-                                 setID, binding.binding)
+                    if (existing->descriptorType != binding.descriptorType ||
+                        existing->descriptorCount != binding.descriptorCount)
+                        return std::unexpected("descriptor set " + std::to_string(setID) + " binding " +
+                                               std::to_string(binding.binding) + " differs between shader stages");
                     existing->stageFlags |= binding.stageFlags;
                     continue;
                 }
@@ -52,6 +99,7 @@ namespace vke_render
                 bindings.push_back(binding);
             }
         }
+        return {};
     }
 
     void ShaderModuleSet::constructPushConstant(SpvReflectShaderModule &reflectInfo)

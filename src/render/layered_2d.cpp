@@ -219,7 +219,6 @@ namespace vke_render
         for (uint32_t frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame)
         {
             VulkanResourceManager::FreeDescriptorSet(imageDescriptorSets[frame]);
-            VulkanResourceManager::FreeDescriptorSet(rendererDescriptorSets[frame]);
         }
     }
 
@@ -305,14 +304,17 @@ namespace vke_render
                                  ResourceNodeIDMap &currentResourceNodeID)
     {
         RenderPassBase::Init(subpassID, frameGraph, blackboard, currentResourceNodeID);
-        font = vke_common::AssetManager::LoadFont(vke_common::BUILTIN_FONT_ARIAL_ID);
-        textShader = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_TEXT_ID);
+        auto textShaderResult = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_TEXT_ID);
+        VKE_FATAL_IF(!textShaderResult, "{}", textShaderResult.error())
+        textShader = std::move(*textShaderResult);
         defaultMaterial = std::make_shared<Material>(0);
         defaultMaterial->shader = textShader;
         defaultMaterial->renderMode = MaterialRenderMode::BLEND_MODE;
 
         imageMaterial = std::make_shared<Material>(0);
-        imageMaterial->shader = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_UI_IMAGE_ID);
+        auto imageShaderResult = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_UI_IMAGE_ID);
+        VKE_FATAL_IF(!imageShaderResult, "{}", imageShaderResult.error())
+        imageMaterial->shader = std::move(*imageShaderResult);
         imageMaterial->renderMode = MaterialRenderMode::BLEND_MODE;
         uint32_t white = 0xffffffff;
         whiteTexture = std::make_shared<Texture2D>(0, &white, 1, 1,
@@ -320,30 +322,65 @@ namespace vke_render
                                                    VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false, false);
         resetImageTextures();
 
+        constructFrameGraph(frameGraph, blackboard, currentResourceNodeID);
+        createDescriptorSets();
+    }
+
+    Layered2DRenderer::FontState &Layered2DRenderer::getOrCreateFontState(const std::shared_ptr<vke_common::Font> &font)
+    {
+        auto it = fontStates.find(font.get());
+        if (it != fontStates.end()) return *it->second;
+        auto state = std::make_unique<FontState>();
+        state->font = font;
         for (uint32_t frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame)
         {
-            dynamicAtlasStagingBuffers[frame] = std::make_unique<HostCoherentBuffer>(
+            state->stagingBuffers[frame] = std::make_unique<HostCoherentBuffer>(
                 static_cast<VkDeviceSize>(vke_common::Font::ATLAS_SIZE) * vke_common::Font::ATLAS_SIZE,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-            dynamicAtlasTextures[frame] = std::make_unique<Texture2D>(
+            state->textures[frame] = std::make_unique<Texture2D>(
                 font->handle, const_cast<uint8_t *>(font->GetDynamicAtlasPixels().data()),
                 vke_common::Font::ATLAS_SIZE, vke_common::Font::ATLAS_SIZE,
                 VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_FILTER_LINEAR, VK_FILTER_LINEAR,
                 VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false, false);
+            state->descriptorSets[frame] = textShader->CreateDescriptorSet(0);
+            VkDescriptorBufferInfo quadBufferInfo = quadManager->GetDescriptorBufferInfo(frame);
+
+            VkDescriptorImageInfo staticAtlasInfo{
+                font->atlasTexture->textureSampler, font->atlasTexture->textureImageView,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+            VkDescriptorImageInfo dynamicAtlasInfo{
+                state->textures[frame]->textureSampler, state->textures[frame]->textureImageView,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+            VkWriteDescriptorSet writes[3];
+            ConstructDescriptorSetWrite(writes[0], state->descriptorSets[frame], 0,
+                                        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &staticAtlasInfo);
+            ConstructDescriptorSetWrite(writes[1], state->descriptorSets[frame], 1,
+                                        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &dynamicAtlasInfo);
+            ConstructDescriptorSetWrite(writes[2], state->descriptorSets[frame], 2,
+                                        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, &quadBufferInfo);
+            vkUpdateDescriptorSets(globalLogicalDevice, 3, writes, 0, nullptr);
         }
 
-        constructFrameGraph(frameGraph, blackboard, currentResourceNodeID);
-        createDescriptorSets();
+        return *fontStates.emplace(font.get(), std::move(state)).first->second;
+    }
+
+    void Layered2DRenderer::UpdateUnitFont(vke_ds::id32_t unitID, const std::shared_ptr<vke_common::Font> &font)
+    {
+        auto it = units.find(unitID);
+        if (it != units.end()) it->second.fontState = &getOrCreateFontState(font);
     }
 
     vke_ds::id32_t Layered2DRenderer::AllocateUnit(const std::shared_ptr<Material> &material,
-                                                   const glm::mat4 &modelMatrix, const std::vector<QuadID> &quadIDs)
+                                                   const glm::mat4 &modelMatrix, const std::vector<QuadID> &quadIDs,
+                                                   const std::shared_ptr<vke_common::Font> &unitFont)
     {
         const vke_ds::id32_t unitID = unitAllocator.Alloc();
         UnitState state;
         state.materialState = &getOrCreateMaterialState(material == nullptr ? defaultMaterial : material);
+        if (state.materialState->material != imageMaterial)
+            state.fontState = &getOrCreateFontState(unitFont);
         state.unit = std::make_unique<Layered2DRenderUnit>(unitID, modelMatrix, &quadIDPool);
         state.unit->SetQuadIDs(quadIDs);
         units.emplace(unitID, std::move(state));
@@ -394,23 +431,7 @@ namespace vke_render
     {
         for (uint32_t frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame)
         {
-            rendererDescriptorSets[frame] = textShader->CreateDescriptorSet(0);
             VkDescriptorBufferInfo quadBufferInfo = quadManager->GetDescriptorBufferInfo(frame);
-
-            VkDescriptorImageInfo staticAtlasInfo{
-                font->atlasTexture->textureSampler, font->atlasTexture->textureImageView,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-            VkDescriptorImageInfo dynamicAtlasInfo{
-                dynamicAtlasTextures[frame]->textureSampler, dynamicAtlasTextures[frame]->textureImageView,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-            VkWriteDescriptorSet writes[3];
-            ConstructDescriptorSetWrite(writes[0], rendererDescriptorSets[frame], 0,
-                                        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &staticAtlasInfo);
-            ConstructDescriptorSetWrite(writes[1], rendererDescriptorSets[frame], 1,
-                                        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &dynamicAtlasInfo);
-            ConstructDescriptorSetWrite(writes[2], rendererDescriptorSets[frame], 2,
-                                        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, &quadBufferInfo);
-            vkUpdateDescriptorSets(globalLogicalDevice, 3, writes, 0, nullptr);
 
             imageDescriptorSets[frame] = imageMaterial->shader->CreateDescriptorSet(0);
             VkWriteDescriptorSet imageBufferWrite{};
@@ -423,7 +444,8 @@ namespace vke_render
     void Layered2DRenderer::Render(TaskNode &, FrameGraph &, VkCommandBuffer commandBuffer,
                                    uint32_t currentFrame, uint32_t imageIndex)
     {
-        syncDynamicAtlas(commandBuffer, currentFrame);
+        for (auto &[key, state] : fontStates)
+            syncDynamicAtlas(*state, commandBuffer, currentFrame);
         syncImageTextures(currentFrame);
         if (units.empty())
             return;
@@ -457,8 +479,8 @@ namespace vke_render
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         const glm::vec2 viewportSize(static_cast<float>(context->width), static_cast<float>(context->height));
-        const glm::vec2 atlasSize(static_cast<float>(font->atlasWidth), static_cast<float>(font->atlasHeight));
         const Layered2DMaterialState *boundMaterialState = nullptr;
+        VkDescriptorSet boundRendererSet = VK_NULL_HANDLE;
         for (const UnitState *draw : sorted)
         {
             const Layered2DMaterialState &state = *draw->materialState;
@@ -466,17 +488,23 @@ namespace vke_render
             if (boundMaterialState != &state)
             {
                 state.pipeline->Bind(commandBuffer);
-                const VkDescriptorSet rendererSet = state.material == imageMaterial
-                                                        ? imageDescriptorSets[currentFrame]
-                                                        : rendererDescriptorSets[currentFrame];
-                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                        pipelineLayout, 0, 1, &rendererSet, 0, nullptr);
                 if (state.commonDescriptorSet != VK_NULL_HANDLE)
                     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                             pipelineLayout, 1, 1, &state.commonDescriptorSet, 0, nullptr);
                 state.material->SetPushConstants(commandBuffer, pipelineLayout);
                 boundMaterialState = &state;
+                boundRendererSet = VK_NULL_HANDLE;
             }
+            const VkDescriptorSet rendererSet = draw->fontState
+                ? draw->fontState->descriptorSets[currentFrame] : imageDescriptorSets[currentFrame];
+            if (boundRendererSet != rendererSet)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                        pipelineLayout, 0, 1, &rendererSet, 0, nullptr);
+                boundRendererSet = rendererSet;
+            }
+            const glm::vec2 atlasSize = draw->fontState
+                ? glm::vec2(draw->fontState->font->atlasWidth, draw->fontState->font->atlasHeight) : glm::vec2(1.0f);
             draw->unit->Render(commandBuffer, pipelineLayout, viewportSize, atlasSize, currentFrame);
         }
         vkCmdEndRendering(commandBuffer);
@@ -487,12 +515,12 @@ namespace vke_render
         context = ctx;
     }
 
-    void Layered2DRenderer::syncDynamicAtlas(VkCommandBuffer commandBuffer, uint32_t currentFrame)
+    void Layered2DRenderer::syncDynamicAtlas(FontState &state, VkCommandBuffer commandBuffer, uint32_t currentFrame)
     {
-        if (font->GetDynamicAtlasUpdateCnt() == 0)
+        if (state.font->GetDynamicAtlasUpdateCnt() == 0)
             return;
-        const auto &pixels = font->GetDynamicAtlasPixels();
-        dynamicAtlasStagingBuffers[currentFrame]->ToBuffer(0, pixels.data(), pixels.size());
+        const auto &pixels = state.font->GetDynamicAtlasPixels();
+        state.stagingBuffers[currentFrame]->ToBuffer(0, pixels.data(), pixels.size());
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -502,12 +530,12 @@ namespace vke_render
         barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = dynamicAtlasTextures[currentFrame]->textureImage;
+        barrier.image = state.textures[currentFrame]->textureImage;
         barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
         vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
                              0, 0, nullptr, 0, nullptr, 1, &barrier);
-        VulkanResourceManager::CopyBufferToImage(commandBuffer, dynamicAtlasStagingBuffers[currentFrame]->buffer,
-                                             dynamicAtlasTextures[currentFrame]->textureImage,
+        VulkanResourceManager::CopyBufferToImage(commandBuffer, state.stagingBuffers[currentFrame]->buffer,
+                                             state.textures[currentFrame]->textureImage,
                                              vke_common::Font::ATLAS_SIZE, vke_common::Font::ATLAS_SIZE);
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -515,6 +543,6 @@ namespace vke_render
         barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                              0, 0, nullptr, 0, nullptr, 1, &barrier);
-        font->ConsumeDynamicAtlasUpdate();
+        state.font->ConsumeDynamicAtlasUpdate();
     }
 }

@@ -106,44 +106,99 @@ namespace vke_render
             bounds = calculateBounds(infos, vertices.data(), indices.data());
         }
 
-        Mesh(const vke_common::AssetHandle hdl, std::istream &binary) : handle(hdl)
+        static vke_common::Result<std::unique_ptr<Mesh>> Create(vke_common::AssetHandle hdl, std::span<const char> data)
         {
-            binary.read((char *)&bounds.min, 3 * sizeof(float));
-            binary.read((char *)&bounds.max, 3 * sizeof(float));
-            uint32_t infoCnt;
-            binary.read((char *)&infoCnt, sizeof(uint32_t));
-            infos.resize(infoCnt);
-            binary.read((char *)(infos.data()), infoCnt * sizeof(MeshInfo));
-            uint64_t vsize;
-            binary.read((char *)&vsize, sizeof(uint64_t));
-            CPUBuffer<> vertices(vsize);
-            binary.read((char *)(vertices.data), vsize);
-            vertexBuffer = std::make_unique<DeviceBuffer>(vsize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-            vertexBuffer->ToBuffer(0, vertices.data, vsize);
-            uint64_t isize;
-            binary.read((char *)&isize, sizeof(uint64_t));
-            CPUBuffer<> indices(isize);
-            binary.read((char *)(indices.data), isize);
-            indexBuffer = std::make_unique<DeviceBuffer>(isize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-            indexBuffer->ToBuffer(0, indices.data, isize);
-
-            uint64_t ibmSize;
-            if (binary.read((char *)(&ibmSize), sizeof(uint64_t)))
+            auto read = [&data](void *destination, size_t size)
             {
-                uint32_t matCnt = ibmSize >> 6;
-                invBindMatrices.resize(matCnt);
-                CPUBuffer<16> ibmBuffer(ibmSize);
-                binary.read((char *)(ibmBuffer.data), ibmSize);
-                VKE_LOG_INFO("matCnt {}", matCnt)
-                for (int i = 0; i < matCnt; ++i)
-                    for (int j = 0; j < 4; ++j)
-                        invBindMatrices[i].cols[j] = ozz::math::simd_float4::LoadPtr(((float *)ibmBuffer.data) + (i << 4) + (j << 2));
+                if (size > data.size()) return false;
+                if (size != 0) std::memcpy(destination, data.data(), size);
+                data = data.subspan(size);
+                return true;
+            };
+            auto mesh = std::make_unique<Mesh>(hdl);
+            uint32_t infoCount;
+            if (!read(&mesh->bounds.min, 3 * sizeof(float)) ||
+                !read(&mesh->bounds.max, 3 * sizeof(float)) || !read(&infoCount, sizeof(infoCount)))
+                return std::unexpected("truncated mesh header");
+            if (infoCount == 0 || infoCount > data.size() / sizeof(MeshInfo))
+                return std::unexpected("invalid mesh info count");
+            mesh->infos.resize(infoCount);
+            const size_t infoSize = infoCount * sizeof(MeshInfo);
+            std::memcpy(mesh->infos.data(), data.data(), infoSize);
+            data = data.subspan(infoSize);
 
-                uint32_t jointCnt;
-                binary.read((char *)(&jointCnt), sizeof(uint32_t));
-                joints.resize(jointCnt);
-                binary.read((char *)(joints.data()), jointCnt << 2);
+            uint64_t vertexSize, indexSize;
+            if (!read(&vertexSize, sizeof(vertexSize)) || vertexSize == 0 || vertexSize > data.size())
+                return std::unexpected("invalid or truncated vertex buffer");
+            const auto vertices = data.first(static_cast<size_t>(vertexSize));
+            data = data.subspan(vertices.size());
+            if (!read(&indexSize, sizeof(indexSize)) || indexSize == 0 || indexSize > data.size())
+                return std::unexpected("invalid or truncated index buffer");
+            const auto indices = data.first(static_cast<size_t>(indexSize));
+            data = data.subspan(indices.size());
+
+            for (size_t i = 0; i < mesh->infos.size(); ++i)
+            {
+                const auto &info = mesh->infos[i];
+                auto primitiveError = [i](const char *message)
+                { return std::unexpected("primitive " + std::to_string(i) + ": " + message); };
+                if (info.vertexCnt == 0 || info.indexCnt == 0 ||
+                    info.vertexOffset > vertexSize || info.vertexSize > vertexSize - info.vertexOffset ||
+                    info.indexOffset > indexSize || info.indexSize > indexSize - info.indexOffset ||
+                    info.vertexSize % info.vertexCnt != 0 || info.indexSize % info.indexCnt != 0)
+                    return primitiveError("invalid buffer range or element count");
+                const auto vertexStride = info.getVertexUnitSize();
+                const auto indexStride = info.getIndexUnitSize();
+                if (vertexStride < 3 * sizeof(float) || (indexStride != 2 && indexStride != 4) ||
+                    info.vertexOffset % vertexStride != 0 || info.indexOffset % indexStride != 0)
+                    return primitiveError("invalid vertex or index layout");
+                if (info.indexCnt > std::numeric_limits<uint32_t>::max() ||
+                    info.indexOffset / indexStride > std::numeric_limits<uint32_t>::max() ||
+                    info.vertexOffset / vertexStride > std::numeric_limits<int32_t>::max())
+                    return primitiveError("draw range exceeds Vulkan limits");
+                for (uint64_t j = 0; j < info.indexCnt; ++j)
+                {
+                    uint32_t index = 0;
+                    std::memcpy(&index, indices.data() + info.indexOffset + j * indexStride, indexStride);
+                    if (index >= info.vertexCnt)
+                        return primitiveError("index references a vertex outside the primitive");
+                }
             }
+
+            if (!data.empty())
+            {
+                uint64_t matrixSize;
+                constexpr size_t matrixStride = 16 * sizeof(float);
+                if (!read(&matrixSize, sizeof(matrixSize)) || matrixSize % matrixStride != 0 || matrixSize > data.size())
+                    return std::unexpected("invalid or truncated inverse bind matrices");
+                const char *matrixData = data.data();
+                data = data.subspan(static_cast<size_t>(matrixSize));
+                mesh->invBindMatrices.resize(static_cast<size_t>(matrixSize / matrixStride));
+                for (auto &matrix : mesh->invBindMatrices)
+                    for (auto &column : matrix.cols)
+                    {
+                        float values[4];
+                        std::memcpy(values, matrixData, sizeof(values));
+                        matrixData += sizeof(values);
+                        column = ozz::math::simd_float4::LoadPtrU(values);
+                    }
+                uint32_t jointCount;
+                if (!read(&jointCount, sizeof(jointCount)) || jointCount > data.size() / sizeof(int))
+                    return std::unexpected("invalid or truncated joint list");
+                mesh->joints.resize(jointCount);
+                const size_t jointSize = jointCount * sizeof(int);
+                if (jointSize != 0) std::memcpy(mesh->joints.data(), data.data(), jointSize);
+                data = data.subspan(jointSize);
+                if (!mesh->invBindMatrices.empty() && mesh->joints.size() != mesh->invBindMatrices.size())
+                    return std::unexpected("joint and inverse bind matrix counts differ");
+                if (!data.empty()) return std::unexpected("unexpected trailing mesh data");
+            }
+
+            mesh->vertexBuffer = std::make_unique<DeviceBuffer>(vertices.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+            mesh->vertexBuffer->ToBuffer(0, vertices.data(), vertices.size());
+            mesh->indexBuffer = std::make_unique<DeviceBuffer>(indices.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+            mesh->indexBuffer->ToBuffer(0, indices.data(), indices.size());
+            return mesh;
         }
 
         ~Mesh() {}

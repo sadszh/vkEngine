@@ -22,7 +22,9 @@ namespace vke_render
                   ResourceNodeIDMap &currentResourceNodeID) override
         {
             RenderPassBase::Init(subpassID, frameGraph, blackboard, currentResourceNodeID);
-            toneMappingShader = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_TONE_MAPPING_ID);
+            auto toneMappingShaderResult = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_TONE_MAPPING_ID);
+            VKE_FATAL_IF(!toneMappingShaderResult, "{}", toneMappingShaderResult.error())
+            toneMappingShader = std::move(*toneMappingShaderResult);
             constructFrameGraph(frameGraph, blackboard, currentResourceNodeID);
             allocateDescriptorSet();
             createGraphicsPipeline();

@@ -113,6 +113,7 @@ namespace vke_render
         {
             units.clear();
             materialStates.clear();
+            fontStates.clear();
             quadIDPool.Reset();
             unitAllocator = vke_ds::NaiveIDAllocator<vke_ds::id32_t>();
             resetImageTextures();
@@ -126,7 +127,9 @@ namespace vke_render
         void OnWindowResize(FrameGraph &frameGraph, RenderContext *ctx) override;
 
         vke_ds::id32_t AllocateUnit(const std::shared_ptr<Material> &material,
-                                    const glm::mat4 &modelMatrix, const std::vector<QuadID> &quadIDs);
+                                    const glm::mat4 &modelMatrix, const std::vector<QuadID> &quadIDs,
+                                    const std::shared_ptr<vke_common::Font> &font);
+        void UpdateUnitFont(vke_ds::id32_t unitID, const std::shared_ptr<vke_common::Font> &font);
         void DestroyUnit(vke_ds::id32_t unitID);
         bool UpdateUnitQuadIDs(vke_ds::id32_t unitID, const std::vector<QuadID> &quadIDs);
 
@@ -135,13 +138,25 @@ namespace vke_render
         std::shared_ptr<Material> GetImageMaterial() const { return imageMaterial; }
         vke_common::Result<uint32_t> RegisterImageTexture(const std::shared_ptr<Texture2D> &texture);
         void UnregisterImageTexture(uint32_t index);
-        std::shared_ptr<vke_common::Font> GetFont() const { return font; }
 
     private:
+        struct FontState
+        {
+            ~FontState()
+            {
+                for (auto set : descriptorSets) VulkanResourceManager::FreeDescriptorSet(set);
+            }
+            std::shared_ptr<vke_common::Font> font;
+            VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT]{};
+            std::unique_ptr<HostCoherentBuffer> stagingBuffers[MAX_FRAMES_IN_FLIGHT];
+            std::unique_ptr<Texture2D> textures[MAX_FRAMES_IN_FLIGHT];
+        };
+
         struct UnitState
         {
             std::unique_ptr<Layered2DRenderUnit> unit;
             const Layered2DMaterialState *materialState;
+            FontState *fontState = nullptr;
         };
 
         struct ImageTextureSlot
@@ -151,7 +166,6 @@ namespace vke_render
         };
 
         QuadManager *quadManager;
-        VkDescriptorSet rendererDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
         VkDescriptorSet imageDescriptorSets[MAX_FRAMES_IN_FLIGHT]{};
         std::array<bool, MAX_FRAMES_IN_FLIGHT> imageTexturesDirty{};
         std::array<std::vector<std::shared_ptr<Texture2D>>, MAX_FRAMES_IN_FLIGHT> frameImageTextures;
@@ -162,9 +176,7 @@ namespace vke_render
         std::unordered_map<Texture2D *, uint32_t> imageTextureIndices;
         std::shared_ptr<ShaderModuleSet> textShader;
         std::shared_ptr<Material> defaultMaterial;
-        std::shared_ptr<vke_common::Font> font;
-        std::unique_ptr<HostCoherentBuffer> dynamicAtlasStagingBuffers[MAX_FRAMES_IN_FLIGHT];
-        std::unique_ptr<Texture2D> dynamicAtlasTextures[MAX_FRAMES_IN_FLIGHT];
+        std::unordered_map<vke_common::Font *, std::unique_ptr<FontState>> fontStates;
         QuadIDVertexBufferPool quadIDPool;
         vke_ds::NaiveIDAllocator<vke_ds::id32_t> unitAllocator;
         std::map<Material *, std::unique_ptr<Layered2DMaterialState>> materialStates;
@@ -176,7 +188,8 @@ namespace vke_render
         void createDescriptorSets();
         const Layered2DMaterialState &getOrCreateMaterialState(const std::shared_ptr<Material> &material);
         void createGraphicsPipeline(Layered2DMaterialState &state);
-        void syncDynamicAtlas(VkCommandBuffer commandBuffer, uint32_t currentFrame);
+        FontState &getOrCreateFontState(const std::shared_ptr<vke_common::Font> &font);
+        void syncDynamicAtlas(FontState &state, VkCommandBuffer commandBuffer, uint32_t currentFrame);
         void syncImageTextures(uint32_t currentFrame);
         void resetImageTextures();
     };

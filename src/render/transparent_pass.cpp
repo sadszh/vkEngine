@@ -22,7 +22,9 @@ namespace vke_render
                                ResourceNodeIDMap &currentResourceNodeID)
     {
         RenderPassBase::Init(subpassID, frameGraph, blackboard, currentResourceNodeID);
-        brdfLUT = vke_common::AssetManager::LoadTexture2D(vke_common::BUILTIN_TEXTURE_BRDF_LUT_ID);
+        auto brdfLUTResult = vke_common::AssetManager::LoadTexture2D(vke_common::BUILTIN_TEXTURE_BRDF_LUT_ID);
+        VKE_FATAL_IF(!brdfLUTResult, "{}", brdfLUTResult.error())
+        brdfLUT = std::move(*brdfLUTResult);
         constructFrameGraph(frameGraph, blackboard, currentResourceNodeID);
     }
 

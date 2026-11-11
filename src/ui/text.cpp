@@ -3,8 +3,8 @@
 namespace vke_ui
 {
     UIText::UIText(const UITextData &data)
-        : UIRenderableComponent(data, data.material.Get()), text(data.text),
-          font(vke_common::AssetManager::LoadFont(vke_common::BUILTIN_FONT_ARIAL_ID)), options(data.layout)
+        : UIRenderableComponent(data, data.material.Get(), data.font.Get()), text(data.text),
+          font(data.font.Get()), options(data.layout)
     {
         prepareCharacters();
         layout = LayoutText(characters, options.fontSize / font->pixelSize, static_cast<float>(font->lineHeight),
@@ -44,6 +44,19 @@ namespace vke_ui
             const auto value = glyph ? *glyph : vke_common::Glyph{};
             characters.push_back({codepoint, static_cast<float>(value.advanceX) * (codepoint == '\t' ? 4 : 1), value});
         }
+    }
+
+    vke_common::Result<void> UIText::SetFont(vke_common::AssetHandle handle)
+    {
+        if (handle == font->handle) return {};
+        auto loaded = vke_common::AssetManager::LoadFont(handle);
+        if (!loaded) return std::unexpected(loaded.error());
+        font = std::move(*loaded);
+        setRenderFont(font);
+        prepareCharacters();
+        invalidateLayout();
+        updateLayout();
+        return {};
     }
 
     void UIText::SetText(std::string_view newText)

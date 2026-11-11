@@ -21,7 +21,9 @@ namespace vke_render
             dirtyFlags[i] = false;
         }
 
-        auto lightCullingShader = vke_common::AssetManager::LoadComputeShader(vke_common::BUILTIN_COMPUTE_SHADER_LIGHTCULL_ID);
+        auto lightCullingShaderResult = vke_common::AssetManager::LoadComputeShader(vke_common::BUILTIN_COMPUTE_SHADER_LIGHTCULL_ID);
+        VKE_FATAL_IF(!lightCullingShaderResult, "{}", lightCullingShaderResult.error())
+        auto lightCullingShader = std::move(*lightCullingShaderResult);
         lightCullingTask = std::make_unique<ComputePipeline>(lightCullingShader);
 
         for (int i = 0; i < (int)LightType::LIGHT_TYPE_CNT; ++i)

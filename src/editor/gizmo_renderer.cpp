@@ -7,7 +7,9 @@ namespace vke_editor
     GizmoRenderer::GizmoRenderer(vke_render::RenderContext *ctx)
         : context(ctx)
     {
-        shader = vke_common::AssetManager::LoadVertFragShaderUnique(BUILTIN_VFSHADER_GIZMO_ID);
+        auto shaderResult = vke_common::AssetManager::LoadVertFragShaderUnique(BUILTIN_VFSHADER_GIZMO_ID);
+        VKE_FATAL_IF(!shaderResult, "{}", shaderResult.error())
+        shader = std::move(*shaderResult);
         createGraphicsPipeline();
     }
 

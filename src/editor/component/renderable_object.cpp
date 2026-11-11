@@ -40,9 +40,11 @@ namespace vke_editor
                     const std::string materialLabel = std::to_string(assetHandle) + "  " + asset.name;
                     if (ImGui::Selectable(materialLabel.c_str(), selected))
                     {
-                        std::shared_ptr<vke_render::Material> material =
-                            vke_common::AssetManager::LoadMaterial(assetHandle);
-                        renderable.SetMaterial(material);
+                        auto material = vke_common::AssetManager::LoadMaterial(assetHandle);
+                        if (material)
+                            renderable.SetMaterial(*material);
+                        else
+                            VKE_LOG_ERROR("Cannot set material: {}", material.error())
                     }
                     if (selected)
                         ImGui::SetItemDefaultFocus(); }));
@@ -66,9 +68,14 @@ namespace vke_editor
                     const std::string meshLabel = std::to_string(assetHandle) + "  " + asset.name;
                     if (ImGui::Selectable(meshLabel.c_str(), selected))
                     {
-                        std::shared_ptr<const vke_render::Mesh> mesh =
-                            vke_common::AssetManager::LoadMesh(assetHandle);
-                        renderable.SetMesh(mesh);
+                        auto loaded = vke_common::AssetManager::LoadMesh(assetHandle);
+                        if (loaded)
+                        {
+                            std::shared_ptr<const vke_render::Mesh> mesh = std::move(*loaded);
+                            renderable.SetMesh(mesh);
+                        }
+                        else
+                            VKE_LOG_ERROR("Cannot set mesh: {}", loaded.error())
                     }
                     if (selected)
                         ImGui::SetItemDefaultFocus(); }));

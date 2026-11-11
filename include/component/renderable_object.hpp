@@ -79,15 +79,15 @@ namespace vke_component
             using vke_common::AssetManager;
             if (!material.Get())
             {
-                material.Resolve(AssetManager::LoadMaterial(material.Handle()));
-                if (!material.Get())
-                    return std::unexpected("material asset " + std::to_string(material.Handle()) + ": loading failed");
+                auto loaded = AssetManager::LoadMaterial(material.Handle());
+                if (!loaded) return std::unexpected(loaded.error());
+                material.Resolve(std::move(*loaded));
             }
             if (!mesh.Get())
             {
-                mesh.Resolve(AssetManager::LoadMesh(mesh.Handle()));
-                if (!mesh.Get())
-                    return std::unexpected("mesh asset " + std::to_string(mesh.Handle()) + ": loading failed");
+                auto loaded = AssetManager::LoadMesh(mesh.Handle());
+                if (!loaded) return std::unexpected(loaded.error());
+                mesh.Resolve(std::move(*loaded));
             }
             return {};
         }

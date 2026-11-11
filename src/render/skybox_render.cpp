@@ -118,7 +118,9 @@ namespace vke_render
 
     void SkyboxRenderer::initResources()
     {
-        skyboxMaterial = vke_common::AssetManager::LoadMaterial(vke_common::BUILTIN_MATERIAL_SKYBOX_ID);
+        auto skyboxMaterialResult = vke_common::AssetManager::LoadMaterial(vke_common::BUILTIN_MATERIAL_SKYBOX_ID);
+        VKE_FATAL_IF(!skyboxMaterialResult, "{}", skyboxMaterialResult.error())
+        skyboxMaterial = std::move(*skyboxMaterialResult);
         // skybox mesh
         std::vector<uint32_t> indices;
         for (int i = 0; i < skyboxVertices.size(); i++)

@@ -69,9 +69,9 @@ namespace vke_ui
         {
             if (texture.Handle() != 0 && !texture.Get())
             {
-                texture.Resolve(vke_common::AssetManager::LoadTexture2D(texture.Handle()));
-                if (!texture.Get())
-                    return std::unexpected("image texture " + std::to_string(texture.Handle()) + ": loading failed");
+                auto loaded = vke_common::AssetManager::LoadTexture2D(texture.Handle());
+                if (!loaded) return std::unexpected("image: " + loaded.error());
+                texture.Resolve(std::move(*loaded));
             }
             return UINodeData::LoadAssets();
         }
@@ -118,10 +118,13 @@ namespace vke_ui
         vke_common::Result<void> SetTexture(vke_common::AssetHandle handle)
         {
             using vke_common::AssetManager;
+            std::shared_ptr<vke_render::Texture2D> loaded;
             if (handle != 0)
-                if (auto valid = AssetManager::ValidateTexture2D(handle); !valid) return valid;
-            auto loaded = handle ? AssetManager::LoadTexture2D(handle) : nullptr;
-            if (handle && !loaded) return std::unexpected("image texture loading failed");
+            {
+                auto result = AssetManager::LoadTexture2D(handle);
+                if (!result) return std::unexpected("image: " + result.error());
+                loaded = std::move(*result);
+            }
             if (quadIDs.empty()) return std::unexpected("image quad is not allocated");
             auto *renderer = vke_render::Renderer::GetLayered2DRenderer();
             auto registered = renderer->RegisterImageTexture(loaded);

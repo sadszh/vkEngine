@@ -103,12 +103,18 @@ namespace vke_editor
             if (mouse.x >= min.x && mouse.x <= max.x && mouse.y >= min.y && mouse.y <= max.y)
                 hoveredEntity = entity;
         };
-        const auto cameraTexture = getTexturePreviewDescriptorSet(BUILTIN_TEXTURE_CAMERA_ICON_ID);
+        const auto iconDescriptor = [&](vke_common::AssetHandle icon)
+        {
+            auto texture = vke_common::AssetManager::LoadTexture2D(icon);
+            VKE_FATAL_IF(!texture, "{}", texture.error())
+            return getTexturePreviewDescriptorSet(**texture);
+        };
+        const auto cameraTexture = iconDescriptor(BUILTIN_TEXTURE_CAMERA_ICON_ID);
         for (auto [entity, sceneCamera] : sceneManager->registry.view<vke_component::Camera>().each())
             drawIcon(entity, glm::vec3(sceneCamera.cameraInfo.invView[3]), cameraTexture, IM_COL32(102, 204, 255, 255));
         const auto drawLights = [&]<typename T>(vke_common::AssetHandle icon)
         {
-            const auto texture = getTexturePreviewDescriptorSet(icon);
+            const auto texture = iconDescriptor(icon);
             for (auto [entity, transform] : sceneManager->registry.view<T, vke_common::Transform>().each())
                 drawIcon(entity, transform.GetGlobalPosition(), texture, IM_COL32(255, 240, 160, 255));
         };

@@ -18,7 +18,8 @@ namespace vke_ui
     {
     public:
         explicit UIRenderableComponent(const UINodeData &data,
-                                       std::shared_ptr<vke_render::Material> componentMaterial)
+                                       std::shared_ptr<vke_render::Material> componentMaterial,
+                                       const std::shared_ptr<vke_common::Font> &font = nullptr)
             : UIComponent(data), material(std::move(componentMaterial))
         {
             vke_render::Layered2DRenderer *renderer = vke_render::Renderer::GetLayered2DRenderer();
@@ -26,7 +27,7 @@ namespace vke_ui
             if (material == nullptr)
                 material = renderer->GetDefaultMaterial();
 
-            id = renderer->AllocateUnit(material, glm::mat4(1.0f), quadIDs);
+            id = renderer->AllocateUnit(material, glm::mat4(1.0f), quadIDs, font);
             renderUnit = renderer->GetUnit(id);
         }
 
@@ -36,6 +37,11 @@ namespace vke_ui
         UIRenderableComponent &operator=(const UIRenderableComponent &) = delete;
 
     protected:
+        void setRenderFont(const std::shared_ptr<vke_common::Font> &font)
+        {
+            vke_render::Renderer::GetLayered2DRenderer()->UpdateUnitFont(id, font);
+        }
+
         void unload() override
         {
             vke_render::Layered2DRenderer *renderer = vke_render::Renderer::GetLayered2DRenderer();

@@ -20,7 +20,9 @@ namespace vke_render
     {
         RenderPassBase::Init(subpassID, frameGraph, blackboard, currentResourceNodeID);
         VKE_FATAL_IF(gbuffer == nullptr, "Atmosphere pass requires the gbuffer pass to be initialized first")
-        shader = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_ATMOSPHERE_ID);
+        auto shaderResult = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_ATMOSPHERE_ID);
+        VKE_FATAL_IF(!shaderResult, "{}", shaderResult.error())
+        shader = std::move(*shaderResult);
         constructFrameGraph(frameGraph, blackboard, currentResourceNodeID);
         createDescriptorSet();
         createGraphicsPipeline();

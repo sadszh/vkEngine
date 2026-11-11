@@ -75,24 +75,24 @@ namespace vke_common
         AM_OP_FUNCS(FontAsset)
         AM_OP_FUNCS(AudioClipAsset)
 
-        static std::unique_ptr<vke_render::Texture2D> LoadTexture2DUnique(const AssetHandle hdl);
-        static std::unique_ptr<vke_render::Mesh> LoadMeshUnique(const AssetHandle hdl);
-        static std::unique_ptr<vke_render::ShaderModuleSet> LoadVertFragShaderUnique(const AssetHandle hdl);
-        static std::unique_ptr<vke_render::ShaderModuleSet> LoadComputeShaderUnique(const AssetHandle hdl);
-        static std::unique_ptr<vke_render::Material> LoadMaterialUnique(const AssetHandle hdl);
-        static std::unique_ptr<vke_common::Skeleton> LoadSkeletonUnique(const AssetHandle hdl);
-        static std::unique_ptr<vke_common::Animation> LoadAnimationUnique(const AssetHandle hdl);
-        static std::unique_ptr<vke_common::Font> LoadFontUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_render::Texture2D>> LoadTexture2DUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_render::Mesh>> LoadMeshUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_render::ShaderModuleSet>> LoadVertFragShaderUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_render::ShaderModuleSet>> LoadComputeShaderUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_render::Material>> LoadMaterialUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_common::Skeleton>> LoadSkeletonUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_common::Animation>> LoadAnimationUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_common::Font>> LoadFontUnique(const AssetHandle hdl);
         static Result<std::unique_ptr<vke_audio::AudioClip>> LoadAudioClipUnique(const AssetHandle hdl);
 
-        static std::shared_ptr<vke_render::Texture2D> LoadTexture2D(const AssetHandle hdl);
-        static std::shared_ptr<vke_render::Mesh> LoadMesh(const AssetHandle hdl);
-        static std::shared_ptr<vke_render::ShaderModuleSet> LoadVertFragShader(const AssetHandle hdl);
-        static std::shared_ptr<vke_render::ShaderModuleSet> LoadComputeShader(const AssetHandle hdl);
-        static std::shared_ptr<vke_render::Material> LoadMaterial(const AssetHandle hdl);
-        static std::shared_ptr<vke_common::Skeleton> LoadSkeleton(const AssetHandle hdl);
-        static std::shared_ptr<vke_common::Animation> LoadAnimation(const AssetHandle hdl);
-        static std::shared_ptr<vke_common::Font> LoadFont(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_render::Texture2D>> LoadTexture2D(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_render::Mesh>> LoadMesh(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_render::ShaderModuleSet>> LoadVertFragShader(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_render::ShaderModuleSet>> LoadComputeShader(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_render::Material>> LoadMaterial(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_common::Skeleton>> LoadSkeleton(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_common::Animation>> LoadAnimation(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_common::Font>> LoadFont(const AssetHandle hdl);
         static Result<std::shared_ptr<vke_audio::AudioClip>> LoadAudioClip(const AssetHandle hdl);
 
         // Preflight checks may read database metadata but do not load runtime resources.

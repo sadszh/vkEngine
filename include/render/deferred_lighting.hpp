@@ -29,9 +29,15 @@ namespace vke_render
         {
             RenderPassBase::Init(subpassID, frameGraph, blackboard, currentResourceNodeID);
             gbuffer = GBuffer::GetInstance();
-            lightingShader = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_DEFERRED_LIGHTING_ID);
-            brdfLUT = vke_common::AssetManager::LoadTexture2D(vke_common::BUILTIN_TEXTURE_BRDF_LUT_ID);
-            defaultOcclusionTexture = vke_common::AssetManager::LoadTexture2D(vke_common::BUILTIN_TEXTURE_DEFAULT_ID);
+            auto lightingShaderResult = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_DEFERRED_LIGHTING_ID);
+            VKE_FATAL_IF(!lightingShaderResult, "{}", lightingShaderResult.error())
+            lightingShader = std::move(*lightingShaderResult);
+            auto brdfLUTResult = vke_common::AssetManager::LoadTexture2D(vke_common::BUILTIN_TEXTURE_BRDF_LUT_ID);
+            VKE_FATAL_IF(!brdfLUTResult, "{}", brdfLUTResult.error())
+            brdfLUT = std::move(*brdfLUTResult);
+            auto defaultOcclusionTextureResult = vke_common::AssetManager::LoadTexture2D(vke_common::BUILTIN_TEXTURE_DEFAULT_ID);
+            VKE_FATAL_IF(!defaultOcclusionTextureResult, "{}", defaultOcclusionTextureResult.error())
+            defaultOcclusionTexture = std::move(*defaultOcclusionTextureResult);
             constructFrameGraph(frameGraph, blackboard, currentResourceNodeID);
             allocateDescriptorSet();
             createGraphicsPipeline();

@@ -25,7 +25,9 @@ namespace vke_render
                   ResourceNodeIDMap &currentResourceNodeID) override
         {
             RenderPassBase::Init(subpassID, frameGraph, blackboard, currentResourceNodeID);
-            bloomShader = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_BLOOM_ID);
+            auto bloomShaderResult = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_BLOOM_ID);
+            VKE_FATAL_IF(!bloomShaderResult, "{}", bloomShaderResult.error())
+            bloomShader = std::move(*bloomShaderResult);
             constructFrameGraph(frameGraph, blackboard, currentResourceNodeID);
             allocateDescriptorSet();
             createGraphicsPipeline();

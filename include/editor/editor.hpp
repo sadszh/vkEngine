@@ -47,6 +47,7 @@ namespace vke_editor
         vke_common::AssetType selectedAssetType;
         vke_common::AssetHandle selectedAsset;
         std::map<vke_common::AssetHandle, VkDescriptorSet> texturePreviewDescriptorSets;
+        std::map<vke_common::AssetHandle, std::string> texturePreviewErrors;
         AssetBrowserMode assetBrowserMode;
         AssetTreeNode assetDirectoryTree;
 
@@ -107,7 +108,8 @@ namespace vke_editor
         void clearSelectedAsset();
         void disposeTexturePreviewDescriptorSets();
         void showSelectedTextureInspector();
-        VkDescriptorSet getTexturePreviewDescriptorSet(vke_common::AssetHandle textureAsset);
+        std::shared_ptr<vke_render::Texture2D> loadTexturePreview(vke_common::AssetHandle textureAsset);
+        VkDescriptorSet getTexturePreviewDescriptorSet(const vke_render::Texture2D &texture);
         void drawTexturePreview(vke_common::AssetHandle textureAsset, float maxSize);
         void showSelectedMaterialInspector();
         void showSelectedAssetInspector();

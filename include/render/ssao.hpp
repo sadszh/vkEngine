@@ -58,8 +58,12 @@ namespace vke_render
         {
             RenderPassBase::Init(subpassID, frameGraph, blackboard, currentResourceNodeID);
             gbuffer = GBuffer::GetInstance();
-            ssaoShader = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_SSAO_ID);
-            ssaoBlurShader = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_SSAO_BLUR_ID);
+            auto ssaoShaderResult = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_SSAO_ID);
+            VKE_FATAL_IF(!ssaoShaderResult, "{}", ssaoShaderResult.error())
+            ssaoShader = std::move(*ssaoShaderResult);
+            auto ssaoBlurShaderResult = vke_common::AssetManager::LoadVertFragShaderUnique(vke_common::BUILTIN_VFSHADER_SSAO_BLUR_ID);
+            VKE_FATAL_IF(!ssaoBlurShaderResult, "{}", ssaoBlurShaderResult.error())
+            ssaoBlurShader = std::move(*ssaoBlurShaderResult);
             constructFrameGraph(frameGraph, blackboard, currentResourceNodeID);
             allocateDescriptorSet();
             createGraphicsPipeline();

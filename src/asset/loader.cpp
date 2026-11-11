@@ -2,10 +2,10 @@
 #include <asset/svg.hpp>
 #include <logger.hpp>
 #include <stb/stb_image.h>
-#include <miniaudio/miniaudio.h>
 #include <vector>
 #include <fstream>
 #include <string>
+#include <limits>
 #include <ozz/base/io/archive.h>
 #include <ozz/base/io/stream.h>
 #include <ozz/animation/runtime/track_sampling_job.h>
@@ -105,287 +105,262 @@ namespace vke_common
         return {};
     }
 
-    template <typename T, typename AT>
-    static inline std::shared_ptr<T> loadFromCacheOrUpdate(
-        AT *asset,
-        std::function<std::unique_ptr<T>(AT &)> &load)
+    template <typename T, typename Load>
+    static Result<std::shared_ptr<T>> loadFromCacheOrUpdate(std::shared_ptr<T> &cache, Load &&load)
     {
-        if (asset->val != nullptr)
-            return asset->val;
-
-        asset->val = load(*asset);
-        return asset->val;
+        if (cache) return cache;
+        auto loaded = load();
+        if (!loaded) return std::unexpected(loaded.error());
+        cache = std::move(*loaded);
+        return cache;
     }
 
-    static inline std::unique_ptr<vke_render::Texture2D> loadTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::filesystem::path &fullPath)
+    static Result<std::unique_ptr<vke_render::Texture2D>> loadTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::filesystem::path &fullPath)
     {
+        const std::string context = "texture " + std::to_string(hdl) + " (" + PathToUTF8(fullPath) + "): ";
         if (IsSVGPath(asset.path))
         {
-            VKE_FATAL_IF(asset.format != VK_FORMAT_R8G8B8A8_SRGB && asset.format != VK_FORMAT_R8G8B8A8_UNORM,
-                         "SVG textures require R8G8B8A8_SRGB or R8G8B8A8_UNORM: {}", PathToUTF8(fullPath))
+            if (asset.format != VK_FORMAT_R8G8B8A8_SRGB && asset.format != VK_FORMAT_R8G8B8A8_UNORM)
+                return std::unexpected(context + "SVG textures require R8G8B8A8_SRGB or R8G8B8A8_UNORM");
             auto image = LoadSVG(fullPath, asset.rasterWidth, asset.rasterHeight);
-            VKE_FATAL_IF(!image, "Failed to load SVG {}: {}", PathToUTF8(fullPath), image.error())
+            if (!image) return std::unexpected(context + image.error());
             return std::make_unique<vke_render::Texture2D>(hdl, image->pixels.data(), image->width, image->height,
                                                           asset.format, asset.usage, asset.layout,
                                                           asset.minFilter, asset.magFilter, asset.addressMode,
                                                           asset.anisotropyEnable, asset.generateMipMap);
         }
         int texWidth, texHeight, texChannels;
-        void *pixels = nullptr;
-        FILE *input = _wfopen(fullPath.c_str(), L"rb");
-        VKE_FATAL_IF(!input, "Cannot open texture: {}", PathToUTF8(fullPath))
-        if (asset.format == VK_FORMAT_R16G16B16A16_UNORM)
-            pixels = stbi_load_from_file_16(input, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-        else
-            pixels = stbi_load_from_file(input, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-        fclose(input);
-        VKE_FATAL_IF(!pixels, "Failed to load texture image!")
-
-        std::unique_ptr<vke_render::Texture2D> texture = std::make_unique<vke_render::Texture2D>(hdl, pixels, texWidth, texHeight,
-                                                                                                 asset.format, asset.usage, asset.layout,
-                                                                                                 asset.minFilter, asset.magFilter, asset.addressMode,
-                                                                                                 asset.anisotropyEnable, asset.generateMipMap);
-        stbi_image_free(pixels);
-        return texture;
+        std::unique_ptr<FILE, decltype(&fclose)> input(_wfopen(fullPath.c_str(), L"rb"), fclose);
+        if (!input) return std::unexpected(context + "cannot open texture file");
+        void *decoded = asset.format == VK_FORMAT_R16G16B16A16_UNORM
+            ? static_cast<void *>(stbi_load_from_file_16(input.get(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha))
+            : static_cast<void *>(stbi_load_from_file(input.get(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha));
+        std::unique_ptr<void, decltype(&stbi_image_free)> pixels(decoded, stbi_image_free);
+        if (ferror(input.get())) return std::unexpected(context + "cannot read texture file");
+        if (!pixels)
+        {
+            const char *reason = stbi_failure_reason();
+            return std::unexpected(context + "image decode failed: " + (reason ? reason : "unknown image error"));
+        }
+        return std::make_unique<vke_render::Texture2D>(hdl, pixels.get(), texWidth, texHeight,
+                                                      asset.format, asset.usage, asset.layout,
+                                                      asset.minFilter, asset.magFilter, asset.addressMode,
+                                                      asset.anisotropyEnable, asset.generateMipMap);
     }
 
-    std::unique_ptr<vke_render::Texture2D> AssetManager::LoadTexture2DUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<vke_render::Texture2D>> AssetManager::LoadTexture2DUnique(const AssetHandle hdl)
     {
         auto result = GetTextureAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected("texture " + std::to_string(hdl) + ": " + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        return loadTexture2D(hdl, *asset, path);
+        if (!asset) return std::unexpected("texture " + std::to_string(hdl) + ": asset not found");
+        return loadTexture2D(hdl, *asset, resolveAssetPath(hdl, asset->path));
     }
 
-    std::shared_ptr<vke_render::Texture2D> AssetManager::LoadTexture2D(const AssetHandle hdl)
+    Result<std::shared_ptr<vke_render::Texture2D>> AssetManager::LoadTexture2D(const AssetHandle hdl)
     {
         auto result = GetTextureAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected("texture " + std::to_string(hdl) + ": " + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        std::function<std::unique_ptr<vke_render::Texture2D>(TextureAsset &)> op = [hdl, path](TextureAsset &a)
-        { return loadTexture2D(hdl, a, path); };
-
-        return loadFromCacheOrUpdate<vke_render::Texture2D>(asset, op);
+        if (!asset) return std::unexpected("texture " + std::to_string(hdl) + ": asset not found");
+        return loadFromCacheOrUpdate(asset->val, [&]
+        { return loadTexture2D(hdl, *asset, resolveAssetPath(hdl, asset->path)); });
     }
 
-    static inline std::unique_ptr<vke_render::Mesh> loadMesh(const AssetHandle hdl, const std::filesystem::path &pth)
+    static Result<std::unique_ptr<vke_render::Mesh>> loadMesh(const AssetHandle hdl, const std::filesystem::path &path)
     {
-        std::ifstream file(pth, std::ios::binary);
-        return std::make_unique<vke_render::Mesh>(hdl, file);
+        const std::string context = "mesh " + std::to_string(hdl) + " (" + PathToUTF8(path) + "): ";
+        std::vector<char> data;
+        if (auto read = ReadFile(path, data); !read) return std::unexpected(context + read.error());
+        auto loaded = vke_render::Mesh::Create(hdl, data);
+        if (!loaded) return std::unexpected(context + loaded.error());
+        return loaded;
     }
 
-    std::unique_ptr<vke_render::Mesh> AssetManager::LoadMeshUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<vke_render::Mesh>> AssetManager::LoadMeshUnique(const AssetHandle hdl)
     {
+        const std::string context = "mesh " + std::to_string(hdl) + ": ";
         auto result = GetMeshAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        return loadMesh(hdl, path);
+        if (!asset) return std::unexpected(context + "asset not found");
+        return loadMesh(hdl, resolveAssetPath(hdl, asset->path));
     }
 
-    std::shared_ptr<vke_render::Mesh> AssetManager::LoadMesh(const AssetHandle hdl)
+    Result<std::shared_ptr<vke_render::Mesh>> AssetManager::LoadMesh(const AssetHandle hdl)
     {
+        const std::string context = "mesh " + std::to_string(hdl) + ": ";
         auto result = GetMeshAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        std::function<std::unique_ptr<vke_render::Mesh>(MeshAsset &)> op = [hdl, path](MeshAsset &a)
-        { return loadMesh(hdl, path); };
-
-        return loadFromCacheOrUpdate<vke_render::Mesh>(asset, op);
+        if (!asset) return std::unexpected(context + "asset not found");
+        return loadFromCacheOrUpdate(asset->val, [&]
+        { return loadMesh(hdl, resolveAssetPath(hdl, asset->path)); });
     }
 
-    static inline std::unique_ptr<vke_render::ShaderModuleSet> loadVertFragShader(const AssetHandle hdl, const std::filesystem::path &vpth, const std::filesystem::path &fpth)
+    static Result<std::unique_ptr<vke_render::ShaderModuleSet>> loadVertFragShader(const std::filesystem::path &vpth, const std::filesystem::path &fpth)
     {
         std::vector<char> vcode, fcode;
-        if (auto read = ReadFile(vpth, vcode); !read)
-            VKE_FATAL("{}", read.error())
-        if (auto read = ReadFile(fpth, fcode); !read)
-            VKE_FATAL("{}", read.error())
-        return std::make_unique<vke_render::ShaderModuleSet>(vcode, fcode);
+        if (auto read = ReadFile(vpth, vcode); !read) return std::unexpected("vertex shader: " + read.error());
+        if (auto read = ReadFile(fpth, fcode); !read) return std::unexpected("fragment shader: " + read.error());
+        auto loaded = vke_render::ShaderModuleSet::Create({{VK_SHADER_STAGE_VERTEX_BIT, vcode}, {VK_SHADER_STAGE_FRAGMENT_BIT, fcode}});
+        if (!loaded) return std::unexpected(PathToUTF8(vpth) + " / " + PathToUTF8(fpth) + ": " + loaded.error());
+        return loaded;
     }
 
-    std::unique_ptr<vke_render::ShaderModuleSet> AssetManager::LoadVertFragShaderUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<vke_render::ShaderModuleSet>> AssetManager::LoadVertFragShaderUnique(const AssetHandle hdl)
     {
+        const std::string context = "VertFrag shader " + std::to_string(hdl) + ": ";
         auto result = GetVFShaderAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto vertPath = resolveAssetPath(hdl, asset->path);
-        const auto fragPath = resolveAssetPath(hdl, asset->fragPath);
-        return loadVertFragShader(hdl, vertPath, fragPath);
+        if (!asset) return std::unexpected(context + "asset not found");
+        auto loaded = loadVertFragShader(resolveAssetPath(hdl, asset->path), resolveAssetPath(hdl, asset->fragPath));
+        if (!loaded) return std::unexpected(context + loaded.error());
+        return loaded;
     }
 
-    std::shared_ptr<vke_render::ShaderModuleSet> AssetManager::LoadVertFragShader(const AssetHandle hdl)
+    Result<std::shared_ptr<vke_render::ShaderModuleSet>> AssetManager::LoadVertFragShader(const AssetHandle hdl)
     {
+        const std::string context = "VertFrag shader " + std::to_string(hdl) + ": ";
         auto result = GetVFShaderAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto vertPath = resolveAssetPath(hdl, asset->path);
-        const auto fragPath = resolveAssetPath(hdl, asset->fragPath);
-        std::function<std::unique_ptr<vke_render::ShaderModuleSet>(VFShaderAsset &)> op = [hdl, vertPath, fragPath](VFShaderAsset &a)
-        { return loadVertFragShader(hdl, vertPath, fragPath); };
-
-        return loadFromCacheOrUpdate<vke_render::ShaderModuleSet>(asset, op);
+        if (!asset) return std::unexpected(context + "asset not found");
+        auto loaded = loadFromCacheOrUpdate(asset->val, [&]
+        { return loadVertFragShader(resolveAssetPath(hdl, asset->path), resolveAssetPath(hdl, asset->fragPath)); });
+        if (!loaded) return std::unexpected(context + loaded.error());
+        return loaded;
     }
 
-    static inline std::unique_ptr<vke_render::ShaderModuleSet> loadComputeShader(const AssetHandle hdl, const std::filesystem::path &pth)
+    static Result<std::unique_ptr<vke_render::ShaderModuleSet>> loadComputeShader(const std::filesystem::path &pth)
     {
         std::vector<char> code;
-        if (auto read = ReadFile(pth, code); !read)
-            VKE_FATAL("{}", read.error())
-        return std::make_unique<vke_render::ShaderModuleSet>(code);
+        if (auto read = ReadFile(pth, code); !read) return std::unexpected(read.error());
+        auto loaded = vke_render::ShaderModuleSet::Create({{VK_SHADER_STAGE_COMPUTE_BIT, code}});
+        if (!loaded) return std::unexpected(PathToUTF8(pth) + ": " + loaded.error());
+        return loaded;
     }
 
-    std::unique_ptr<vke_render::ShaderModuleSet> AssetManager::LoadComputeShaderUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<vke_render::ShaderModuleSet>> AssetManager::LoadComputeShaderUnique(const AssetHandle hdl)
     {
+        const std::string context = "Compute shader " + std::to_string(hdl) + ": ";
         auto result = GetComputeShaderAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        return loadComputeShader(hdl, path);
+        if (!asset) return std::unexpected(context + "asset not found");
+        auto loaded = loadComputeShader(resolveAssetPath(hdl, asset->path));
+        if (!loaded) return std::unexpected(context + loaded.error());
+        return loaded;
     }
 
-    std::shared_ptr<vke_render::ShaderModuleSet> AssetManager::LoadComputeShader(const AssetHandle hdl)
+    Result<std::shared_ptr<vke_render::ShaderModuleSet>> AssetManager::LoadComputeShader(const AssetHandle hdl)
     {
+        const std::string context = "Compute shader " + std::to_string(hdl) + ": ";
         auto result = GetComputeShaderAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        std::function<std::unique_ptr<vke_render::ShaderModuleSet>(ComputeShaderAsset &)> op = [hdl, path](ComputeShaderAsset &a)
-        { return loadComputeShader(hdl, path); };
-
-        return loadFromCacheOrUpdate<vke_render::ShaderModuleSet>(asset, op);
+        if (!asset) return std::unexpected(context + "asset not found");
+        auto loaded = loadFromCacheOrUpdate(asset->val, [&]
+        { return loadComputeShader(resolveAssetPath(hdl, asset->path)); });
+        if (!loaded) return std::unexpected(context + loaded.error());
+        return loaded;
     }
 
-    std::unique_ptr<vke_render::Material> loadMaterial(MaterialAsset &asset)
+    static Result<std::unique_ptr<vke_render::Material>> loadMaterial(MaterialAsset &asset)
     {
-        vke_render::Material *mat = new vke_render::Material(asset.id);
-
-        mat->shader = AssetManager::LoadVertFragShader(asset.shader);
+        auto mat = std::make_unique<vke_render::Material>(asset.id);
+        for (size_t i = 0; i < asset.textures.size(); ++i)
+        {
+            auto texture = AssetManager::LoadTexture2D(asset.textures[i]);
+            if (!texture)
+                return std::unexpected("material " + std::to_string(asset.id) + ": textures[" +
+                                       std::to_string(i) + "]: " + texture.error());
+            mat->textures.push_back(std::move(*texture));
+        }
+        auto shader = AssetManager::LoadVertFragShader(asset.shader);
+        if (!shader) return std::unexpected("material " + std::to_string(asset.id) + ": shader: " + shader.error());
+        mat->shader = std::move(*shader);
         mat->renderMode = asset.renderMode;
         mat->blendMode = asset.blendMode;
-        int bindingID = 0;
-        for (auto tex : asset.textures)
-            mat->textures.push_back(AssetManager::LoadTexture2D(tex));
         mat->textureBindingInfos = asset.textureBindingInfos;
         mat->pushConstantInfos = asset.pushConstantInfos;
         mat->pushConstantData = asset.pushConstantData;
-
-        return std::unique_ptr<vke_render::Material>(mat);
+        return mat;
     }
 
-    std::unique_ptr<vke_render::Material> AssetManager::LoadMaterialUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<vke_render::Material>> AssetManager::LoadMaterialUnique(const AssetHandle hdl)
     {
         auto result = GetMaterialAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected("material " + std::to_string(hdl) + ": " + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
+        if (!asset) return std::unexpected("material " + std::to_string(hdl) + ": asset not found");
         return loadMaterial(*asset);
     }
 
-    std::shared_ptr<vke_render::Material> AssetManager::LoadMaterial(const AssetHandle hdl)
+    Result<std::shared_ptr<vke_render::Material>> AssetManager::LoadMaterial(const AssetHandle hdl)
     {
         auto result = GetMaterialAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected("material " + std::to_string(hdl) + ": " + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        std::function<std::unique_ptr<vke_render::Material>(MaterialAsset &)> op(loadMaterial);
-        return loadFromCacheOrUpdate<vke_render::Material>(asset, op);
+        if (!asset) return std::unexpected("material " + std::to_string(hdl) + ": asset not found");
+        return loadFromCacheOrUpdate(asset->val, [&]
+        { return loadMaterial(*asset); });
     }
 
-    std::unique_ptr<Skeleton> loadSkeleton(SkeletonAsset &asset, const std::filesystem::path &fullPath)
+    static Result<std::unique_ptr<Skeleton>> loadSkeleton(const SkeletonAsset &asset, const std::filesystem::path &fullPath)
     {
-        auto ret = std::make_unique<Skeleton>(asset.id);
+        const std::string context = "skeleton " + std::to_string(asset.id) + " (" + PathToUTF8(fullPath) + "): ";
         ozz::io::File file(_wfopen(fullPath.c_str(), L"rb"));
-        if (!file.opened())
-        {
-            VKE_LOG_ERROR("Cannot open animation archive: {}", PathToUTF8(fullPath))
-            return nullptr;
-        }
+        if (!file.opened()) return std::unexpected(context + "cannot open archive");
         ozz::io::IArchive archive(&file);
         if (!archive.TestTag<ozz::animation::Skeleton>())
-        {
-            VKE_LOG_ERROR("Failed to load skeleton instance from file {}", PathToUTF8(fullPath))
-            return nullptr;
-        }
+            return std::unexpected(context + "invalid skeleton archive type tag");
+        auto ret = std::make_unique<Skeleton>(asset.id);
         archive >> ret->skeleton;
         return ret;
     }
 
-    std::unique_ptr<Skeleton> AssetManager::LoadSkeletonUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<Skeleton>> AssetManager::LoadSkeletonUnique(const AssetHandle hdl)
     {
+        const std::string context = "skeleton " + std::to_string(hdl) + ": ";
         auto result = GetSkeletonAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        return loadSkeleton(*asset, path);
+        if (!asset) return std::unexpected(context + "asset not found");
+        return loadSkeleton(*asset, resolveAssetPath(hdl, asset->path));
     }
 
-    std::shared_ptr<Skeleton> AssetManager::LoadSkeleton(const AssetHandle hdl)
+    Result<std::shared_ptr<Skeleton>> AssetManager::LoadSkeleton(const AssetHandle hdl)
     {
+        const std::string context = "skeleton " + std::to_string(hdl) + ": ";
         auto result = GetSkeletonAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        std::function<std::unique_ptr<Skeleton>(SkeletonAsset &)> op = [path](SkeletonAsset &a)
-        { return loadSkeleton(a, path); };
-        return loadFromCacheOrUpdate<Skeleton>(asset, op);
+        if (!asset) return std::unexpected(context + "asset not found");
+        return loadFromCacheOrUpdate(asset->val, [&]
+        { return loadSkeleton(*asset, resolveAssetPath(hdl, asset->path)); });
     }
 
-    std::unique_ptr<Animation> loadAnimation(AnimationAsset &asset, const std::filesystem::path &fullPath)
+    static Result<std::unique_ptr<Animation>> loadAnimation(const AnimationAsset &asset, const std::filesystem::path &fullPath)
     {
-        auto ret = std::make_unique<Animation>(asset.id);
+        const std::string context = "animation " + std::to_string(asset.id) + " (" + PathToUTF8(fullPath) + "): ";
         ozz::io::File file(_wfopen(fullPath.c_str(), L"rb"));
-        if (!file.opened())
-        {
-            VKE_LOG_ERROR("Cannot open animation archive: {}", PathToUTF8(fullPath))
-            return nullptr;
-        }
+        if (!file.opened()) return std::unexpected(context + "cannot open archive");
         ozz::io::IArchive archive(&file);
         if (!archive.TestTag<ozz::animation::Animation>())
-        {
-            VKE_LOG_ERROR("Failed to load animation instance from file {}", PathToUTF8(fullPath))
-            return nullptr;
-        }
+            return std::unexpected(context + "invalid animation archive type tag");
+        auto ret = std::make_unique<Animation>(asset.id);
         archive >> ret->animation;
         ret->hasRootMotion = asset.hasRootMotion;
         if (ret->hasRootMotion)
         {
             if (!archive.TestTag<ozz::animation::Float3Track>())
-            {
-                VKE_LOG_ERROR("Failed to load root motion position track from file {}", PathToUTF8(fullPath))
-                return nullptr;
-            }
+                return std::unexpected(context + "root motion position: invalid track type tag");
             archive >> ret->rootMotionPosition;
 
             if (!archive.TestTag<ozz::animation::QuaternionTrack>())
-            {
-                VKE_LOG_ERROR("Failed to load root motion rotation track from file {}", PathToUTF8(fullPath))
-                return nullptr;
-            }
+                return std::unexpected(context + "root motion rotation: invalid track type tag");
             archive >> ret->rootMotionRotation;
 
             ozz::math::Float3 startPosition, endPosition;
@@ -416,44 +391,44 @@ namespace vke_common
         return ret;
     }
 
-    std::unique_ptr<Animation> AssetManager::LoadAnimationUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<Animation>> AssetManager::LoadAnimationUnique(const AssetHandle hdl)
     {
+        const std::string context = "animation " + std::to_string(hdl) + ": ";
         auto result = GetAnimationAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        return loadAnimation(*asset, path);
+        if (!asset) return std::unexpected(context + "asset not found");
+        return loadAnimation(*asset, resolveAssetPath(hdl, asset->path));
     }
 
-    std::shared_ptr<Animation> AssetManager::LoadAnimation(const AssetHandle hdl)
+    Result<std::shared_ptr<Animation>> AssetManager::LoadAnimation(const AssetHandle hdl)
     {
+        const std::string context = "animation " + std::to_string(hdl) + ": ";
         auto result = GetAnimationAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        std::function<std::unique_ptr<Animation>(AnimationAsset &)> op = [path](AnimationAsset &a)
-        { return loadAnimation(a, path); };
-        return loadFromCacheOrUpdate<Animation>(asset, op);
+        if (!asset) return std::unexpected(context + "asset not found");
+        return loadFromCacheOrUpdate(asset->val, [&]
+        { return loadAnimation(*asset, resolveAssetPath(hdl, asset->path)); });
     }
 
-    static inline std::unique_ptr<Font> loadFont(FontAsset &asset, const std::filesystem::path &fullPath)
+    static Result<std::unique_ptr<Font>> loadFont(const FontAsset &asset, const std::filesystem::path &fullPath)
     {
+        const std::string context = "font " + std::to_string(asset.id) + " (" + PathToUTF8(fullPath) + "): ";
+        if (asset.pixelSize == 0) return std::unexpected(context + "pixel size must be positive");
         auto ret = std::make_unique<Font>(asset.id);
-        if (auto read = ReadFile(fullPath, ret->fontData); !read)
-            VKE_FATAL("{}", read.error())
+        if (auto read = ReadFile(fullPath, ret->fontData); !read) return std::unexpected(context + read.error());
+        if (ret->fontData.size() > static_cast<size_t>(std::numeric_limits<FT_Long>::max()))
+            return std::unexpected(context + "font file exceeds FreeType size limit");
         FT_Error error = FT_New_Memory_Face(AssetManager::GetInstance()->ftLibrary,
             reinterpret_cast<const FT_Byte *>(ret->fontData.data()), static_cast<FT_Long>(ret->fontData.size()), 0, &(ret->face));
-        VKE_FATAL_IF(error != FT_Err_Ok, "Failed to load font face from {}", PathToUTF8(fullPath))
+        if (error) return std::unexpected(context + "FT_New_Memory_Face failed: " + std::to_string(error));
 
-        if (ret->face->charmap == nullptr)
-            FT_Select_Charmap(ret->face, FT_ENCODING_UNICODE);
+        error = FT_Select_Charmap(ret->face, FT_ENCODING_UNICODE);
+        if (error) return std::unexpected(context + "FT_Select_Charmap(Unicode) failed: " + std::to_string(error));
 
         error = FT_Set_Pixel_Sizes(ret->face, 0, asset.pixelSize);
-        VKE_FATAL_IF(error != FT_Err_Ok, "Failed to set font pixel size to {} for {}", asset.pixelSize, PathToUTF8(fullPath))
+        if (error) return std::unexpected(context + "FT_Set_Pixel_Sizes(" + std::to_string(asset.pixelSize) + ") failed: " + std::to_string(error));
 
         ret->familyName = ret->face->family_name == nullptr ? "" : ret->face->family_name;
         ret->styleName = ret->face->style_name == nullptr ? "" : ret->face->style_name;
@@ -464,32 +439,30 @@ namespace vke_common
         ret->ascender = static_cast<int>(ret->face->size->metrics.ascender >> 6);
         ret->descender = static_cast<int>(ret->face->size->metrics.descender >> 6);
         ret->lineHeight = static_cast<int>(ret->face->size->metrics.height >> 6);
-        ret->BuildStaticAtlas(asset.characters, asset.characterCount, asset.firstCodepoint);
+        if (auto built = ret->BuildStaticAtlas(asset.characters, asset.characterCount, asset.firstCodepoint); !built)
+            return std::unexpected(context + built.error());
         return ret;
     }
 
-    std::unique_ptr<Font> AssetManager::LoadFontUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<Font>> AssetManager::LoadFontUnique(const AssetHandle hdl)
     {
+        const std::string context = "font " + std::to_string(hdl) + ": ";
         auto result = GetFontAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        return loadFont(*asset, path);
+        if (!asset) return std::unexpected(context + "asset not found");
+        return loadFont(*asset, resolveAssetPath(hdl, asset->path));
     }
 
-    std::shared_ptr<Font> AssetManager::LoadFont(const AssetHandle hdl)
+    Result<std::shared_ptr<Font>> AssetManager::LoadFont(const AssetHandle hdl)
     {
+        const std::string context = "font " + std::to_string(hdl) + ": ";
         auto result = GetFontAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        std::function<std::unique_ptr<Font>(FontAsset &)> op = [path](FontAsset &a)
-        { return loadFont(a, path); };
-        return loadFromCacheOrUpdate<Font>(asset, op);
+        if (!asset) return std::unexpected(context + "asset not found");
+        return loadFromCacheOrUpdate(asset->val, [&]
+        { return loadFont(*asset, resolveAssetPath(hdl, asset->path)); });
     }
 
     static Result<std::unique_ptr<vke_audio::AudioClip>> loadAudioClip(const AudioClipAsset &asset, const std::filesystem::path &fullPath)
@@ -531,10 +504,7 @@ namespace vke_common
         if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
         if (!asset) return std::unexpected(context + "asset not found");
-        if (asset->val) return asset->val;
-        auto loaded = loadAudioClip(*asset, resolveAssetPath(hdl, asset->path));
-        if (!loaded) return std::unexpected(loaded.error());
-        asset->val = std::move(*loaded);
-        return asset->val;
+        return loadFromCacheOrUpdate(asset->val, [&]
+        { return loadAudioClip(*asset, resolveAssetPath(hdl, asset->path)); });
     }
 }

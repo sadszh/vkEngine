@@ -137,28 +137,41 @@ namespace vke_editor
         return false;
     }
 
-    VkDescriptorSet Editor::getTexturePreviewDescriptorSet(vke_common::AssetHandle textureAsset)
+    std::shared_ptr<vke_render::Texture2D> Editor::loadTexturePreview(vke_common::AssetHandle textureAsset)
     {
-        const auto descriptorIt = texturePreviewDescriptorSets.find(textureAsset);
+        auto error = texturePreviewErrors.find(textureAsset);
+        if (error == texturePreviewErrors.end())
+        {
+            auto loaded = vke_common::AssetManager::LoadTexture2D(textureAsset);
+            if (loaded) return std::move(*loaded);
+            error = texturePreviewErrors.emplace(textureAsset, loaded.error()).first;
+        }
+        ImGui::TextWrapped("Preview unavailable: %s", error->second.c_str());
+        const std::string retryID = "Retry##texture" + std::to_string(textureAsset);
+        if (ImGui::Button(retryID.c_str())) texturePreviewErrors.erase(error);
+        return nullptr;
+    }
+
+    VkDescriptorSet Editor::getTexturePreviewDescriptorSet(const vke_render::Texture2D &texture)
+    {
+        const auto descriptorIt = texturePreviewDescriptorSets.find(texture.handle);
         if (descriptorIt != texturePreviewDescriptorSets.end())
             return descriptorIt->second;
 
-        std::shared_ptr<vke_render::Texture2D> texture = vke_common::AssetManager::LoadTexture2D(textureAsset);
-        if (texture == nullptr)
-            return VK_NULL_HANDLE;
-
         VkDescriptorSet descriptorSet = ImGui_ImplVulkan_AddTexture(
-            texture->textureImageView,
+            texture.textureImageView,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        texturePreviewDescriptorSets[textureAsset] = descriptorSet;
+        if (descriptorSet != VK_NULL_HANDLE)
+            texturePreviewDescriptorSets[texture.handle] = descriptorSet;
         return descriptorSet;
     }
 
     void Editor::drawTexturePreview(vke_common::AssetHandle textureAsset, float maxSize)
     {
-        std::shared_ptr<vke_render::Texture2D> texture = vke_common::AssetManager::LoadTexture2D(textureAsset);
-        VkDescriptorSet descriptorSet = getTexturePreviewDescriptorSet(textureAsset);
-        if (texture == nullptr || descriptorSet == VK_NULL_HANDLE)
+        auto texture = loadTexturePreview(textureAsset);
+        if (!texture) return;
+        VkDescriptorSet descriptorSet = getTexturePreviewDescriptorSet(*texture);
+        if (descriptorSet == VK_NULL_HANDLE)
         {
             ImGui::TextDisabled("Preview unavailable");
             return;
@@ -290,8 +303,6 @@ namespace vke_editor
         selectedEntity = entt::null;
         selectedAssetType = assetType;
         selectedAsset = asset;
-        if (assetType == vke_common::ASSET_TEXTURE)
-            getTexturePreviewDescriptorSet(asset);
     }
 
     void Editor::clearSelectedAsset()
@@ -308,6 +319,7 @@ namespace vke_editor
                 ImGui_ImplVulkan_RemoveTexture(descriptorSet);
         }
         texturePreviewDescriptorSets.clear();
+        texturePreviewErrors.clear();
         if (selectedAssetType == vke_common::ASSET_TEXTURE)
         {
             selectedAssetType = vke_common::ASSET_CNT_FLAG;
@@ -325,9 +337,10 @@ namespace vke_editor
             return;
         }
 
-        std::shared_ptr<vke_render::Texture2D> texture = vke_common::AssetManager::LoadTexture2D(selectedAsset);
-        VkDescriptorSet descriptorSet = getTexturePreviewDescriptorSet(selectedAsset);
-        if (texture == nullptr || descriptorSet == VK_NULL_HANDLE)
+        auto texture = loadTexturePreview(selectedAsset);
+        if (!texture) return;
+        VkDescriptorSet descriptorSet = getTexturePreviewDescriptorSet(*texture);
+        if (descriptorSet == VK_NULL_HANDLE)
         {
             ImGui::TextUnformatted("Texture preview unavailable");
             return;

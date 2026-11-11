@@ -2,7 +2,7 @@
 
 ## 输入、输出与坐标
 
-`UIText` 使用内置 Arial 的 SDF 字形。`TextLayoutOptions` 定义字号、水平对齐、垂直对齐和自动换行；输入文字使用 UTF-8。排版以 Canvas 逻辑单位计算，RectTransform 的旋转、缩放和 Canvas 的屏幕适配在几何生成后作用于整体。
+`UIText` 使用所选字体的 SDF 字形，默认字体为内置 Arial。`TextLayoutOptions` 定义字号、水平对齐、垂直对齐和自动换行；输入文字使用 UTF-8。排版以 Canvas 逻辑单位计算，RectTransform 的旋转、缩放和 Canvas 的屏幕适配在几何生成后作用于整体。
 
 实现分为两部分：
 
@@ -129,6 +129,6 @@ glm::vec2 GetTextSize() const;
 
 ## 支持范围
 
-当前实现适用于简单的从左到右文字。超长词按码点拆分，不能保证组合字符或 emoji 序列的完整性；未实现 Unicode 行断规则、双向文字、复杂文字 shaping、字体回退链、富文本、省略号或文字裁剪。内置字体无法提供的字符按上述替代字形规则处理。
+当前实现适用于简单的从左到右文字。超长词按码点拆分，不能保证组合字符或 emoji 序列的完整性；未实现 Unicode 行断规则、双向文字、复杂文字 shaping、字体回退链、富文本、省略号或文字裁剪。所选字体无法提供的字符按上述替代字形规则处理。
 
 自动布局和内容自适应是后续功能；当前 `Measure` 提供尺寸查询，不自动修改 RectTransform。

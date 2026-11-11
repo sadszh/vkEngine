@@ -56,10 +56,10 @@ namespace vke_common
     {
         std::ifstream stream(path, std::ios::binary);
         if (!stream)
-            return std::unexpected("unable to open SVG file: " + path.string());
+            return std::unexpected("unable to open SVG file: " + PathToUTF8(path));
         const std::string source{std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
         if (stream.bad())
-            return std::unexpected("unable to read SVG file: " + path.string());
+            return std::unexpected("unable to read SVG file: " + PathToUTF8(path));
         return RasterizeSVG(source, width, height);
     }
 }

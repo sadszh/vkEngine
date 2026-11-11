@@ -2,7 +2,9 @@
 #define SHADER_H
 
 #include <render/vulkan_resource_manager.hpp>
-#include <assert.h>
+#include <span>
+#include <initializer_list>
+#include <utility>
 #include <string>
 #include <iostream>
 #include <map>
@@ -18,17 +20,7 @@ namespace vke_render
 
         ShaderModule() : module(nullptr) {}
 
-        ShaderModule(const std::vector<char> &code)
-        {
-            VkShaderModuleCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            createInfo.codeSize = code.size();
-            createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
-            VKE_VK_CHECK(vkCreateShaderModule(globalLogicalDevice, &createInfo, nullptr, &module), "Failed to create shader module!")
-
-            SpvReflectResult result = spvReflectCreateShaderModule(code.size(), code.data(), &reflectInfo);
-            assert(result == SPV_REFLECT_RESULT_SUCCESS);
-        }
+        static vke_common::Result<ShaderModule> Create(std::span<const char> code, VkShaderStageFlagBits stage);
 
         ShaderModule(const ShaderModule &) = delete;
         ShaderModule &operator=(const ShaderModule &) = delete;
@@ -112,23 +104,8 @@ namespace vke_render
             return *this;
         }
 
-        template <typename... Args>
-        ShaderModuleSet(Args &&...code)
-        {
-            (modules.emplace_back(std::forward<Args>(code)), ...);
-            for (auto &module : modules)
-            {
-                VkPipelineShaderStageCreateInfo stageCreateInfo = VkPipelineShaderStageCreateInfo{};
-                stageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                stageCreateInfo.stage = (VkShaderStageFlagBits)module.reflectInfo.shader_stage;
-                stageCreateInfo.module = module.module;
-                stageCreateInfo.pName = module.reflectInfo.entry_point_name;
-                stageCreateInfos.push_back(stageCreateInfo);
-                constructDescriptorSetInfo(module.reflectInfo);
-                constructPushConstant(module.reflectInfo);
-            }
-            constructDescriptorSetLayout();
-        }
+        static vke_common::Result<std::unique_ptr<ShaderModuleSet>> Create(
+            std::initializer_list<std::pair<VkShaderStageFlagBits, std::span<const char>>> shaders);
 
         VkDescriptorSet CreateDescriptorSet(uint32_t setID)
         {
@@ -148,7 +125,7 @@ namespace vke_render
         }
 
     private:
-        void constructDescriptorSetInfo(SpvReflectShaderModule &reflectInfo);
+        vke_common::Result<void> constructDescriptorSetInfo(SpvReflectShaderModule &reflectInfo);
         void constructPushConstant(SpvReflectShaderModule &reflectInfo);
         void constructDescriptorSetLayout();
     };

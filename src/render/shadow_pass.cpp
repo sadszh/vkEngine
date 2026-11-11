@@ -33,10 +33,14 @@ namespace vke_render
         RenderPassBase::Init(subpassID, frameGraph, blackboard, currentResourceNodeID);
 
         shadowMaterial = std::make_shared<Material>(vke_common::BUILTIN_VFSHADER_SHADOW_ID);
-        shadowMaterial->shader = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_SHADOW_ID);
+        auto shadowShaderResult = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_SHADOW_ID);
+        VKE_FATAL_IF(!shadowShaderResult, "{}", shadowShaderResult.error())
+        shadowMaterial->shader = std::move(*shadowShaderResult);
         shadowMaterial->textureBindingInfos = std::make_shared<std::vector<TextureBindingInfo>>();
         shadowSkinMaterial = std::make_shared<Material>(vke_common::BUILTIN_VFSHADER_SHADOW_SKIN_ID);
-        shadowSkinMaterial->shader = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_SHADOW_SKIN_ID);
+        auto shadowSkinShaderResult = vke_common::AssetManager::LoadVertFragShader(vke_common::BUILTIN_VFSHADER_SHADOW_SKIN_ID);
+        VKE_FATAL_IF(!shadowSkinShaderResult, "{}", shadowSkinShaderResult.error())
+        shadowSkinMaterial->shader = std::move(*shadowSkinShaderResult);
         shadowSkinMaterial->textureBindingInfos = std::make_shared<std::vector<TextureBindingInfo>>();
         registerMaterial(shadowMaterial, false);
         registerMaterial(shadowSkinMaterial, true);

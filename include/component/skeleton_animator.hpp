@@ -64,9 +64,9 @@ namespace vke_component
             using vke_common::AssetManager;
             if (!animation.Get())
             {
-                animation.Resolve(AssetManager::LoadAnimation(animation.Handle()));
-                if (!animation.Get())
-                    return std::unexpected("animation asset " + std::to_string(animation.Handle()) + ": loading failed");
+                auto loaded = AssetManager::LoadAnimation(animation.Handle());
+                if (!loaded) return std::unexpected(loaded.error());
+                animation.Resolve(std::move(*loaded));
             }
             return {};
         }
@@ -154,21 +154,21 @@ namespace vke_component
             using vke_common::AssetManager;
             if (!material.Get())
             {
-                material.Resolve(AssetManager::LoadMaterial(material.Handle()));
-                if (!material.Get())
-                    return std::unexpected("material asset " + std::to_string(material.Handle()) + ": loading failed");
+                auto loaded = AssetManager::LoadMaterial(material.Handle());
+                if (!loaded) return std::unexpected(loaded.error());
+                material.Resolve(std::move(*loaded));
             }
             if (!mesh.Get())
             {
-                mesh.Resolve(AssetManager::LoadMesh(mesh.Handle()));
-                if (!mesh.Get())
-                    return std::unexpected("mesh asset " + std::to_string(mesh.Handle()) + ": loading failed");
+                auto loaded = AssetManager::LoadMesh(mesh.Handle());
+                if (!loaded) return std::unexpected(loaded.error());
+                mesh.Resolve(std::move(*loaded));
             }
             if (!skeleton.Get())
             {
-                skeleton.Resolve(AssetManager::LoadSkeleton(skeleton.Handle()));
-                if (!skeleton.Get())
-                    return std::unexpected("skeleton asset " + std::to_string(skeleton.Handle()) + ": loading failed");
+                auto loaded = AssetManager::LoadSkeleton(skeleton.Handle());
+                if (!loaded) return std::unexpected(loaded.error());
+                skeleton.Resolve(std::move(*loaded));
             }
             const int jointCount = skeleton.Get()->skeleton.num_joints();
             if (jointCount == 0)
@@ -180,12 +180,13 @@ namespace vke_component
                     return std::unexpected("mesh: skin joint index is outside the skeleton");
             if (!mesh.Get()->invBindMatrices.empty() && mesh.Get()->invBindMatrices.size() != mesh.Get()->joints.size())
                 return std::unexpected("mesh: inverse bind matrix count must match skin joint count");
-            for (auto &state : animations)
+            for (size_t i = 0; i < animations.size(); ++i)
             {
+                auto &state = animations[i];
                 if (auto result = state.LoadAssets(); !result)
-                    return result;
+                    return std::unexpected("animations[" + std::to_string(i) + "]: " + result.error());
                 if (auto result = state.animation.Get()->ValidateSkeleton(skeleton.Get()->skeleton); !result)
-                    return result;
+                    return std::unexpected("animations[" + std::to_string(i) + "]: " + result.error());
             }
             return {};
         }

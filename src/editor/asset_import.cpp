@@ -20,6 +20,7 @@ namespace vke_editor
         struct AssetImportState
         {
             bool dialogActive = false;
+            vke_common::AssetHandle pendingAsset = 0;
             vke_common::AssetType type = vke_common::ASSET_CNT_FLAG;
             char name[assetNameBufferSize]{};
             char path[assetPathBufferSize]{};
@@ -45,6 +46,25 @@ namespace vke_editor
         };
 
         AssetImportState importState;
+
+        void DiscardPendingImport()
+        {
+            if (!importState.pendingAsset) return;
+            auto *db = vke_common::AssetManager::GetAssetDB();
+            switch (importState.type)
+            {
+            case vke_common::ASSET_MESH: db->RemoveMeshAsset(importState.pendingAsset); break;
+            case vke_common::ASSET_VF_SHADER: db->RemoveVFShaderAsset(importState.pendingAsset); break;
+            case vke_common::ASSET_COMPUTE_SHADER: db->RemoveComputeShaderAsset(importState.pendingAsset); break;
+            case vke_common::ASSET_SKELETON: db->RemoveSkeletonAsset(importState.pendingAsset); break;
+            case vke_common::ASSET_AUDIO_CLIP: db->RemoveAudioClipAsset(importState.pendingAsset); break;
+            case vke_common::ASSET_TEXTURE: db->RemoveTextureAsset(importState.pendingAsset); break;
+            case vke_common::ASSET_ANIMATION: db->RemoveAnimationAsset(importState.pendingAsset); break;
+            case vke_common::ASSET_FONT: db->RemoveFontAsset(importState.pendingAsset); break;
+            default: break;
+            }
+            importState.pendingAsset = 0;
+        }
 
         const char *textureFormatNames[] = {
             "R8G8B8A8_SRGB", "R8G8B8A8_UNORM", "R8G8B8A8_SNORM",
@@ -187,6 +207,8 @@ namespace vke_editor
 
     void Editor::openAssetImport(vke_common::AssetType type)
     {
+        DiscardPendingImport();
+        assetDirectoryTree = {};
         importState = {};
         importState.dialogActive = true;
         importState.type = type;
@@ -206,6 +228,7 @@ namespace vke_editor
 
         if (windowVisible)
         {
+            ImGui::BeginDisabled(importState.pendingAsset != 0);
             ImGui::InputText("Name", importState.name, sizeof(importState.name));
             ImGui::InputText("Path", importState.path, sizeof(importState.path));
             ImGui::SameLine();
@@ -269,138 +292,134 @@ namespace vke_editor
                     ImGui::TextDisabled("Font values must describe a non-empty valid Unicode range.");
             }
 
+            ImGui::EndDisabled();
+            if (importState.pendingAsset)
+                ImGui::TextWrapped("Saving failed. Retry saving this asset, or cancel to discard the import.");
             if (!importState.error.empty())
                 ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.35f, 1.0f), "%s", importState.error.c_str());
 
             ImGui::Separator();
-            const bool canImport = CanImportAsset();
+            const bool canImport = importState.pendingAsset != 0 || CanImportAsset();
             if (!canImport)
                 ImGui::BeginDisabled();
-            if (ImGui::Button("Import", ImVec2(120.0f, 0.0f)))
+            if (ImGui::Button(importState.pendingAsset ? "Retry Save" : "Import", ImVec2(120.0f, 0.0f)))
             {
-                std::filesystem::path relativePath;
-                std::filesystem::path relativeFragmentPath;
-                bool pathsValid = GetRelativeAssetPath(importState.path, relativePath, importState.error);
-                if (pathsValid && importState.type == vke_common::ASSET_VF_SHADER)
-                    pathsValid = GetRelativeAssetPath(
-                        importState.fragmentPath, relativeFragmentPath, importState.error);
-
-                if (pathsValid)
+                auto *assetDB = vke_common::AssetManager::GetAssetDB();
+                importState.error.clear();
+                if (!importState.pendingAsset)
                 {
-                    vke_common::AssetDBBase *assetDB =
-                        vke_common::AssetManager::GetInstance()->GetAssetDB();
-                    vke_common::AssetHandle newAsset = 0;
-
-                    switch (importState.type)
+                    std::filesystem::path relativePath;
+                    std::filesystem::path relativeFragmentPath;
+                    bool pathsValid = GetRelativeAssetPath(importState.path, relativePath, importState.error);
+                    if (pathsValid && importState.type == vke_common::ASSET_VF_SHADER)
+                        pathsValid = GetRelativeAssetPath(importState.fragmentPath, relativeFragmentPath, importState.error);
+                    if (pathsValid)
                     {
-                    case vke_common::ASSET_MESH:
-                    {
-                        vke_common::MeshAsset asset;
-                        asset.name = importState.name;
-                        asset.path = relativePath;
-                        newAsset = assetDB->CreateMeshAsset(asset);
-                        break;
-                    }
-                    case vke_common::ASSET_VF_SHADER:
-                    {
-                        vke_common::VFShaderAsset asset;
-                        asset.name = importState.name;
-                        asset.path = relativePath;
-                        asset.fragPath = relativeFragmentPath;
-                        newAsset = assetDB->CreateVFShaderAsset(asset);
-                        break;
-                    }
-                    case vke_common::ASSET_COMPUTE_SHADER:
-                    {
-                        vke_common::ComputeShaderAsset asset;
-                        asset.name = importState.name;
-                        asset.path = relativePath;
-                        newAsset = assetDB->CreateComputeShaderAsset(asset);
-                        break;
-                    }
-                    case vke_common::ASSET_SKELETON:
-                    {
-                        vke_common::SkeletonAsset asset;
-                        asset.name = importState.name;
-                        asset.path = relativePath;
-                        newAsset = assetDB->CreateSkeletonAsset(asset);
-                        break;
-                    }
-                    case vke_common::ASSET_AUDIO_CLIP:
-                    {
-                        vke_common::AudioClipAsset asset;
-                        asset.name = importState.name;
-                        asset.path = relativePath;
-                        newAsset = assetDB->CreateAudioClipAsset(asset);
-                        break;
-                    }
-                    case vke_common::ASSET_TEXTURE:
-                    {
-                        vke_common::TextureAsset asset;
-                        asset.name = importState.name;
-                        asset.path = relativePath;
-                        asset.format = textureFormatValues[importState.textureFormat];
-                        asset.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-                        asset.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                        asset.minFilter = textureFilterValues[importState.textureMinFilter];
-                        asset.magFilter = textureFilterValues[importState.textureMagFilter];
-                        asset.addressMode = textureAddressModeValues[importState.textureAddressMode];
-                        asset.anisotropyEnable = importState.textureAnisotropy;
-                        asset.generateMipMap = importState.textureGenerateMipMap;
-                        asset.rasterWidth = importState.textureRasterWidth;
-                        asset.rasterHeight = importState.textureRasterHeight;
-                        if (vke_common::IsSVGPath(asset.path))
+                        switch (importState.type)
                         {
-                            auto image = vke_common::LoadSVG(vke_common::Paths::Project(asset.path), asset.rasterWidth, asset.rasterHeight);
-                            if (!image)
+                        case vke_common::ASSET_MESH:
+                        {
+                            vke_common::MeshAsset asset;
+                            asset.name = importState.name;
+                            asset.path = relativePath;
+                            importState.pendingAsset = assetDB->CreateMeshAsset(asset);
+                            break;
+                        }
+                        case vke_common::ASSET_VF_SHADER:
+                        {
+                            vke_common::VFShaderAsset asset;
+                            asset.name = importState.name;
+                            asset.path = relativePath;
+                            asset.fragPath = relativeFragmentPath;
+                            importState.pendingAsset = assetDB->CreateVFShaderAsset(asset);
+                            break;
+                        }
+                        case vke_common::ASSET_COMPUTE_SHADER:
+                        {
+                            vke_common::ComputeShaderAsset asset;
+                            asset.name = importState.name;
+                            asset.path = relativePath;
+                            importState.pendingAsset = assetDB->CreateComputeShaderAsset(asset);
+                            break;
+                        }
+                        case vke_common::ASSET_SKELETON:
+                        {
+                            vke_common::SkeletonAsset asset;
+                            asset.name = importState.name;
+                            asset.path = relativePath;
+                            importState.pendingAsset = assetDB->CreateSkeletonAsset(asset);
+                            break;
+                        }
+                        case vke_common::ASSET_AUDIO_CLIP:
+                        {
+                            vke_common::AudioClipAsset asset;
+                            asset.name = importState.name;
+                            asset.path = relativePath;
+                            importState.pendingAsset = assetDB->CreateAudioClipAsset(asset);
+                            break;
+                        }
+                        case vke_common::ASSET_TEXTURE:
+                        {
+                            vke_common::TextureAsset asset;
+                            asset.name = importState.name;
+                            asset.path = relativePath;
+                            asset.format = textureFormatValues[importState.textureFormat];
+                            asset.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+                            asset.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                            asset.minFilter = textureFilterValues[importState.textureMinFilter];
+                            asset.magFilter = textureFilterValues[importState.textureMagFilter];
+                            asset.addressMode = textureAddressModeValues[importState.textureAddressMode];
+                            asset.anisotropyEnable = importState.textureAnisotropy;
+                            asset.generateMipMap = importState.textureGenerateMipMap;
+                            asset.rasterWidth = importState.textureRasterWidth;
+                            asset.rasterHeight = importState.textureRasterHeight;
+                            if (vke_common::IsSVGPath(asset.path))
                             {
-                                importState.error = image.error();
-                                break;
+                                auto image = vke_common::LoadSVG(vke_common::Paths::Project(asset.path), asset.rasterWidth, asset.rasterHeight);
+                                if (!image)
+                                {
+                                    importState.error = image.error();
+                                    break;
+                                }
                             }
+                            importState.pendingAsset = assetDB->CreateTextureAsset(asset);
+                            break;
                         }
-                        newAsset = assetDB->CreateTextureAsset(asset);
-                        break;
-                    }
-                    case vke_common::ASSET_ANIMATION:
-                    {
-                        vke_common::AnimationAsset asset;
-                        asset.name = importState.name;
-                        asset.path = relativePath;
-                        asset.hasRootMotion = importState.animationHasRootMotion;
-                        newAsset = assetDB->CreateAnimationAsset(asset);
-                        break;
-                    }
-                    case vke_common::ASSET_FONT:
-                    {
-                        vke_common::FontAsset asset;
-                        asset.name = importState.name;
-                        asset.path = relativePath;
-                        asset.pixelSize = static_cast<uint32_t>(importState.fontPixelSize);
-                        asset.characterCount = static_cast<uint32_t>(importState.fontCharacterCount);
-                        asset.firstCodepoint = static_cast<uint32_t>(importState.fontFirstCodepoint);
-                        asset.characters = importState.fontCharacters;
-                        newAsset = assetDB->CreateFontAsset(asset);
-                        break;
-                    }
-                    default:
-                        break;
-                    }
-
-                    if (newAsset != 0)
-                    {
-                        if (auto result = assetDB->SyncAll(); !result)
+                        case vke_common::ASSET_ANIMATION:
                         {
-                            importState.error = result.error();
+                            vke_common::AnimationAsset asset;
+                            asset.name = importState.name;
+                            asset.path = relativePath;
+                            asset.hasRootMotion = importState.animationHasRootMotion;
+                            importState.pendingAsset = assetDB->CreateAnimationAsset(asset);
+                            break;
                         }
-                        else
+                        case vke_common::ASSET_FONT:
                         {
-                            assetDirectoryTree = {};
-                            importState.dialogActive = false;
+                            vke_common::FontAsset asset;
+                            asset.name = importState.name;
+                            asset.path = relativePath;
+                            asset.pixelSize = static_cast<uint32_t>(importState.fontPixelSize);
+                            asset.characterCount = static_cast<uint32_t>(importState.fontCharacterCount);
+                            asset.firstCodepoint = static_cast<uint32_t>(importState.fontFirstCodepoint);
+                            asset.characters = importState.fontCharacters;
+                            importState.pendingAsset = assetDB->CreateFontAsset(asset);
+                            break;
+                        }
+                        default:
+                            break;
                         }
                     }
-                    else if (importState.error.empty())
+                }
+                if (importState.pendingAsset)
+                {
+                    assetDirectoryTree = {};
+                    if (auto result = assetDB->SyncAll(); !result)
+                        importState.error = result.error();
+                    else
                     {
-                        importState.error = "The asset database could not create this asset.";
+                        importState.pendingAsset = 0;
+                        importState.dialogActive = false;
                     }
                 }
             }
@@ -412,6 +431,11 @@ namespace vke_editor
                 importState.dialogActive = false;
         }
         ImGui::End();
+        if (!importState.dialogActive && importState.pendingAsset)
+        {
+            DiscardPendingImport();
+            assetDirectoryTree = {};
+        }
 
         HandleBrowseResult("ImportBrowse", importState.path, sizeof(importState.path));
         if (importState.type == vke_common::ASSET_VF_SHADER)
