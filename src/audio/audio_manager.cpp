@@ -33,11 +33,6 @@ namespace vke_audio
 
     AudioManager::~AudioManager()
     {
-        for (auto *sound : sounds)
-        {
-            ma_sound_uninit(sound);
-            delete sound;
-        }
         if (engine)
         {
             ma_engine_uninit(engine);
@@ -59,42 +54,12 @@ namespace vke_audio
         instance = nullptr;
     }
 
-    ma_sound *AudioManager::LoadSound(const char *path, uint32_t flags)
-    {
-        if (GetEngine() == nullptr)
-            return nullptr;
-        auto *sound = new ma_sound;
-        const ma_result result = ma_sound_init_from_file_w(instance->engine, vke_common::PathFromUTF8(path).c_str(), flags, nullptr, nullptr, sound);
-        if (result != MA_SUCCESS)
-        {
-            VKE_LOG_ERROR("AudioManager: failed to load '{}' (error {})", path, (int)result);
-            delete sound;
-            return nullptr;
-        }
-        instance->sounds.insert(sound);
-        return sound;
-    }
-
-    void AudioManager::ReleaseSound(ma_sound *sound)
-    {
-        if (instance == nullptr || instance->sounds.erase(sound) == 0)
-            return;
-        ma_sound_uninit(sound);
-        delete sound;
-    }
-
     void AudioManager::Reset()
     {
         if (instance == nullptr || instance->engine == nullptr)
             return;
         auto *engine = instance->engine;
         ma_engine_stop(engine);
-        for (auto *sound : instance->sounds)
-        {
-            ma_sound_uninit(sound);
-            delete sound;
-        }
-        instance->sounds.clear();
         ma_engine_set_time_in_pcm_frames(engine, 0);
         ma_engine_set_volume(engine, 1.0f);
         for (ma_uint32 index = 0; index < ma_engine_get_listener_count(engine); ++index)
@@ -118,13 +83,13 @@ namespace vke_audio
         auto srcView = scene->registry.view<vke_common::Transform, vke_component::AudioSource>();
         for (auto [entity, transform, src] : srcView.each())
         {
-            if (!src.soundInitialized)
+            if (!src.sound)
                 continue;
 
             if (src.spatializationEnabled)
             {
                 glm::vec3 pos = transform.GetGlobalPosition();
-                ma_sound_set_position(src.sound, pos.x, pos.y, pos.z);
+                ma_sound_set_position(src.sound.get(), pos.x, pos.y, pos.z);
             }
         }
 

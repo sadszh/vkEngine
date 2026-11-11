@@ -15,7 +15,19 @@ namespace vke_editor
 
     static void SetAudioClip(vke_component::AudioSource &source, vke_common::AssetHandle handle)
     {
-        source.SetClip(handle == 0 ? nullptr : vke_common::AssetManager::LoadAudioClip(handle));
+        std::shared_ptr<vke_audio::AudioClip> clip;
+        if (handle != 0)
+        {
+            auto loaded = vke_common::AssetManager::LoadAudioClip(handle);
+            if (!loaded)
+            {
+                VKE_LOG_ERROR("Cannot set audio clip: {}", loaded.error())
+                return;
+            }
+            clip = std::move(*loaded);
+        }
+        if (auto result = source.SetClip(std::move(clip)); !result)
+            VKE_LOG_ERROR("Cannot set audio clip: {}", result.error())
     }
 
     void Editor::drawAudioSourceComponent()
@@ -95,7 +107,7 @@ namespace vke_editor
             source.SetDopplerFactor(std::max(dopplerFactor, 0.0f));
         ImGui::EndDisabled();
 
-        ImGui::BeginDisabled(!source.soundInitialized);
+        ImGui::BeginDisabled(!source.sound);
         if (ImGui::Button(source.IsPlaying() ? "Pause" : "Play"))
         {
             if (source.IsPlaying())

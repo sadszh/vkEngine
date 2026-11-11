@@ -446,10 +446,10 @@ namespace vke_common
         vke_render::Renderer::Reset();
         vke_ui::UIManager::Reset();
         ScriptManager::Reset();
-        vke_audio::AudioManager::Reset();
         // Plain C++ destruction releases owned resources, without lifecycle dispatch.
         // CharacterVirtual must die while its inner body and PhysicsSystem still exist.
         scene.registry.clear();
+        vke_audio::AudioManager::Reset();
         vke_physics::PhysicsManager::Reset();
         scene.physicsUpdateListenerID = vke_physics::PhysicsManager::RegisterUpdateListener(
             &scene, std::function<void(void *, void *)>(physicsUpdateCallback));

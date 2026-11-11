@@ -7,7 +7,7 @@ C++ 原生组件和 C# EntityScript 共用同一生命周期：从 Data 构造�
 - `SceneManager` 持有运行时 registry，统一创建、增删组件、分派生命周期和延迟回收实体。引擎与编辑器共用其 Start / Update / FixedUpdate / LateUpdate 入口，由这些入口分派场景组件（含脚本）。场景系统读取 EngineState，决定组件生命周期的调用时机。
 - C# `SceneManager` 持有脚本对象和分发列表，在脚本构造并加载字段后完成注册。脚本用 `ScriptState` 枚举记录生命周期，C++ `ScriptManager` 负责互操作桥接。
 - `Engine::UpdateSimulation(deltaTime, accumulator)` 统一调度场景更新、固定步长物理模拟和音频更新；引擎与编辑器共用该入口，各自持有累积时间。渲染由各自的帧循环调用。
-- Render、Physics、Audio 等子系统持有注册的渲染单元、物理体、声音等资源。组件构造时完成注册，Unload 撤销注册；Start 表示开始运行。
+- Render、Physics 等子系统持有注册的渲染单元、物理体等资源。组件准备和构造期间完成注册，Unload 撤销注册；Start 表示开始运行。
 - 系统遍历 registry 或已注册脚本，保证所属实体、组件有效。外部调用（编辑器、C# 原生接口、异步请求）在入口验证实体与组件。
 - 原生组件按需实现 `Start()`、`Update(float deltaTime)`、`FixedUpdate(float deltaTime)`、`LateUpdate(float deltaTime)`，场景系统在编译期筛选钩子。C# 对应钩子为无参、默认空实现，按覆盖掩码注册更新。
 - 结构修改只允许在主线程安全阶段进行，不能在遍历受影响组件池或渲染上传回调时修改结构。实体销毁和脚本提交的预制体实例化使用队列。
@@ -84,7 +84,7 @@ Start 内发出的实例化请求若发生在正在处理的实例化批次内�
 
 SkeletonAnimator 构造时以零时间计算初始姿态，运行时 Update 推进动画、采样混合并应用根运动。渲染回调在帧 fence 完成后，将已算出的姿态上传至 GPU。
 
-AudioSource 构造时初始化声音，Start 根据 `playOnStart` 决定是否播放。SetClip 负责重新加载声音，主动播放由调用方调用 Play / Replay。CharacterController 在 FixedUpdate 推进，物理模拟后的场景监听器负责同步结果。
+AudioSource 构造时从已解码的 AudioClip 创建独立播放实例；音频引擎不可用或播放资源创建失败时，记录错误并终止运行。Start 根据 `playOnStart` 决定是否播放。`SetClip` 返回 `Result<void>`，新声音加载成功后替换当前声音，失败保留当前 Clip 和播放状态；空 Clip 清空声音。主动播放由调用方调用 Play / Replay。CharacterController 在 FixedUpdate 推进，物理模拟后的场景监听器负责同步结果。
 
 托管脚本状态为 `NotStarted → Starting → Started`，卸载时进入 `Unloading → Unloaded`；尚未启动或正在启动的脚本也可以卸载，Reset 直接进入 `Unloaded`。仅 `NotStarted` 可以开始启动；Start 回调返回后，仅仍为 `Starting` 的脚本转为 `Started`，避免覆盖回调期间发生的卸载或 Reset。Start 异常记录后仍按同样规则转为 `Started`，不重试启动。
 

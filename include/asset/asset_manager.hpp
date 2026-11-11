@@ -83,7 +83,7 @@ namespace vke_common
         static std::unique_ptr<vke_common::Skeleton> LoadSkeletonUnique(const AssetHandle hdl);
         static std::unique_ptr<vke_common::Animation> LoadAnimationUnique(const AssetHandle hdl);
         static std::unique_ptr<vke_common::Font> LoadFontUnique(const AssetHandle hdl);
-        static std::unique_ptr<vke_audio::AudioClip> LoadAudioClipUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_audio::AudioClip>> LoadAudioClipUnique(const AssetHandle hdl);
 
         static std::shared_ptr<vke_render::Texture2D> LoadTexture2D(const AssetHandle hdl);
         static std::shared_ptr<vke_render::Mesh> LoadMesh(const AssetHandle hdl);
@@ -93,7 +93,7 @@ namespace vke_common
         static std::shared_ptr<vke_common::Skeleton> LoadSkeleton(const AssetHandle hdl);
         static std::shared_ptr<vke_common::Animation> LoadAnimation(const AssetHandle hdl);
         static std::shared_ptr<vke_common::Font> LoadFont(const AssetHandle hdl);
-        static std::shared_ptr<vke_audio::AudioClip> LoadAudioClip(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_audio::AudioClip>> LoadAudioClip(const AssetHandle hdl);
 
         // Preflight checks may read database metadata but do not load runtime resources.
         static Result<void> ValidateTexture2D(AssetHandle handle);

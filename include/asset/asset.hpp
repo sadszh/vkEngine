@@ -74,7 +74,7 @@ namespace vke_common
     const std::string AssetTypeToName[] = {"Texture", "Mesh", "VFShader", "ComputeShader",
                                            "Material", "Skeleton", "Animation", "Scene", "Font", "AudioClip"};
 
-    void ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer);
+    Result<void> ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer);
 
     [[nodiscard]] Result<nlohmann::json> LoadJSON(const std::filesystem::path &pth);
     [[nodiscard]] Result<void> ValidateAssetJSON(const nlohmann::json &json);

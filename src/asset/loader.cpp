@@ -2,6 +2,7 @@
 #include <asset/svg.hpp>
 #include <logger.hpp>
 #include <stb/stb_image.h>
+#include <miniaudio/miniaudio.h>
 #include <vector>
 #include <fstream>
 #include <string>
@@ -88,19 +89,20 @@ namespace vke_common
         return {};
     }
 
-    void ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer)
+    Result<void> ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer)
     {
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
-        VKE_FATAL_IF(!file, "Cannot open file: {}", PathToUTF8(filename))
-        size_t fileSize = (size_t)file.tellg();
+        if (!file) return std::unexpected(PathToUTF8(filename) + ": cannot open file");
+        const auto fileSize = file.tellg();
+        if (fileSize < 0) return std::unexpected(PathToUTF8(filename) + ": cannot determine file size");
         buffer.resize(fileSize);
 
         file.seekg(0);
         file.read(buffer.data(), fileSize);
-        VKE_FATAL_IF(!file, "Cannot read file: {}", PathToUTF8(filename))
+        if (!file) return std::unexpected(PathToUTF8(filename) + ": cannot read file");
 
-        file.close();
+        return {};
     }
 
     template <typename T, typename AT>
@@ -206,8 +208,10 @@ namespace vke_common
     static inline std::unique_ptr<vke_render::ShaderModuleSet> loadVertFragShader(const AssetHandle hdl, const std::filesystem::path &vpth, const std::filesystem::path &fpth)
     {
         std::vector<char> vcode, fcode;
-        ReadFile(vpth, vcode);
-        ReadFile(fpth, fcode);
+        if (auto read = ReadFile(vpth, vcode); !read)
+            VKE_FATAL("{}", read.error())
+        if (auto read = ReadFile(fpth, fcode); !read)
+            VKE_FATAL("{}", read.error())
         return std::make_unique<vke_render::ShaderModuleSet>(vcode, fcode);
     }
 
@@ -241,7 +245,8 @@ namespace vke_common
     static inline std::unique_ptr<vke_render::ShaderModuleSet> loadComputeShader(const AssetHandle hdl, const std::filesystem::path &pth)
     {
         std::vector<char> code;
-        ReadFile(pth, code);
+        if (auto read = ReadFile(pth, code); !read)
+            VKE_FATAL("{}", read.error())
         return std::make_unique<vke_render::ShaderModuleSet>(code);
     }
 
@@ -438,7 +443,8 @@ namespace vke_common
     static inline std::unique_ptr<Font> loadFont(FontAsset &asset, const std::filesystem::path &fullPath)
     {
         auto ret = std::make_unique<Font>(asset.id);
-        ReadFile(fullPath, ret->fontData);
+        if (auto read = ReadFile(fullPath, ret->fontData); !read)
+            VKE_FATAL("{}", read.error())
         FT_Error error = FT_New_Memory_Face(AssetManager::GetInstance()->ftLibrary,
             reinterpret_cast<const FT_Byte *>(ret->fontData.data()), static_cast<FT_Long>(ret->fontData.size()), 0, &(ret->face));
         VKE_FATAL_IF(error != FT_Err_Ok, "Failed to load font face from {}", PathToUTF8(fullPath))
@@ -486,32 +492,49 @@ namespace vke_common
         return loadFromCacheOrUpdate<Font>(asset, op);
     }
 
-    static std::unique_ptr<vke_audio::AudioClip> loadAudioClip(AudioClipAsset &asset, const std::filesystem::path &fullPath)
+    static Result<std::unique_ptr<vke_audio::AudioClip>> loadAudioClip(const AudioClipAsset &asset, const std::filesystem::path &fullPath)
     {
-        return std::make_unique<vke_audio::AudioClip>(asset.id, PathToUTF8(fullPath));
+        const std::string context = "audio clip " + std::to_string(asset.id) + " (" + PathToUTF8(fullPath) + "): ";
+        std::vector<char> encoded;
+        if (auto read = ReadFile(fullPath, encoded); !read) return std::unexpected(context + read.error());
+        auto clip = std::make_unique<vke_audio::AudioClip>(asset.id);
+        auto config = ma_decoder_config_init(ma_format_f32, 0, 0);
+        ma_uint64 frameCount = 0;
+        void *samples = nullptr;
+        const auto result = ma_decode_memory(encoded.data(), encoded.size(), &config, &frameCount, &samples);
+        clip->samples.reset(static_cast<float *>(samples));
+        if (result != MA_SUCCESS)
+            return std::unexpected(context + "cannot decode audio: " + ma_result_description(result));
+        if (frameCount == 0) return std::unexpected(context + "audio contains no frames");
+        clip->frameCount = frameCount;
+        clip->channels = config.channels;
+        clip->sampleRate = config.sampleRate;
+        return clip;
     }
 
-    std::unique_ptr<vke_audio::AudioClip> AssetManager::LoadAudioClipUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<vke_audio::AudioClip>> AssetManager::LoadAudioClipUnique(const AssetHandle hdl)
     {
+        const std::string context = "audio clip " + std::to_string(hdl) + ": ";
         auto result = GetAudioClipAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
+        if (!asset) return std::unexpected(context + "asset not found");
 
         const auto path = resolveAssetPath(hdl, asset->path);
         return loadAudioClip(*asset, path);
     }
 
-    std::shared_ptr<vke_audio::AudioClip> AssetManager::LoadAudioClip(const AssetHandle hdl)
+    Result<std::shared_ptr<vke_audio::AudioClip>> AssetManager::LoadAudioClip(const AssetHandle hdl)
     {
+        const std::string context = "audio clip " + std::to_string(hdl) + ": ";
         auto result = GetAudioClipAsset(hdl);
-        VKE_FATAL_IF(!result, "{}", result.error())
+        if (!result) return std::unexpected(context + result.error());
         auto *asset = *result;
-        VKE_FATAL_IF(asset == nullptr, "Asset Not Exist!")
-
-        const auto path = resolveAssetPath(hdl, asset->path);
-        std::function<std::unique_ptr<vke_audio::AudioClip>(AudioClipAsset &)> op = [path](AudioClipAsset &a)
-        { return loadAudioClip(a, path); };
-        return loadFromCacheOrUpdate<vke_audio::AudioClip>(asset, op);
+        if (!asset) return std::unexpected(context + "asset not found");
+        if (asset->val) return asset->val;
+        auto loaded = loadAudioClip(*asset, resolveAssetPath(hdl, asset->path));
+        if (!loaded) return std::unexpected(loaded.error());
+        asset->val = std::move(*loaded);
+        return asset->val;
     }
 }

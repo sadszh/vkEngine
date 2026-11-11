@@ -1,22 +1,36 @@
 #ifndef AUDIO_CLIP_H
 #define AUDIO_CLIP_H
 
-#include <string>
 #include <cstdint>
+#include <memory>
+#include <miniaudio/miniaudio.h>
 #include <common.hpp>
 
 namespace vke_audio
 {
     class AudioClip
     {
+    private:
+        struct PCMDeleter
+        {
+            void operator()(float *samples) const
+            {
+                ma_free(samples, nullptr);
+            }
+        };
+
     public:
         vke_common::AssetHandle handle = 0;
-        std::string path;
+
+        std::unique_ptr<float[], PCMDeleter> samples;
+        uint64_t frameCount = 0;
+        uint32_t channels = 0;
+        uint32_t sampleRate = 0;
 
         AudioClip() = default;
-        AudioClip(vke_common::AssetHandle h, const std::string &p) : handle(h), path(p) {}
+        explicit AudioClip(vke_common::AssetHandle h) : handle(h) {}
 
-        bool IsValid() const { return !path.empty(); }
+        uint64_t FrameCount() const { return frameCount; }
     };
 }
 
