@@ -10,9 +10,9 @@ namespace vke_render
 
     void FrameGraph::init()
     {
-        queueFamilies[RENDER_TASK] = RenderEnvironment::GetInstance()->queueFamilyIndices.graphicsAndComputeFamily.value();
-        queueFamilies[COMPUTE_TASK] = RenderEnvironment::GetInstance()->queueFamilyIndices.computeOnlyFamily.value();
-        queueFamilies[TRANSFER_TASK] = RenderEnvironment::GetInstance()->queueFamilyIndices.transferOnlyFamily.value();
+        queueFamilies[RENDER_TASK] = RenderEnvironment::GetQueueFamilyIndex(GRAPHICS_QUEUE);
+        queueFamilies[COMPUTE_TASK] = RenderEnvironment::GetQueueFamilyIndex(COMPUTE_QUEUE);
+        queueFamilies[TRANSFER_TASK] = RenderEnvironment::GetQueueFamilyIndex(TRANSFER_QUEUE);
 
         for (int i = 0; i < framesInFlight; i++)
             cpuSemaphores.push_back(std::make_unique<std::atomic<bool>>(true));

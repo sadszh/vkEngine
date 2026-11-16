@@ -7,6 +7,7 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 #include <memory>
+#include <array>
 #include <vector>
 
 namespace vke_render
@@ -168,6 +169,34 @@ namespace vke_render
             return ret == nullptr ? instance->commandQueues[GRAPHICS_QUEUE].get() : ret;
         }
 
+        static uint32_t GetQueueFamilyIndex(QueueType type)
+        {
+            const auto &families = instance->queueFamilyIndices;
+            const auto graphicsFamily = families.graphicsAndComputeFamily.value();
+            switch (type)
+            {
+            case GRAPHICS_QUEUE:
+                return graphicsFamily;
+            case COMPUTE_QUEUE:
+                return families.computeOnlyFamily.value_or(graphicsFamily);
+            case TRANSFER_QUEUE:
+                return families.transferOnlyFamily.value_or(graphicsFamily);
+            default:
+                VKE_FATAL("Queue type has no GPU queue family")
+            }
+        }
+
+        static void WaitIdle()
+        {
+            std::array<std::unique_lock<std::mutex>, CPU_QUEUE + 1> locks;
+            for (size_t i = 0; i < CPU_QUEUE; ++i)
+                if (auto *queue = static_cast<GPUCommandQueue *>(instance->commandQueues[i].get()))
+                    locks[i] = std::unique_lock(queue->mutex);
+            if (instance->presentQueueMutex == &instance->presentMutex)
+                locks[CPU_QUEUE] = std::unique_lock(instance->presentMutex);
+            VKE_VK_CHECK(vkDeviceWaitIdle(globalLogicalDevice), "Cannot wait for device")
+        }
+
         static VkCommandBuffer BeginSingleTimeCommands(VkCommandPool commandPool)
         {
             VkCommandBufferAllocateInfo allocInfo{};
@@ -322,7 +351,11 @@ namespace vke_render
             presentInfo.pSwapchains = swapChains;
             presentInfo.pImageIndices = &imageIndex;
             presentInfo.pResults = nullptr; // Optional
-            VkResult result = vkQueuePresentKHR(instance->presentQueue, &presentInfo);
+            VkResult result;
+            {
+                std::lock_guard queueLock(*instance->presentQueueMutex);
+                result = vkQueuePresentKHR(instance->presentQueue, &presentInfo);
+            }
             if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || instance->windowResized)
             {
                 int width = 0, height = 0;
@@ -368,6 +401,9 @@ namespace vke_render
         RenderContext rootRenderContext;
 
     private:
+        // A separate present queue owns its mutex; aliased queues share the submission mutex.
+        std::mutex presentMutex;
+        std::mutex *presentQueueMutex = &presentMutex;
         bool windowResized;
         bool enableValidationLayers;
 

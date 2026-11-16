@@ -3,7 +3,9 @@
 
 #include <render/descriptor.hpp>
 #include <vma/vk_mem_alloc.h>
+#include <array>
 #include <compare>
+#include <mutex>
 
 namespace vke_render
 {
@@ -71,8 +73,9 @@ namespace vke_render
         {
             for (auto &kv : instance->descriptorSetPools)
                 vkDestroyDescriptorPool(globalLogicalDevice, kv.first, nullptr);
-            for (const auto &[desc, sampler] : instance->samplers)
-                vkDestroySampler(globalLogicalDevice, sampler, nullptr);
+            for (const auto &slot : instance->samplerSlots)
+                for (const auto &[desc, sampler] : slot.samplers)
+                    vkDestroySampler(globalLogicalDevice, sampler, nullptr);
             delete instance;
         }
 
@@ -162,7 +165,13 @@ namespace vke_render
         }
 
     private:
-        std::map<SamplerDesc, VkSampler> samplers;
+        static constexpr size_t SamplerSlotCount = 16;
+        struct SamplerSlot
+        {
+            std::mutex mutex;
+            std::map<SamplerDesc, VkSampler> samplers;
+        };
+        std::array<SamplerSlot, SamplerSlotCount> samplerSlots;
         std::map<VkDescriptorPool, DescriptorSetPoolInfo> descriptorSetPools;
         struct Allocation
         {

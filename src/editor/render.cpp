@@ -152,7 +152,7 @@ namespace vke_editor
 
     void EditorRenderer::Dispose()
     {
-        vkDeviceWaitIdle(vke_render::globalLogicalDevice);
+        vke_render::RenderEnvironment::WaitIdle();
         instance->removeSceneTextures();
         ImGui_ImplGlfw_Shutdown();
         ImGui_ImplVulkan_Shutdown();
@@ -290,7 +290,7 @@ namespace vke_editor
         submitInfo.pCommandBufferInfos = &commandBufferInfo;
 
         vke_render::RenderEnvironment::GetGraphicsQueue()->Submit(1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(vke_render::RenderEnvironment::GetGraphicsQueue()->queue);
+        vke_render::RenderEnvironment::GetGraphicsQueue()->WaitIdle();
 
         sceneRenderContext = vke_render::RenderContext(
             width, height,
@@ -320,7 +320,7 @@ namespace vke_editor
             return;
 
         vke_render::RenderEnvironment *env = vke_render::RenderEnvironment::GetInstance();
-        vkDeviceWaitIdle(vke_render::globalLogicalDevice);
+        vke_render::RenderEnvironment::WaitIdle();
         ((vke_render::CPUCommandQueue *)env->commandQueues[vke_render::CPU_QUEUE].get())->WaitIdle();
         removeSceneTextures();
         cleanupSceneRenderContext();

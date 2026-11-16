@@ -1,5 +1,6 @@
 #include <render/vulkan_resource_manager.hpp>
 #include <render/environment.hpp>
+#include <atomic>
 
 namespace vke_render
 {
@@ -18,8 +19,12 @@ namespace vke_render
             key.addressModeW != VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER)
             key.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 
-        auto it = instance->samplers.find(key);
-        if (it != instance->samplers.end())
+        static std::atomic<size_t> nextSlot{0};
+        thread_local const size_t slotIndex = nextSlot.fetch_add(1, std::memory_order_relaxed) % SamplerSlotCount;
+        auto &slot = instance->samplerSlots[slotIndex];
+        std::lock_guard lock(slot.mutex);
+        auto it = slot.samplers.find(key);
+        if (it != slot.samplers.end())
             return it->second;
 
         VkSamplerCreateInfo info{};
@@ -43,7 +48,7 @@ namespace vke_render
 
         VkSampler sampler;
         VKE_VK_CHECK(vkCreateSampler(globalLogicalDevice, &info, nullptr, &sampler), "Failed to create sampler!")
-        instance->samplers.emplace(key, sampler);
+        slot.samplers.emplace(key, sampler);
         return sampler;
     }
 

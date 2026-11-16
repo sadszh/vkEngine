@@ -407,6 +407,13 @@ namespace vke_render
             commandQueues[TRANSFER_QUEUE] = nullptr;
 
         vkGetDeviceQueue(globalLogicalDevice, queueFamilyIndices.presentFamily.value(), 0, &presentQueue);
+        for (size_t i = 0; i < CPU_QUEUE; ++i)
+            if (auto *commandQueue = static_cast<GPUCommandQueue *>(commandQueues[i].get());
+                commandQueue && commandQueue->queue == presentQueue)
+            {
+                presentQueueMutex = &commandQueue->mutex;
+                break;
+            }
     }
 
     void RenderEnvironment::createVulkanMemoryAllocator()
@@ -643,7 +650,7 @@ namespace vke_render
 
     void RenderEnvironment::recreateSwapChain()
     {
-        vkDeviceWaitIdle(globalLogicalDevice);
+        RenderEnvironment::WaitIdle();
         ((CPUCommandQueue *)commandQueues[CPU_QUEUE].get())->WaitIdle();
         cleanupSwapChain();
         createSwapChain();
@@ -658,7 +665,7 @@ namespace vke_render
             rootRenderContext.depthImageViews[i] = depthImageViews[i];
         }
         resizeEventHub.DispatchEvent(&rootRenderContext);
-        vkDeviceWaitIdle(globalLogicalDevice);
+        RenderEnvironment::WaitIdle();
     }
 
     void RenderEnvironment::createImageViews()

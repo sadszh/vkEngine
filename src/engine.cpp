@@ -67,6 +67,6 @@ namespace vke_common
             glfwPollEvents();
             Update();
         }
-        vkDeviceWaitIdle(vke_render::globalLogicalDevice);
+        vke_render::RenderEnvironment::WaitIdle();
     }
 }

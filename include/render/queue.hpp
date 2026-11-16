@@ -64,6 +64,7 @@ namespace vke_render
     {
     public:
         CommandQueue() {}
+        virtual ~CommandQueue() = default;
         virtual void Submit(uint32_t submitCount, const VkSubmitInfo2 *pSubmits, VkFence fence) = 0;
     };
 
@@ -71,11 +72,19 @@ namespace vke_render
     {
     public:
         VkQueue queue;
+        std::mutex mutex;
         GPUCommandQueue() {}
         GPUCommandQueue(VkQueue queue) : queue(queue) {}
 
+        void WaitIdle()
+        {
+            std::lock_guard lock(mutex);
+            VKE_VK_CHECK(vkQueueWaitIdle(queue), "Cannot wait for queue")
+        }
+
         virtual void Submit(uint32_t submitCount, const VkSubmitInfo2 *pSubmits, VkFence fence) override
         {
+            std::lock_guard lock(mutex);
             VKE_VK_CHECK(vkQueueSubmit2(queue, submitCount, pSubmits, fence), "vkQueueSubmit2 FAIL")
         }
     };

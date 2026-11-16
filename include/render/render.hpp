@@ -213,7 +213,7 @@ namespace vke_render
         static void WaitIdle()
         {
             VKE_LOG_INFO("WAIT_IDLE0")
-            vkDeviceWaitIdle(globalLogicalDevice);
+            RenderEnvironment::WaitIdle();
             VKE_LOG_INFO("WAIT_IDLE1")
             CPUCommandQueue *cpuQueue = (CPUCommandQueue *)RenderEnvironment::GetInstance()->commandQueues[CPU_QUEUE].get();
             cpuQueue->WaitIdle();
