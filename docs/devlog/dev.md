@@ -129,3 +129,34 @@ glyph修好了，现在只有loadtoengine的时候才会实际计算glyph数据�
 
 
 后面可能需要专门的重构，来检查AI引入的这些乱七八糟的校验
+
+## 2d758c19fb38661f17e02ffa5601b42870412007 asset manager error handling refactor
+
+过去的几轮重构把资源管理器的错误处理部分捋顺了，接下来要实现多线程的资源加载，计划是添加一种专门的loadbatch结构，这个结构是一个`std::unordered_map<AssetType,std::unordered_set<AssetHandle>>`，资源管理器只有在加载loadbatch的时候会使用多线程，其他形式的加载还是在主线程
+
+这个大版本分以下几个步骤实现：
+- 资源管理器提供一个线程池，以及除场景/材质等复合资源外每种资源一个队列，线程通过某种方式原子地从队列里取任务，有任务的时候可以通过某种信号量的方式来唤醒线程，没有的时候线程等待信号量并进行休眠。
+- 任务状态包括一个原子变量（或直接使用信号量）和一个`Result<XXX>*`，线程执行完成这个任务结束把对应的原子变量置1，并且写入result（成功就写结果，失败就写报错）
+- 资源管理器在assetdb对应的条目下（Asset基类）维护加载状态（有一个单独的状态位和引用计数）和上述任务状态，异步加载的时候会先在asset中标识正在进行，从而避免重复加载同一个资源
+  - 处于未加载状态，任务状态为空，asset原本的val为空
+  - 处于正在加载状态时，任务状态非空，asset原本的val为空
+  - 处于顺利加载完成的状态，任务状态为空，实际的值在asset原本的val里
+  - 处于加载失败的状态，任务状态里面有错误记录，asset原本的val为空
+  - 处于取消的状态，下文会详细讨论
+- 另加一个async_loader.cpp，在里面实现除了scene外其他资源异步版的资源加载，相当于AssetManager::LoadXXX函数分了三段，暴露在外用于执行的两个接口
+  - 第一个接口AsyncLoadXXX(AssetHandle)，用于发起异步加载请求，在主线程中查找数据库记录，对应处于未加载状态，则将资源状态转为正在加载并添加任务状态，并在任务队列里添加对应任务，处于正在加载状态，引用计数+1，对应处于取消状态，判断是否完成加载，完成，转换成加载结束状态，未完成，转换成正在加载状态
+  - 管理器内部线程获取任务并执行，执行结束后设置结果和原子变量
+  - 第二个接口WaitAsyncLoadXXX(AssetHandle)，用于等待结果，如果已经加载完毕，则直接返回结果（可能是正常结果或异常），否则等待原子变量成为1，执行原来AssetManager::LoadXXX的最后一段，负责向GPU传输数据并完成布局转换，完成后切换状态并更新缓存，等待的如果是取消状态，那么恢复到未加载状态
+- 引用计数的规则如下：
+  - 调用AsyncLoadXXX，如果资源正在被异步加载，引用计数+1
+  - 第一个调用WaitAsyncLoadXXX并得到结果的，直接把引用计数置0
+  - 取消加载的，只有在正在加载状态时，可以把引用计数-1，减到0才能把状态置为取消（分一个同步取消接口和异步取消接口，同步取消需要等待原子变量，并把状态置回未加载状态，异步取消接口在上述条件满足时把状态置为取消，不需要做其他操作）
+- 关于引用其他资源的复合资源（目前之后material，场景下文会详细讨论），添加其所依赖的资源的所有任务，等待时等待所有原子变量，取消时取消所有
+- 添加一个LoadBatch结构`std::unordered_map<AssetType,std::unordered_set<AssetHandle>>`
+- 组件添加一个ConstructAssetLoadBatch，传入一个loadbatch，用于在loadbatch里添加资源依赖
+- 场景加载在resolveSceneAssets的ValidateAssets之后，LoadAssets之前调用ConstructAssetLoadBatch进行batch的构造
+- 资源管理器有一对AsyncBatchLoad和WaitAsyncBatchLoad函数，接收一个LoadBatch，类似其他的异步接口
+  - 把其中引用其他资源的（比如Material）所引用的递归展开，直到没有引用其他的资源，把这些资源也加到LoadBatch里
+  - 把loadbatch中的加载需求，逐个按类似单个AsyncLoad的方式把还没完成加载的加入任务队列
+  - 等待时会等待所有，并把结果插入到一个`std::unordered_map<AssetType,std::unordered_set<Result<>>>`的BatchResult里
+- 场景调用AsyncBatchLoad和WaitAsyncBatchLoad进行实际加载，然后用之前的LoadAssets完成实际的资源赋值

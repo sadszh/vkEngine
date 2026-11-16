@@ -1,6 +1,7 @@
 #ifndef UI_COMPONENT_H
 #define UI_COMPONENT_H
 
+#include <asset/asset.hpp>
 #include <ui/rect_transform.hpp>
 #include <ui/layout.hpp>
 #include <glm/mat4x4.hpp>
@@ -84,6 +85,12 @@ namespace vke_ui
             return {};
         }
 
+        virtual void ConstructAssetLoadBatch(vke_common::LoadBatch &batch) const
+        {
+            for (const auto &child : children)
+                child->ConstructAssetLoadBatch(batch);
+        }
+
         virtual vke_common::Result<void> ValidateAssets() const
         {
             for (const auto &child : children)
@@ -97,6 +104,14 @@ namespace vke_ui
             for (auto &child : children)
                 if (auto loaded = child->LoadAssets(); !loaded)
                     return loaded;
+            return {};
+        }
+
+        virtual vke_common::Result<void> ResolveAssets(const vke_common::BatchResult &loaded)
+        {
+            for (auto &child : children)
+                if (auto result = child->ResolveAssets(loaded); !result)
+                    return result;
             return {};
         }
 
@@ -230,7 +245,8 @@ namespace vke_ui
         const UISelfLayoutOptions &GetSelfLayout() const { return selfLayout; }
         vke_common::Result<void> SetSelfLayout(const UISelfLayoutOptions &value)
         {
-            if (auto valid = value.Validate(); !valid) return valid;
+            if (auto valid = value.Validate(); !valid)
+                return valid;
             selfLayout = value;
             layoutDirty = true;
             return {};
@@ -239,7 +255,8 @@ namespace vke_ui
         const UIGroupLayoutOptions &GetGroupLayout() const { return groupLayout; }
         vke_common::Result<void> SetGroupLayout(const UIGroupLayoutOptions &value)
         {
-            if (auto valid = value.Validate(); !valid) return valid;
+            if (auto valid = value.Validate(); !valid)
+                return valid;
             groupLayout = value;
             layoutDirty = true;
             return {};

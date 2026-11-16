@@ -12,13 +12,10 @@ namespace vke_render
         if (result != SPV_REFLECT_RESULT_SUCCESS)
             return std::unexpected("SPIR-V reflection failed (error " + std::to_string(result) + ")");
         if (module.reflectInfo.shader_stage != static_cast<SpvReflectShaderStageFlagBits>(stage))
-        {
-            spvReflectDestroyShaderModule(&module.reflectInfo);
             return std::unexpected("SPIR-V execution stage does not match the requested shader stage");
-        }
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        createInfo.codeSize = code.size();
+        createInfo.codeSize = spvReflectGetCodeSize(&module.reflectInfo);
         createInfo.pCode = spvReflectGetCode(&module.reflectInfo);
         VKE_VK_CHECK(vkCreateShaderModule(globalLogicalDevice, &createInfo, nullptr, &module.module), "Failed to create shader module!")
         return module;
@@ -30,10 +27,11 @@ namespace vke_render
         auto set = std::make_unique<ShaderModuleSet>();
         for (const auto &[stage, code] : shaders)
         {
-            const std::string context = stage == VK_SHADER_STAGE_VERTEX_BIT ? "vertex shader: " :
-                stage == VK_SHADER_STAGE_FRAGMENT_BIT ? "fragment shader: " : "compute shader: ";
+            const std::string context = stage == VK_SHADER_STAGE_VERTEX_BIT ? "vertex shader: " : stage == VK_SHADER_STAGE_FRAGMENT_BIT ? "fragment shader: "
+                                                                                                                                        : "compute shader: ";
             auto loaded = ShaderModule::Create(code, stage);
-            if (!loaded) return std::unexpected(context + loaded.error());
+            if (!loaded)
+                return std::unexpected(context + loaded.error());
             set->modules.push_back(std::move(*loaded));
             auto &module = set->modules.back();
             VkPipelineShaderStageCreateInfo stageInfo{};

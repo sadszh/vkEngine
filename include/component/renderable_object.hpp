@@ -61,6 +61,14 @@ namespace vke_component
                 for (const auto &index : json["textureIndices"])
                     textureIndices.emplace_back(index[0].get<int>(), index[1].get<int>(), index[2].get<int>(), 0);
         }
+        void ConstructAssetLoadBatch(vke_common::LoadBatch &batch) const
+        {
+            if (!material.Get())
+                batch[vke_common::ASSET_MATERIAL].insert(material.Handle());
+            if (!mesh.Get())
+                batch[vke_common::ASSET_MESH].insert(mesh.Handle());
+        }
+
         vke_common::Result<void> ValidateAssets() const
         {
             using vke_common::AssetManager;
@@ -80,15 +88,26 @@ namespace vke_component
             if (!material.Get())
             {
                 auto loaded = AssetManager::LoadMaterial(material.Handle());
-                if (!loaded) return std::unexpected(loaded.error());
+                if (!loaded)
+                    return std::unexpected(loaded.error());
                 material.Resolve(std::move(*loaded));
             }
             if (!mesh.Get())
             {
                 auto loaded = AssetManager::LoadMesh(mesh.Handle());
-                if (!loaded) return std::unexpected(loaded.error());
+                if (!loaded)
+                    return std::unexpected(loaded.error());
                 mesh.Resolve(std::move(*loaded));
             }
+            return {};
+        }
+
+        vke_common::Result<void> ResolveAssets(const vke_common::BatchResult &loaded)
+        {
+            if (!material.Get())
+                material.Resolve(*loaded.materials.at(material.Handle()));
+            if (!mesh.Get())
+                mesh.Resolve(*loaded.meshes.at(mesh.Handle()));
             return {};
         }
 

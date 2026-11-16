@@ -192,18 +192,17 @@ namespace vke_editor
                     if (ImGui::ColorEdit4("Color", glm::value_ptr(color)))
                         text.SetColor(color);
                     const auto font = text.GetFont();
-                    const auto *fontAsset = ShowAssetReadResult(vke_common::AssetManager::GetFontAsset(font));
+                    const auto *fontAsset = ShowAssetReadResult(vke_common::AssetManager::GetFontAssetReadOnly(font));
                     const std::string fontLabel = std::to_string(font) + "  " + (fontAsset ? fontAsset->name : "<missing>");
                     if (ImGui::BeginCombo("Font", fontLabel.c_str()))
                     {
                         ShowAssetIterationResult(vke_common::AssetManager::IterateFontAsset([&](const vke_common::FontAsset &entry)
-                        {
+                                                                                            {
                             const auto choice = std::to_string(entry.id) + "  " + entry.name;
                             if (ImGui::Selectable(choice.c_str(), entry.id == font))
                                 if (auto result = text.SetFont(entry.id); !result)
                                     VKE_LOG_ERROR("Cannot set text font: {}", result.error());
-                            if (entry.id == font) ImGui::SetItemDefaultFocus();
-                        }));
+                            if (entry.id == font) ImGui::SetItemDefaultFocus(); }));
                         ImGui::EndCombo();
                     }
                     auto options = text.GetLayoutOptions();
@@ -229,7 +228,7 @@ namespace vke_editor
                 {
                     auto &image = static_cast<UIImage &>(node);
                     const auto texture = image.GetTexture();
-                    const auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetTextureAsset(texture));
+                    const auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetTextureAssetReadOnly(texture));
                     const std::string label = texture == 0 ? "0  <white>" : std::to_string(texture) + "  " + (asset ? asset->name : "<missing>");
                     if (ImGui::BeginCombo("Texture", label.c_str()))
                     {

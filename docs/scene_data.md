@@ -47,7 +47,7 @@ JSON 数据统一通过 FromJSON 解析并校验：组件字段在构造前由�
 
 - `ValidateJSON(json)` 检查自身必填字段、类型及参数约束；SceneData 仅检查分派用的 type、重复组件并添加实体和组件错误上下文，通过后才构造组件 Data。
 - `PhyscisShapeData::ValidateJSON` 由刚体、传感器和角色控制器复用；`SkeletonAnimationData::ValidateJSON` 由动画组件调用；TransformData 负责变换字段。
-- `ValidateAssets()` 通过 `AssetManager::ValidateXXX(handle)` 检查组件的资源依赖；`LoadAssets()` 使用 `AssetManager::LoadXXX(handle)` 加载资源并填充引用。
+- `ValidateAssets()` 通过 `AssetManager::ValidateXXX(handle)` 检查组件的资源依赖；`LoadAssets()` 使用 `AssetManager::LoadXXX(handle)` 独立加载资源并填充引用，`ResolveAssets(const BatchResult&)` 使用已检查成功的批量加载结果填充引用。
 - `ScriptStateData::FromJSON()` 在文件读取时查找脚本元数据、检查并编码状态和校验互操作数据长度；运行时导出入口校验返回的二进制。SceneManager 实例化时只检查所需的脚本管理器是否可用，加载时直接借用已有缓冲区。
 
 公共 json_validation 工具提供数值、向量、字段类型和必填项检查。各组件定义并校验自身消费的字段，忽略未知扩展字段。直接调用 JSON 构造函数前，调用方须先调用 ValidateJSON。
@@ -56,7 +56,7 @@ AssetManager 缓存只读的 Expanded 数据，其中已完成预制体内部的
 
 缓存记录展开时依赖的预制体句柄。资源重新加载时，使其自身及所有传递依赖它的展开缓存失效，后续加载重新构建；已创建的运行时实体保持当前状态。
 
-加载、准备和缓存失效在主线程同步执行。
+场景展开、缓存访问和资源发布在主线程执行。`PrepareSceneData` 同步返回；资源解析期间通过线程池并行执行文件读取和 CPU 解码，shader 的 Vulkan 对象在工作线程创建，主线程等待后完成纹理、网格和字体图集的 GPU 创建与上传。
 
 AssetHandle 标识资源，局部 ID 标识一份 SceneData 内的实体，运行时 entt::entity 标识 SceneManager 中的实体。展开和实例化分别建立各自的实体映射。
 
@@ -129,9 +129,9 @@ Result<std::shared_ptr<const SceneData>> ReloadSceneData(AssetHandle handle);
 
 PrepareSceneData 按当前阶段执行展开和资源解析，Ready 数据直接返回成功。展开和资源解析分别由私有 expandSceneData、resolveSceneAssets 实现。依赖资源在覆盖完成后加载，仅解析最终组件数据中的引用。
 
-各组件 Data 分别提供只读的 `ValidateAssets()` 和负责加载的 `LoadAssets()`，由组件处理可选引用和已解析引用。私有 `resolveSceneAssets` 先对全部组件调用 `ValidateAssets()`，全部通过后再对全部组件调用 `LoadAssets()`，全部成功后标记 Ready；加载接口要求此前验证成功。
+各组件 Data 提供 `ValidateAssets()`、`ConstructAssetLoadBatch(LoadBatch&) const`、`LoadAssets()` 和 `ResolveAssets(const BatchResult&)`，由组件处理可选引用和已解析引用。Canvas 和 UI 节点递归收集并解析子节点依赖。私有 `resolveSceneAssets` 先验证全部组件，再收集 batch、发起异步加载并等待所有结果；确认全部结果成功后，调用 `ResolveAssets` 直接从结果中填充引用并检查组件间约束，全部成功后标记 Ready。`ResolveAssets` 要求结果包含所收集的全部未解析引用且均加载成功，收集到解析期间引用保持不变；已解析引用和空的可选引用保持原值。运行时添加组件或 UI 节点使用 `LoadAssets()` 独立加载，要求此前 `ValidateAssets()` 成功。两条路径共用骨骼、网格及动画的匹配检查。
 
-`AssetManager::ValidateMesh(handle)`、`ValidateMaterial(handle)` 等接口只读检查资源记录和文件。材质验证进一步检查 shader 和各纹理依赖，顶点/片元 shader 验证分别检查两个文件，错误包含相应的依赖上下文。文件存在检查不保证资源内容可被解码，实际加载仍可能失败。Mesh、纹理、材质、骨骼、动画、字体、顶点/片元 shader 和 compute shader 的共享及独占加载接口返回 `Result`，成功值非空。文件读取、图片/SVG 解码、SPIR-V 反射、shader 阶段不匹配及跨阶段 descriptor 类型或数量冲突会向上传播；材质传播纹理和 shader 依赖错误，错误包含资源 ID、文件路径或依赖位置。缓存只发布完整加载的资源；失败后可重试，已成功加载的独立纹理可以保留在缓存中。资源由 `AssetManager::LoadXXX(handle)` 加载，组件将结果写回 `AssetRef`。
+`AssetManager::ValidateMesh(handle)`、`ValidateMaterial(handle)` 等接口只读检查资源记录和文件。材质验证进一步检查 shader 和各纹理依赖，顶点/片元 shader 验证分别检查两个文件，错误包含相应的依赖上下文。文件存在检查不保证资源内容可被解码，实际加载仍可能失败。Mesh、纹理、材质、骨骼、动画、字体、顶点/片元 shader 和 compute shader 的共享及独占加载接口返回 `Result`，成功值非空。文件读取、图片/SVG 解码、SPIR-V 反射、shader 阶段不匹配及跨阶段 descriptor 类型或数量冲突会向上传播；材质传播纹理和 shader 依赖错误，错误包含资源 ID、文件路径或依赖位置。缓存只发布完整加载的资源；异步失败由后续 `AsyncLoadXXX` 或 `AsyncBatchLoad` 发起重试，已成功加载的独立纹理保留在缓存中。组件通过 `ResolveAssets` 将批量加载结果写回 `AssetRef`；独立加载路径通过 `LoadAssets()` 调用 `AssetManager::LoadXXX(handle)` 并写回引用。
 
 缓存数据通过 `Clone()` 复制为可修改的 SceneData，再调用 PrepareSceneData。ReloadSceneData 清除自身及传递依赖缓存，并立即重建指定资源；其他受影响资源在下次请求时重建。缓存失效由调用方显式触发，旧 shared_ptr 持有的快照继续有效。InvalidateSceneData 在读取所有受影响的资源记录成功后才清理缓存和依赖关系；读取失败返回错误并保留原缓存及依赖关系，ReloadSceneData 将该错误传给调用方。
 

@@ -7,17 +7,20 @@
 namespace vke_common
 {
 
-#define DB_GET_ASSET_FUNC(tp) \
-    virtual Result<tp *> Get##tp(AssetHandle id) = 0;
+#define DB_GET_ASSET_FUNC(tp)                         \
+protected:                                            \
+    virtual Result<tp *> get##tp(AssetHandle id) = 0; \
+                                                      \
+public:
 
 #define DB_SET_ASSET_FUNC(tp) \
-    virtual void Set##tp(tp &asset) = 0;
+    virtual void Set##tp(tp &&asset) = 0;
 
 #define DB_SYNC_ASSET_FUNC(tp) \
     virtual Result<void> Sync##tp(AssetHandle id) = 0;
 
 #define DB_CREATE_ASSET_FUNC(tp) \
-    virtual AssetHandle Create##tp(tp &asset) = 0;
+    virtual AssetHandle Create##tp(tp &&asset) = 0;
 
 #define DB_REMOVE_ASSET_FUNC(tp) \
     virtual void Remove##tp(AssetHandle id) = 0;
@@ -39,6 +42,8 @@ namespace vke_common
 
     class AssetDBBase
     {
+        friend class AssetManager;
+
     public:
         AssetDBBase() = default;
         AssetDBBase(const std::filesystem::path &pth, AssetHandle stid)
@@ -65,6 +70,24 @@ namespace vke_common
         std::filesystem::path path;
 
     protected:
+        template <typename A>
+        static void eraseCachedAsset(std::map<AssetHandle, A> &cache, AssetHandle id)
+        {
+            auto found = cache.find(id);
+            if (found == cache.end())
+                return;
+            found->second.WaitForLoad();
+            cache.erase(found);
+        }
+
+        template <typename A>
+        static void clearAssetCache(std::map<AssetHandle, A> &cache)
+        {
+            for (auto &[id, asset] : cache)
+                asset.WaitForLoad();
+            cache.clear();
+        }
+
         AssetHandle stID = 1;
 
     private:

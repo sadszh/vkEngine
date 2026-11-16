@@ -4,16 +4,16 @@ namespace vke_common
 {
     Result<void> AssetDBJSON::ClearAll()
     {
-        textureCache.clear();
-        meshCache.clear();
-        vfShaderCache.clear();
-        computeShaderCache.clear();
-        materialCache.clear();
-        skeletonCache.clear();
-        animationCache.clear();
-        sceneCache.clear();
-        fontCache.clear();
-        audioCache.clear();
+        clearAssetCache(textureCache);
+        clearAssetCache(meshCache);
+        clearAssetCache(vfShaderCache);
+        clearAssetCache(computeShaderCache);
+        clearAssetCache(materialCache);
+        clearAssetCache(skeletonCache);
+        clearAssetCache(animationCache);
+        clearAssetCache(sceneCache);
+        clearAssetCache(fontCache);
+        clearAssetCache(audioCache);
         for (auto &id : ids)
             id = stID;
         return {};
@@ -86,18 +86,21 @@ namespace vke_common
         ofs << data;
         ofs.close();
         std::string error;
-        if (ofs.fail()) error = PathToUTF8(temporary) + ": failed to write asset database";
+        if (ofs.fail())
+            error = PathToUTF8(temporary) + ": failed to write asset database";
         else
         {
             std::error_code replaceError;
             std::filesystem::rename(temporary, pth, replaceError);
-            if (!replaceError) return {};
+            if (!replaceError)
+                return {};
             error = PathToUTF8(pth) + ": replace asset database: " + replaceError.message();
         }
 
         std::error_code cleanupError;
         std::filesystem::remove(temporary, cleanupError);
-        if (cleanupError) error += "; remove temporary file: " + cleanupError.message();
+        if (cleanupError)
+            error += "; remove temporary file: " + cleanupError.message();
         return std::unexpected(std::move(error));
     }
 }

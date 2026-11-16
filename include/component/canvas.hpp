@@ -20,7 +20,8 @@ namespace vke_component
             : referenceResolution(other.referenceResolution), sortOrder(other.sortOrder)
         {
             children.reserve(other.children.size());
-            for (const auto &child : other.children) children.push_back(child ? child->Clone() : nullptr);
+            for (const auto &child : other.children)
+                children.push_back(child ? child->Clone() : nullptr);
         }
         CanvasData &operator=(const CanvasData &other)
         {
@@ -40,7 +41,8 @@ namespace vke_component
             if (json.contains("referenceResolution"))
                 referenceResolution = {json["referenceResolution"][0].get<float>(), json["referenceResolution"][1].get<float>()};
             if (json.contains("children"))
-                for (const auto &child : json["children"]) children.push_back(vke_ui::UINodeData::FromJSON(child));
+                for (const auto &child : json["children"])
+                    children.push_back(vke_ui::UINodeData::FromJSON(child));
         }
 
         static vke_common::Result<void> ValidateResolution(const glm::vec2 &value)
@@ -57,45 +59,65 @@ namespace vke_component
             if (json.contains("mode") && json["mode"] != "screenSpace")
                 return std::unexpected("only screenSpace Canvas is supported");
             if (json.contains("sortOrder") && (!json["sortOrder"].is_number_integer() ||
-                json["sortOrder"].get<double>() < INT32_MIN || json["sortOrder"].get<double>() > INT32_MAX))
+                                               json["sortOrder"].get<double>() < INT32_MIN || json["sortOrder"].get<double>() > INT32_MAX))
                 return std::unexpected("sortOrder must be a 32-bit integer");
             if (json.contains("referenceResolution"))
                 if (auto valid = ValidateResolution({json["referenceResolution"][0].get<float>(),
-                                                    json["referenceResolution"][1].get<float>()}); !valid) return valid;
+                                                     json["referenceResolution"][1].get<float>()});
+                    !valid)
+                    return valid;
             return vke_ui::UINodeData::ValidateChildrenJSON(json);
         }
 
         vke_common::Result<void> Validate() const
         {
-            if (auto valid = ValidateResolution(referenceResolution); !valid) return valid;
+            if (auto valid = ValidateResolution(referenceResolution); !valid)
+                return valid;
             for (const auto &child : children)
             {
-                if (!child) return std::unexpected("UI child must not be null");
-                if (auto valid = child->Validate(); !valid) return valid;
+                if (!child)
+                    return std::unexpected("UI child must not be null");
+                if (auto valid = child->Validate(); !valid)
+                    return valid;
             }
             return {};
+        }
+
+        void ConstructAssetLoadBatch(vke_common::LoadBatch &batch) const
+        {
+            for (const auto &child : children)
+                child->ConstructAssetLoadBatch(batch);
         }
 
         vke_common::Result<void> ValidateAssets() const
         {
             for (const auto &child : children)
-                if (auto valid = child->ValidateAssets(); !valid) return valid;
+                if (auto valid = child->ValidateAssets(); !valid)
+                    return valid;
             return {};
         }
 
         vke_common::Result<void> LoadAssets()
         {
             for (auto &child : children)
-                if (auto loaded = child->LoadAssets(); !loaded) return loaded;
+                if (auto loaded = child->LoadAssets(); !loaded)
+                    return loaded;
+            return {};
+        }
+
+        vke_common::Result<void> ResolveAssets(const vke_common::BatchResult &loaded)
+        {
+            for (auto &child : children)
+                if (auto result = child->ResolveAssets(loaded); !result)
+                    return result;
             return {};
         }
 
         nlohmann::json ToJSON() const
         {
-            nlohmann::json json{{"type", "canvas"}, {"mode", "screenSpace"}, {"sortOrder", sortOrder},
-                                {"referenceResolution", {referenceResolution.x, referenceResolution.y}},
-                                {"children", nlohmann::json::array()}};
-            for (const auto &child : children) json["children"].push_back(child->ToJSON());
+            nlohmann::json json{{"type", "canvas"}, {"mode", "screenSpace"}, {"sortOrder", sortOrder}, {"referenceResolution", {referenceResolution.x, referenceResolution.y}}, {"children", nlohmann::json::array()}};
+            for (const auto &child : children)
+                json["children"].push_back(child->ToJSON());
             return json;
         }
     };
@@ -106,7 +128,8 @@ namespace vke_component
         explicit Canvas(const CanvasData &data)
             : referenceResolution(data.referenceResolution), sortOrder(data.sortOrder)
         {
-            for (const auto &child : data.children) addPrepared(*child, nullptr);
+            for (const auto &child : data.children)
+                addPrepared(*child, nullptr);
         }
 
         Canvas(const Canvas &) = delete;
@@ -138,9 +161,11 @@ namespace vke_component
         vke_ui::UIComponent *Find(std::string_view name, vke_ui::UIHandle parent = 0) const
         {
             auto *node = Get(parent);
-            if (parent && !node) return nullptr;
+            if (parent && !node)
+                return nullptr;
             for (const auto &child : node ? node->children : children)
-                if (child->name == name) return child.get();
+                if (child->name == name)
+                    return child.get();
             return nullptr;
         }
 
@@ -148,21 +173,27 @@ namespace vke_component
         vke_common::Result<vke_ui::UIComponent *> Add(const vke_ui::UINodeData &data, vke_ui::UIHandle parent = 0)
         {
             auto *parentNode = Get(parent);
-            if (parent && !parentNode) return std::unexpected("invalid UI parent");
-            if (auto valid = data.Validate(); !valid) return std::unexpected(valid.error());
-            if (auto valid = data.ValidateAssets(); !valid) return std::unexpected(valid.error());
+            if (parent && !parentNode)
+                return std::unexpected("invalid UI parent");
+            if (auto valid = data.Validate(); !valid)
+                return std::unexpected(valid.error());
+            if (auto valid = data.ValidateAssets(); !valid)
+                return std::unexpected(valid.error());
             auto prepared = data.Clone();
-            if (auto loaded = prepared->LoadAssets(); !loaded) return std::unexpected(loaded.error());
+            if (auto loaded = prepared->LoadAssets(); !loaded)
+                return std::unexpected(loaded.error());
             return addPrepared(*prepared, parentNode);
         }
 
         vke_common::Result<void> Remove(vke_ui::UIHandle handle)
         {
             auto *node = Get(handle);
-            if (!node) return std::unexpected("invalid UI handle");
+            if (!node)
+                return std::unexpected("invalid UI handle");
             auto &list = siblings(*node);
             unloadSubtree(*node);
-            std::erase_if(list, [node](const auto &child) { return child.get() == node; });
+            std::erase_if(list, [node](const auto &child)
+                          { return child.get() == node; });
             layoutDirty = true;
             return {};
         }
@@ -171,12 +202,16 @@ namespace vke_component
         {
             auto *node = Get(handle);
             auto *parentNode = Get(parent);
-            if (!node || (parent && !parentNode)) return std::unexpected("invalid UI handle or parent");
+            if (!node || (parent && !parentNode))
+                return std::unexpected("invalid UI handle or parent");
             for (auto *ancestor = parentNode; ancestor; ancestor = ancestor->parent)
-                if (ancestor == node) return std::unexpected("UI hierarchy cannot contain a cycle");
-            if (node->parent == parentNode) return {};
+                if (ancestor == node)
+                    return std::unexpected("UI hierarchy cannot contain a cycle");
+            if (node->parent == parentNode)
+                return {};
             auto &source = siblings(*node);
-            auto it = std::find_if(source.begin(), source.end(), [node](const auto &child) { return child.get() == node; });
+            auto it = std::find_if(source.begin(), source.end(), [node](const auto &child)
+                                   { return child.get() == node; });
             auto owned = std::move(*it);
             source.erase(it);
             node->parent = parentNode;
@@ -188,10 +223,13 @@ namespace vke_component
         vke_common::Result<void> SetSiblingIndex(vke_ui::UIHandle handle, size_t index)
         {
             auto *node = Get(handle);
-            if (!node) return std::unexpected("invalid UI handle");
+            if (!node)
+                return std::unexpected("invalid UI handle");
             auto &list = siblings(*node);
-            if (index >= list.size()) return std::unexpected("sibling index out of range");
-            auto it = std::find_if(list.begin(), list.end(), [node](const auto &child) { return child.get() == node; });
+            if (index >= list.size())
+                return std::unexpected("sibling index out of range");
+            auto it = std::find_if(list.begin(), list.end(), [node](const auto &child)
+                                   { return child.get() == node; });
             auto owned = std::move(*it);
             list.erase(it);
             list.insert(list.begin() + index, std::move(owned));
@@ -201,7 +239,8 @@ namespace vke_component
 
         vke_common::Result<void> SetReferenceResolution(const glm::vec2 &value)
         {
-            if (auto valid = CanvasData::ValidateResolution(value); !valid) return valid;
+            if (auto valid = CanvasData::ValidateResolution(value); !valid)
+                return valid;
             referenceResolution = value;
             layoutDirty = true;
             return {};
@@ -213,9 +252,11 @@ namespace vke_component
 
         void Update(const glm::vec2 &viewportSize, uint32_t &drawOrder)
         {
-            if (viewportSize.x <= 0 || viewportSize.y <= 0) return;
+            if (viewportSize.x <= 0 || viewportSize.y <= 0)
+                return;
             const bool changed = layoutDirty || viewportSize != layoutViewportSize ||
-                std::any_of(children.begin(), children.end(), [](const auto &child) { return needsLayout(*child); });
+                                 std::any_of(children.begin(), children.end(), [](const auto &child)
+                                             { return needsLayout(*child); });
             layoutViewportSize = viewportSize;
             const auto ratio = viewportSize / referenceResolution;
             const float scale = glm::min(ratio.x, ratio.y);
@@ -232,12 +273,14 @@ namespace vke_component
                     auto size = child->measuredSize;
                     if (child->selfLayout.height == vke_ui::SizeMode::Rect)
                         size.y = glm::max((rect.anchorMax.y - rect.anchorMin.y) * resolvedSize.y +
-                            rect.offsetMax.y - rect.offsetMin.y, 0.0f);
+                                              rect.offsetMax.y - rect.offsetMin.y,
+                                          0.0f);
                     arrangeSubtree(*child, rect.anchorMin * resolvedSize + rect.offsetMin,
-                        size, resolvedSize, glm::vec2(0), matrix);
+                                   size, resolvedSize, glm::vec2(0), matrix);
                 }
             }
-            for (auto &child : children) updateRenderSubtree(*child, drawOrder);
+            for (auto &child : children)
+                updateRenderSubtree(*child, drawOrder);
             layoutDirty = false;
         }
 
@@ -246,12 +289,14 @@ namespace vke_component
             data = {};
             data.referenceResolution = referenceResolution;
             data.sortOrder = sortOrder;
-            for (const auto &child : children) data.children.push_back(child->ToData());
+            for (const auto &child : children)
+                data.children.push_back(child->ToData());
         }
 
         void Unload()
         {
-            for (auto &child : children) unloadSubtree(*child);
+            for (auto &child : children)
+                unloadSubtree(*child);
             children.clear();
         }
 
@@ -287,7 +332,8 @@ namespace vke_component
             node->parent = parent;
             nodes.emplace(node->handle, node);
             (parent ? parent->children : children).push_back(std::move(owned));
-            for (const auto &child : data.children) addPrepared(*child, node);
+            for (const auto &child : data.children)
+                addPrepared(*child, node);
             return node;
         }
 

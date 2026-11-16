@@ -691,13 +691,24 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
         return false;
     }
 
-    std::vector<vke_render::Vertex> vertices(positions.size());
-    for (size_t i = 0; i < vertices.size(); ++i)
+    // Primitives can share an accessor while referencing different parts of it.
+    // Each standalone mesh stores only its referenced vertices, in first-use order.
+    std::vector<uint32_t> vertexRemap(positions.size(), UINT32_MAX);
+    std::vector<vke_render::Vertex> vertices;
+    vertices.reserve(std::min(positions.size(), indices.size()));
+    for (uint32_t &index : indices)
     {
-        vertices[i].pos = positions[i];
-        vertices[i].normal = hasNormals ? normals[i] : glm::vec3(0.0f);
-        vertices[i].tangent = hasTangents ? tangents[i] : glm::vec4(0.0f);
-        vertices[i].texCoord = hasTexCoords ? texCoords[i] : glm::vec2(0.0f);
+        uint32_t &remapped = vertexRemap[index];
+        if (remapped == UINT32_MAX)
+        {
+            remapped = static_cast<uint32_t>(vertices.size());
+            auto &vertex = vertices.emplace_back();
+            vertex.pos = positions[index];
+            vertex.normal = hasNormals ? normals[index] : glm::vec3(0.0f);
+            vertex.tangent = hasTangents ? tangents[index] : glm::vec4(0.0f);
+            vertex.texCoord = hasTexCoords ? texCoords[index] : glm::vec2(0.0f);
+        }
+        index = remapped;
     }
     if (!hasNormals)
         GenerateNormals(vertices, indices);

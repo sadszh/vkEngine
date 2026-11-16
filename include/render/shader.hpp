@@ -16,7 +16,7 @@ namespace vke_render
     {
     public:
         VkShaderModule module;
-        SpvReflectShaderModule reflectInfo;
+        SpvReflectShaderModule reflectInfo{};
 
         ShaderModule() : module(nullptr) {}
 
@@ -32,6 +32,7 @@ namespace vke_render
             module = ano.module;
             reflectInfo = ano.reflectInfo;
             ano.module = nullptr;
+            ano.reflectInfo = {};
         }
 
         ShaderModule &operator=(ShaderModule &&ano)
@@ -43,6 +44,7 @@ namespace vke_render
             module = ano.module;
             reflectInfo = ano.reflectInfo;
             ano.module = nullptr;
+            ano.reflectInfo = {};
 
             return *this;
         }
@@ -56,10 +58,8 @@ namespace vke_render
         void dispose()
         {
             if (module != nullptr)
-            {
                 vkDestroyShaderModule(globalLogicalDevice, module, nullptr);
-                spvReflectDestroyShaderModule(&reflectInfo);
-            }
+            spvReflectDestroyShaderModule(&reflectInfo);
         }
     };
 

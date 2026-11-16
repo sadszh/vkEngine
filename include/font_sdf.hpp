@@ -63,6 +63,7 @@ namespace vke_common
 
         AssetHandle handle = 0;
         std::vector<char> fontData;
+        FT_Library library = nullptr;
         FT_Face face = nullptr;
         std::string familyName;
         std::string styleName;
@@ -95,6 +96,8 @@ namespace vke_common
         {
             if (face != nullptr)
                 FT_Done_Face(face);
+            if (library != nullptr)
+                FT_Done_FreeType(library);
         }
 
         static std::vector<uint32_t> DecodeUTF8(std::string_view text)
@@ -167,7 +170,7 @@ namespace vke_common
             return result;
         }
 
-        Result<void> BuildStaticAtlas(std::string_view configuredCharacters, uint32_t characterCount, uint32_t startCodepoint)
+        Result<void> PrepareStaticAtlas(std::string_view configuredCharacters, uint32_t characterCount, uint32_t startCodepoint)
         {
             VKE_FATAL_IF(face == nullptr, "Cannot build font atlas without a valid FreeType face!")
 
@@ -204,21 +207,27 @@ namespace vke_common
 
                 RasterizedGlyph rasterized;
                 auto result = rasterizeGlyph(codepoint, GlyphAtlasType::STATIC_ATLAS, slot, rasterized);
-                if (!result) return std::unexpected(result.error());
-                if (!*result) continue;
+                if (!result)
+                    return std::unexpected(result.error());
+                if (!*result)
+                    continue;
                 blitGlyph(rasterized, staticAtlasPixels);
                 glyphs[codepoint] = rasterized.glyph;
                 ++slot;
             }
 
             loadedCharacterCount = static_cast<uint32_t>(glyphs.size());
+            return {};
+        }
+
+        void UploadStaticAtlas()
+        {
             atlasTexture = std::make_shared<vke_render::Texture2D>(
                 handle, staticAtlasPixels.data(), ATLAS_SIZE, ATLAS_SIZE,
                 VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_FILTER_LINEAR, VK_FILTER_LINEAR,
                 VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false, false);
-            return {};
         }
 
         Glyph *GetOrCreateGlyph(uint32_t codepoint)
@@ -256,7 +265,8 @@ namespace vke_common
                 VKE_LOG_ERROR("font {}: {}", handle, result.error())
                 return nullptr;
             }
-            if (!*result) return nullptr;
+            if (!*result)
+                return nullptr;
 
             if (evictedCodepoint != INVALID_CODEPOINT)
                 dynamicGlyphs.erase(evictedCodepoint);
@@ -295,7 +305,8 @@ namespace vke_common
                 return false;
 
             FT_Error error = FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT);
-            if (error) return std::unexpected("glyph " + std::to_string(codepoint) + ": FT_Load_Glyph failed: " + std::to_string(error));
+            if (error)
+                return std::unexpected("glyph " + std::to_string(codepoint) + ": FT_Load_Glyph failed: " + std::to_string(error));
 
             const int advanceX = static_cast<int>(face->glyph->advance.x >> 6);
             if (face->glyph->format == FT_GLYPH_FORMAT_OUTLINE && face->glyph->outline.n_contours == 0)
@@ -312,7 +323,8 @@ namespace vke_common
             error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
             if (error == FT_Err_Ok)
                 error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_SDF);
-            if (error) return std::unexpected("glyph " + std::to_string(codepoint) + ": FT_Render_Glyph failed: " + std::to_string(error));
+            if (error)
+                return std::unexpected("glyph " + std::to_string(codepoint) + ": FT_Render_Glyph failed: " + std::to_string(error));
 
             FT_GlyphSlot ftGlyph = face->glyph;
             const FT_Bitmap &bitmap = ftGlyph->bitmap;

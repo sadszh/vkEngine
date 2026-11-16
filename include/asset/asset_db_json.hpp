@@ -8,36 +8,40 @@ namespace vke_common
 {
 
 #define DBJSON_GET_ASSET_FUNC(tp, cache)                  \
-    virtual Result<tp *> Get##tp(AssetHandle id) override \
+protected:                                                \
+    virtual Result<tp *> get##tp(AssetHandle id) override \
     {                                                     \
         auto it = cache.find(id);                         \
         if (it != cache.end())                            \
             return &it->second;                           \
         return nullptr;                                   \
-    }
+    }                                                     \
+                                                          \
+public:
 
-#define DBJSON_SET_ASSET_FUNC(tp, cache)     \
-    virtual void Set##tp(tp &asset) override \
-    {                                        \
-        cache[asset.id] = asset;             \
+#define DBJSON_SET_ASSET_FUNC(tp, cache)              \
+    virtual void Set##tp(tp &&asset) override         \
+    {                                                 \
+        const AssetHandle id = asset.id;              \
+        cache.insert_or_assign(id, std::move(asset)); \
     }
 
 #define DBJSON_SYNC_ASSET_FUNC(tp, cache) \
     virtual Result<void> Sync##tp(AssetHandle id) override { return std::unexpected("JSON asset database does not support syncing a single asset"); }
 
-#define DBJSON_CREATE_ASSET_FUNC(tp, cache)            \
-    virtual AssetHandle Create##tp(tp &asset) override \
-    {                                                  \
-        AssetHandle newId = ids[tp::type]++;           \
-        asset.id = newId;                              \
-        cache[newId] = asset;                          \
-        return newId;                                  \
+#define DBJSON_CREATE_ASSET_FUNC(tp, cache)              \
+    virtual AssetHandle Create##tp(tp &&asset) override  \
+    {                                                    \
+        AssetHandle newId = ids[tp::type]++;             \
+        asset.id = newId;                                \
+        cache.insert_or_assign(newId, std::move(asset)); \
+        return newId;                                    \
     }
 
 #define DBJSON_REMOVE_ASSET_FUNC(tp, cache)          \
     virtual void Remove##tp(AssetHandle id) override \
     {                                                \
-        cache.erase(id);                             \
+        eraseCachedAsset(cache, id);                 \
     }
 
 #define DBJSON_ITERATE_ASSET_FUNC(tp, cache)                                      \
@@ -62,6 +66,8 @@ namespace vke_common
 
     class AssetDBJSON : public AssetDBBase
     {
+        friend class AssetManager;
+
     public:
         AssetDBJSON(const std::filesystem::path &pth, AssetHandle stid = 1)
             : AssetDBBase(pth, stid)
@@ -70,7 +76,7 @@ namespace vke_common
                 ids[i] = stid;
         }
 
-        virtual ~AssetDBJSON() {}
+        virtual ~AssetDBJSON() { (void)ClearAll(); }
 
         virtual Result<void> Init() override { return bulkLoad(path); }
         virtual Result<void> ClearAll() override;

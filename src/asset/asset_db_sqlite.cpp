@@ -26,7 +26,6 @@ namespace vke_common
         return std::unexpected(std::move(error));
     }
 
-
     AssetDBSQLite::AssetDBSQLite(const std::filesystem::path &dbPath, AssetHandle stid)
         : AssetDBBase(dbPath, stid)
     {
@@ -34,8 +33,23 @@ namespace vke_common
             ids[i] = stid;
     }
 
+    void AssetDBSQLite::clearCaches()
+    {
+        clearAssetCache(textureCache);
+        clearAssetCache(meshCache);
+        clearAssetCache(vfShaderCache);
+        clearAssetCache(computeShaderCache);
+        clearAssetCache(materialCache);
+        clearAssetCache(skeletonCache);
+        clearAssetCache(animationCache);
+        clearAssetCache(sceneCache);
+        clearAssetCache(fontCache);
+        clearAssetCache(audioCache);
+    }
+
     AssetDBSQLite::~AssetDBSQLite()
     {
+        clearCaches();
         if (db)
         {
             sqlite3_close(db);
@@ -76,7 +90,8 @@ namespace vke_common
         {
             auto result = execSQL(std::string("CREATE TABLE IF NOT EXISTS ") + table +
                                   " (id INTEGER PRIMARY KEY, data TEXT NOT NULL)");
-            if (!result) return result;
+            if (!result)
+                return result;
         }
         return {};
     }
@@ -95,7 +110,8 @@ namespace vke_common
             if (sqlite3_column_type(stmt.get(), 0) != SQLITE_NULL)
             {
                 const sqlite3_int64 maxId = sqlite3_column_int64(stmt.get(), 0);
-                if (maxId >= 0) ids[type] = std::max(stID, static_cast<AssetHandle>(maxId) + 1);
+                if (maxId >= 0)
+                    ids[type] = std::max(stID, static_cast<AssetHandle>(maxId) + 1);
             }
         }
         return {};
@@ -110,7 +126,8 @@ namespace vke_common
         sqlite3_stmt *raw = nullptr;
         const int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &raw, nullptr);
         Statement stmt(raw, sqlite3_finalize);
-        if (rc != SQLITE_OK) return std::unexpected(databaseError(operation));
+        if (rc != SQLITE_OK)
+            return std::unexpected(databaseError(operation));
         if (sqlite3_bind_int64(stmt.get(), 1, static_cast<sqlite3_int64>(id)) != SQLITE_OK ||
             sqlite3_bind_text(stmt.get(), 2, jsonData.c_str(), static_cast<int>(jsonData.size()), SQLITE_TRANSIENT) != SQLITE_OK)
             return std::unexpected(databaseError(operation));
@@ -128,7 +145,8 @@ namespace vke_common
         sqlite3_stmt *raw = nullptr;
         const int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &raw, nullptr);
         Statement stmt(raw, sqlite3_finalize);
-        if (rc != SQLITE_OK) return std::unexpected(databaseError(operation));
+        if (rc != SQLITE_OK)
+            return std::unexpected(databaseError(operation));
         if (sqlite3_bind_int64(stmt.get(), 1, static_cast<sqlite3_int64>(id)) != SQLITE_OK)
             return std::unexpected(databaseError(operation));
         if (sqlite3_step(stmt.get()) != SQLITE_DONE)
@@ -141,11 +159,13 @@ namespace vke_common
         const int rc = sqlite3_open_v2(PathToUTF8(path).c_str(), &db,
                                        SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
         Result<void> result;
-        if (rc != SQLITE_OK) result = std::unexpected(databaseError("open database"));
+        if (rc != SQLITE_OK)
+            result = std::unexpected(databaseError("open database"));
         else
         {
             result = createTables();
-            if (result) result = updateNextIds();
+            if (result)
+                result = updateNextIds();
         }
         if (!result)
         {
@@ -157,22 +177,15 @@ namespace vke_common
 
     Result<void> AssetDBSQLite::ClearAll()
     {
-        if (auto result = execSQL("BEGIN IMMEDIATE"); !result) return result;
+        if (auto result = execSQL("BEGIN IMMEDIATE"); !result)
+            return result;
         for (const auto &table : TABLE_NAMES)
             if (auto result = execSQL("DELETE FROM " + std::string(table)); !result)
                 return rollback(result.error());
-        if (auto result = execSQL("COMMIT"); !result) return rollback(result.error());
+        if (auto result = execSQL("COMMIT"); !result)
+            return rollback(result.error());
 
-        textureCache.clear();
-        meshCache.clear();
-        vfShaderCache.clear();
-        computeShaderCache.clear();
-        materialCache.clear();
-        skeletonCache.clear();
-        animationCache.clear();
-        sceneCache.clear();
-        fontCache.clear();
-        audioCache.clear();
+        clearCaches();
 
         for (auto &id : ids)
             id = stID;
@@ -249,18 +262,30 @@ namespace vke_common
 
     Result<void> AssetDBSQLite::SyncAll()
     {
-        if (auto result = execSQL("BEGIN IMMEDIATE"); !result) return result;
-        if (auto result = flushChanges("texture_assets", textureCache, dirtyTexture, deletedTexture); !result) return rollback(result.error());
-        if (auto result = flushChanges("mesh_assets", meshCache, dirtyMesh, deletedMesh); !result) return rollback(result.error());
-        if (auto result = flushChanges("vf_shader_assets", vfShaderCache, dirtyVFShader, deletedVFShader); !result) return rollback(result.error());
-        if (auto result = flushChanges("compute_shader_assets", computeShaderCache, dirtyComputeShader, deletedComputeShader); !result) return rollback(result.error());
-        if (auto result = flushChanges("material_assets", materialCache, dirtyMaterial, deletedMaterial); !result) return rollback(result.error());
-        if (auto result = flushChanges("skeleton_assets", skeletonCache, dirtySkeleton, deletedSkeleton); !result) return rollback(result.error());
-        if (auto result = flushChanges("animation_assets", animationCache, dirtyAnimation, deletedAnimation); !result) return rollback(result.error());
-        if (auto result = flushChanges("scene_assets", sceneCache, dirtyScene, deletedScene); !result) return rollback(result.error());
-        if (auto result = flushChanges("font_assets", fontCache, dirtyFont, deletedFont); !result) return rollback(result.error());
-        if (auto result = flushChanges("audio_clip_assets", audioCache, dirtyAudio, deletedAudio); !result) return rollback(result.error());
-        if (auto result = execSQL("COMMIT"); !result) return rollback(result.error());
+        if (auto result = execSQL("BEGIN IMMEDIATE"); !result)
+            return result;
+        if (auto result = flushChanges("texture_assets", textureCache, dirtyTexture, deletedTexture); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("mesh_assets", meshCache, dirtyMesh, deletedMesh); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("vf_shader_assets", vfShaderCache, dirtyVFShader, deletedVFShader); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("compute_shader_assets", computeShaderCache, dirtyComputeShader, deletedComputeShader); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("material_assets", materialCache, dirtyMaterial, deletedMaterial); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("skeleton_assets", skeletonCache, dirtySkeleton, deletedSkeleton); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("animation_assets", animationCache, dirtyAnimation, deletedAnimation); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("scene_assets", sceneCache, dirtyScene, deletedScene); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("font_assets", fontCache, dirtyFont, deletedFont); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("audio_clip_assets", audioCache, dirtyAudio, deletedAudio); !result)
+            return rollback(result.error());
+        if (auto result = execSQL("COMMIT"); !result)
+            return rollback(result.error());
 
         dirtyTexture.clear();
         dirtyMesh.clear();
@@ -289,10 +314,13 @@ namespace vke_common
     template <typename T>
     static Result<T> parseAssetRecord(const char *raw, int size, AssetHandle id)
     {
-        if (!raw || size <= 0) return std::unexpected("empty JSON record");
+        if (!raw || size <= 0)
+            return std::unexpected("empty JSON record");
         auto json = nlohmann::json::parse(raw, raw + size, nullptr, false);
-        if (json.is_discarded()) return std::unexpected("invalid JSON");
-        if (auto valid = ValidateAssetJSON(json); !valid) return std::unexpected(valid.error());
+        if (json.is_discarded())
+            return std::unexpected("invalid JSON");
+        if (auto valid = ValidateAssetJSON(json); !valid)
+            return std::unexpected(valid.error());
         if (json["type"].get<AssetType>() != T::type || json["id"].get<AssetHandle>() != id)
             return std::unexpected("JSON type or id does not match the database record");
         return T(id, json);
@@ -301,39 +329,46 @@ namespace vke_common
     template <typename T>
     Result<bool> AssetDBSQLite::loadAssetFromDB(const std::string &table, AssetHandle id, T &outAsset)
     {
-        if (id > INT64_MAX) return false;
+        if (id > INT64_MAX)
+            return false;
         const std::string operation = "read " + table + " asset " + std::to_string(id);
         const std::string sql = "SELECT data FROM " + table + " WHERE id = ?1";
         sqlite3_stmt *raw = nullptr;
         const int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &raw, nullptr);
         Statement stmt(raw, sqlite3_finalize);
-        if (rc != SQLITE_OK) return std::unexpected(databaseError(operation));
+        if (rc != SQLITE_OK)
+            return std::unexpected(databaseError(operation));
         if (sqlite3_bind_int64(stmt.get(), 1, static_cast<sqlite3_int64>(id)) != SQLITE_OK)
             return std::unexpected(databaseError(operation));
         const int step = sqlite3_step(stmt.get());
-        if (step == SQLITE_DONE) return false;
-        if (step != SQLITE_ROW) return std::unexpected(databaseError(operation));
+        if (step == SQLITE_DONE)
+            return false;
+        if (step != SQLITE_ROW)
+            return std::unexpected(databaseError(operation));
         auto parsed = parseAssetRecord<T>(reinterpret_cast<const char *>(sqlite3_column_text(stmt.get(), 0)),
                                           sqlite3_column_bytes(stmt.get(), 0), id);
-        if (!parsed) return std::unexpected(PathToUTF8(path) + ": " + operation + ": " + parsed.error());
+        if (!parsed)
+            return std::unexpected(PathToUTF8(path) + ": " + operation + ": " + parsed.error());
         outAsset = std::move(*parsed);
         return true;
     }
 
     template <typename T>
     Result<void> AssetDBSQLite::loadCleanAssetsFromDB(const std::string &table, std::map<AssetHandle, T> &cache,
-                                              const std::set<AssetHandle> &deleted)
+                                                      const std::set<AssetHandle> &deleted)
     {
         const std::string sql = "SELECT id, data FROM " + table;
         sqlite3_stmt *raw = nullptr;
         const int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &raw, nullptr);
         Statement stmt(raw, sqlite3_finalize);
-        if (rc != SQLITE_OK) return std::unexpected(databaseError(sql));
+        if (rc != SQLITE_OK)
+            return std::unexpected(databaseError(sql));
         int step;
         while ((step = sqlite3_step(stmt.get())) == SQLITE_ROW)
         {
             const AssetHandle id = static_cast<AssetHandle>(sqlite3_column_int64(stmt.get(), 0));
-            if (cache.contains(id) || deleted.contains(id)) continue;
+            if (cache.contains(id) || deleted.contains(id))
+                continue;
             auto parsed = parseAssetRecord<T>(reinterpret_cast<const char *>(sqlite3_column_text(stmt.get(), 1)),
                                               sqlite3_column_bytes(stmt.get(), 1), id);
             if (!parsed)
@@ -341,19 +376,22 @@ namespace vke_common
                                        std::to_string(id) + ": " + parsed.error());
             cache.emplace(id, std::move(*parsed));
         }
-        if (step != SQLITE_DONE) return std::unexpected(databaseError(sql));
+        if (step != SQLITE_DONE)
+            return std::unexpected(databaseError(sql));
         return {};
     }
 
     template <typename T>
     Result<void> AssetDBSQLite::flushChanges(const std::string &table, std::map<AssetHandle, T> &cache,
-                                     const std::set<AssetHandle> &dirty,
-                                     const std::set<AssetHandle> &deleted)
+                                             const std::set<AssetHandle> &dirty,
+                                             const std::set<AssetHandle> &deleted)
     {
         for (const AssetHandle id : dirty)
-            if (auto result = saveToDB(table, id, cache.at(id).ToJSON().dump()); !result) return result;
+            if (auto result = saveToDB(table, id, cache.at(id).ToJSON().dump()); !result)
+                return result;
         for (const AssetHandle id : deleted)
-            if (auto result = removeFromDB(table, id); !result) return result;
+            if (auto result = removeFromDB(table, id); !result)
+                return result;
         return {};
     }
 

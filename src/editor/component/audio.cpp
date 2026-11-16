@@ -43,7 +43,7 @@ namespace vke_editor
             sceneManager->registry.get<vke_component::AudioSource>(selectedEntity);
         const vke_common::AssetHandle clipHandle = source.clip ? source.clip->handle : 0;
         const vke_common::AudioClipAsset *clipAsset =
-            ShowAssetReadResult(vke_common::AssetManager::GetAudioClipAsset(clipHandle));
+            ShowAssetReadResult(vke_common::AssetManager::GetAudioClipAssetReadOnly(clipHandle));
         const std::string selectedClip =
             AudioClipDisplayName(clipHandle, clipAsset ? clipAsset->name.c_str() : nullptr);
 

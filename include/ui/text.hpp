@@ -12,8 +12,18 @@
 
 namespace vke_ui
 {
-    enum class TextHorizontalAlignment : int32_t { Left, Center, Right };
-    enum class TextVerticalAlignment : int32_t { Top, Middle, Bottom };
+    enum class TextHorizontalAlignment : int32_t
+    {
+        Left,
+        Center,
+        Right
+    };
+    enum class TextVerticalAlignment : int32_t
+    {
+        Top,
+        Middle,
+        Bottom
+    };
 
     struct TextLayoutOptions
     {
@@ -45,8 +55,7 @@ namespace vke_ui
         static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
-            if (auto valid = Object(json).Strings({"text", "horizontalAlignment", "verticalAlignment"})
-                .Numbers({"fontSize"}).Booleans({"wordWrap"}).Unsigneds({"material", "font"}).Vectors({"color"}, 4).Result(); !valid)
+            if (auto valid = Object(json).Strings({"text", "horizontalAlignment", "verticalAlignment"}).Numbers({"fontSize"}).Booleans({"wordWrap"}).Unsigneds({"material", "font"}).Vectors({"color"}, 4).Result(); !valid)
                 return valid;
             if (json.contains("fontSize") && json["fontSize"].get<float>() <= 0)
                 return std::unexpected("fontSize must be positive");
@@ -68,11 +77,11 @@ namespace vke_ui
             layout.fontSize = json.value("fontSize", 48.0f);
             layout.wordWrap = json.value("wordWrap", false);
             const auto horizontal = json.value("horizontalAlignment", std::string("left"));
-            layout.horizontalAlignment = horizontal == "left" ? TextHorizontalAlignment::Left :
-                horizontal == "center" ? TextHorizontalAlignment::Center : TextHorizontalAlignment::Right;
+            layout.horizontalAlignment = horizontal == "left" ? TextHorizontalAlignment::Left : horizontal == "center" ? TextHorizontalAlignment::Center
+                                                                                                                       : TextHorizontalAlignment::Right;
             const auto vertical = json.value("verticalAlignment", std::string("top"));
-            layout.verticalAlignment = vertical == "top" ? TextVerticalAlignment::Top :
-                vertical == "middle" ? TextVerticalAlignment::Middle : TextVerticalAlignment::Bottom;
+            layout.verticalAlignment = vertical == "top" ? TextVerticalAlignment::Top : vertical == "middle" ? TextVerticalAlignment::Middle
+                                                                                                             : TextVerticalAlignment::Bottom;
             if (json.contains("color"))
             {
                 const auto &value = json["color"];
@@ -86,8 +95,18 @@ namespace vke_ui
 
         vke_common::Result<void> Validate() const override
         {
-            if (auto valid = layout.Validate(); !valid) return valid;
+            if (auto valid = layout.Validate(); !valid)
+                return valid;
             return UINodeData::Validate();
+        }
+
+        void ConstructAssetLoadBatch(vke_common::LoadBatch &batch) const override
+        {
+            if (material.Handle() != 0 && !material.Get())
+                batch[vke_common::ASSET_MATERIAL].insert(material.Handle());
+            if (!font.Get())
+                batch[vke_common::ASSET_FONT].insert(font.Handle());
+            UINodeData::ConstructAssetLoadBatch(batch);
         }
 
         vke_common::Result<void> ValidateAssets() const override
@@ -108,16 +127,27 @@ namespace vke_ui
             if (material.Handle() != 0 && !material.Get())
             {
                 auto loaded = AssetManager::LoadMaterial(material.Handle());
-                if (!loaded) return std::unexpected(loaded.error());
+                if (!loaded)
+                    return std::unexpected(loaded.error());
                 material.Resolve(std::move(*loaded));
             }
             if (!font.Get())
             {
                 auto loaded = AssetManager::LoadFont(font.Handle());
-                if (!loaded) return std::unexpected(loaded.error());
+                if (!loaded)
+                    return std::unexpected(loaded.error());
                 font.Resolve(std::move(*loaded));
             }
             return UINodeData::LoadAssets();
+        }
+
+        vke_common::Result<void> ResolveAssets(const vke_common::BatchResult &loaded) override
+        {
+            if (material.Handle() != 0 && !material.Get())
+                material.Resolve(*loaded.materials.at(material.Handle()));
+            if (!font.Get())
+                font.Resolve(*loaded.fonts.at(font.Handle()));
+            return UINodeData::ResolveAssets(loaded);
         }
 
         nlohmann::json ToJSON() const override

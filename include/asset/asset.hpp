@@ -1,5 +1,10 @@
 #ifndef ASSET_H
 #define ASSET_H
+#include <common.hpp>
+#include <atomic>
+#include <functional>
+#include <memory>
+#include <utility>
 #include <render/material.hpp>
 #include <render/mesh.hpp>
 #include <animation.hpp>
@@ -14,6 +19,7 @@
 #include <map>
 #include <cstring>
 #include <unordered_map>
+#include <unordered_set>
 #include <filesystem>
 
 namespace vke_common
@@ -71,6 +77,21 @@ namespace vke_common
         ASSET_CNT_FLAG
     };
 
+    using LoadBatch = std::unordered_map<AssetType, std::unordered_set<AssetHandle>>;
+
+    struct BatchResult
+    {
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_render::Texture2D>>> textures;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_render::Mesh>>> meshes;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_render::ShaderModuleSet>>> vertFragShaders;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_render::ShaderModuleSet>>> computeShaders;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_render::Material>>> materials;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<Skeleton>>> skeletons;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<Animation>>> animations;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<Font>>> fonts;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_audio::AudioClip>>> audioClips;
+    };
+
     const std::string AssetTypeToName[] = {"Texture", "Mesh", "VFShader", "ComputeShader",
                                            "Material", "Skeleton", "Animation", "Scene", "Font", "AudioClip"};
 
@@ -79,6 +100,31 @@ namespace vke_common
     [[nodiscard]] Result<nlohmann::json> LoadJSON(const std::filesystem::path &pth);
     [[nodiscard]] Result<void> ValidateAssetJSON(const nlohmann::json &json);
     [[nodiscard]] Result<void> ValidateAssetListJSON(const nlohmann::json &json);
+
+    enum class AssetLoadState
+    {
+        Unloaded,
+        Loading,
+        Loaded,
+        Failed,
+        Cancelled
+    };
+
+    template <typename T>
+    using AssetFinalizer = std::move_only_function<Result<std::unique_ptr<T>>()>;
+
+    template <typename T>
+    struct AssetLoadTask
+    {
+        std::atomic<bool> complete{false};
+        Result<AssetFinalizer<T>> result;
+
+        void Wait() const
+        {
+            while (!complete.load(std::memory_order_acquire))
+                complete.wait(false, std::memory_order_acquire);
+        }
+    };
 
     template <AssetType TID, typename T, typename VT>
     class Asset
@@ -89,6 +135,25 @@ namespace vke_common
         std::string name;
         std::filesystem::path path;
         std::shared_ptr<VT> val;
+        AssetLoadState loadState = AssetLoadState::Unloaded;
+        size_t loadReferences = 0;
+        std::shared_ptr<AssetLoadTask<VT>> loadTask;
+
+        void WaitForLoad() const
+        {
+            if (loadTask)
+                loadTask->Wait();
+        }
+
+        ~Asset() = default;
+
+        Asset(const Asset &) = delete;
+
+        // Move sources must have no pending task; jobs reference their database entry.
+        Asset(Asset &&other) noexcept
+            : id(other.id), name(std::move(other.name)), path(std::move(other.path)), val(std::move(other.val)),
+              loadState(std::exchange(other.loadState, AssetLoadState::Unloaded)),
+              loadReferences(std::exchange(other.loadReferences, 0)), loadTask(std::move(other.loadTask)) {}
 
         Asset() : id(0), val(nullptr) {}
 
@@ -97,12 +162,20 @@ namespace vke_common
         Asset(AssetHandle id, const std::string &nm, const std::string &pth)
             : id(id), name(nm), path(PathFromUTF8(pth)), val(nullptr) {}
 
-        Asset<TID, T, VT> &operator=(const Asset<TID, T, VT> &ano)
+        Asset &operator=(const Asset &) = delete;
+
+        Asset &operator=(Asset &&other) noexcept
         {
-            id = ano.id;
-            name = ano.name;
-            path = ano.path;
-            val = ano.val;
+            if (this == &other)
+                return *this;
+            WaitForLoad();
+            id = other.id;
+            name = std::move(other.name);
+            path = std::move(other.path);
+            val = std::move(other.val);
+            loadState = std::exchange(other.loadState, AssetLoadState::Unloaded);
+            loadReferences = std::exchange(other.loadReferences, 0);
+            loadTask = std::move(other.loadTask);
             return *this;
         }
 
@@ -124,19 +197,23 @@ namespace vke_common
 #define DEFAULT_CONSTRUCTOR(type) \
     type(AssetHandle id, const nlohmann::json &json) : Asset(id, json) {}
 
-#define DEFAULT_CONSTRUCTOR2(type) \
-    type(AssetHandle id, const std::string &nm, const std::string &pth) : Asset(id, nm, pth) {}
-
 #define LEAF_ASSET_TYPE(type, typeid, valtype)       \
     class type : public Asset<typeid, type, valtype> \
     {                                                \
     public:                                          \
         type() {}                                    \
         DEFAULT_CONSTRUCTOR(type)                    \
-        DEFAULT_CONSTRUCTOR2(type)                   \
     };
 
-    LEAF_ASSET_TYPE(MeshAsset, ASSET_MESH, vke_render::Mesh)
+    class MeshAsset : public Asset<ASSET_MESH, MeshAsset, vke_render::Mesh>
+    {
+    public:
+        MeshAsset() {}
+        DEFAULT_CONSTRUCTOR(MeshAsset)
+
+        MeshAsset(AssetHandle id, const std::string &nm, const std::string &pth)
+            : Asset(id, nm, pth) {}
+    };
     LEAF_ASSET_TYPE(ComputeShaderAsset, ASSET_COMPUTE_SHADER, vke_render::ShaderModuleSet)
     LEAF_ASSET_TYPE(SkeletonAsset, ASSET_SKELETON, vke_common::Skeleton)
     LEAF_ASSET_TYPE(SceneAsset, ASSET_SCENE, const SceneData);
@@ -150,9 +227,6 @@ namespace vke_common
 
         AnimationAsset(AssetHandle id, const nlohmann::json &json)
             : Asset(id, json), hasRootMotion(json.value("hasRootMotion", false)) {}
-
-        AnimationAsset(AssetHandle id, const std::string &nm, const std::string &pth)
-            : Asset(id, nm, pth), hasRootMotion(false) {}
 
         void writeJSON(nlohmann::json &json) const
         {
@@ -192,11 +266,6 @@ namespace vke_common
             rasterHeight = json.value("rasterHeight", 0);
         }
 
-        TextureAsset(AssetHandle id, const std::string &nm, const std::string &pth)
-            : Asset(id, nm, pth),
-              format(VK_FORMAT_R8G8B8A8_SRGB), usage(VK_IMAGE_USAGE_SAMPLED_BIT), layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL),
-              minFilter(VK_FILTER_LINEAR), magFilter(VK_FILTER_LINEAR), addressMode(VK_SAMPLER_ADDRESS_MODE_REPEAT), anisotropyEnable(true), generateMipMap(true) {}
-
         void writeJSON(nlohmann::json &json) const
         {
             json["format"] = format;
@@ -230,9 +299,6 @@ namespace vke_common
             characters = json.contains("characters") ? json["characters"].get<std::string>() : "";
         }
 
-        FontAsset(AssetHandle id, const std::string &nm, const std::string &pth)
-            : Asset(id, nm, pth), pixelSize(48), characterCount(128), firstCodepoint(32) {}
-
         void writeJSON(nlohmann::json &json) const
         {
             json["pixelSize"] = pixelSize;
@@ -252,11 +318,6 @@ namespace vke_common
 
         VFShaderAsset(AssetHandle id, const nlohmann::json &json)
             : fragPath(PathFromUTF8(json["fragPath"].get<std::string>())), Asset(id, json) {}
-
-        DEFAULT_CONSTRUCTOR2(VFShaderAsset)
-
-        VFShaderAsset(AssetHandle id, const std::string &nm, const std::string &pth, const std::string &fragpth)
-            : fragPath(PathFromUTF8(fragpth)), Asset(id, nm, pth) {}
 
         void writeJSON(nlohmann::json &json) const
         {
@@ -343,11 +404,6 @@ namespace vke_common
                 pushConstantData->emplace_back(std::move(constantData));
             }
         }
-
-        MaterialAsset(AssetHandle id, const std::string &nm, const std::string &pth)
-            : Asset(id, nm, pth), shader(0),
-              renderMode(vke_render::MaterialRenderMode::OPAQUE_MODE),
-              blendMode(vke_render::MaterialBlendMode::ALPHA) {}
 
         void writeJSON(nlohmann::json &json) const
         {

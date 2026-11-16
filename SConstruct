@@ -147,6 +147,7 @@ commonsrc = (
         "./src/asset/asset.cpp",
         "./src/asset/asset_json.cpp",
         "./src/asset/loader.cpp",
+        "./src/asset/async_loader.cpp",
         "./src/asset/svg.cpp",
         "./src/asset/scene_loader.cpp",
         "./src/asset/builtin.cpp",

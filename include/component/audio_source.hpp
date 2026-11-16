@@ -35,9 +35,7 @@ namespace vke_component
         static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
-            return Object(json).Unsigneds({"clip"}).Unsigneds({"attenuationModel"}, 3)
-                .Booleans({"playOnStart", "looping", "spatializationEnabled"})
-                .Numbers({"volume", "pitch", "rolloff", "minDistance", "maxDistance", "dopplerFactor"}).Result();
+            return Object(json).Unsigneds({"clip"}).Unsigneds({"attenuationModel"}, 3).Booleans({"playOnStart", "looping", "spatializationEnabled"}).Numbers({"volume", "pitch", "rolloff", "minDistance", "maxDistance", "dopplerFactor"}).Result();
         }
 
         AudioSourceData() = default;
@@ -58,6 +56,12 @@ namespace vke_component
             dopplerFactor = json.value("dopplerFactor", 1.0f);
         }
 
+        void ConstructAssetLoadBatch(vke_common::LoadBatch &batch) const
+        {
+            if (clip.Handle() != 0 && !clip.Get())
+                batch[vke_common::ASSET_AUDIO_CLIP].insert(clip.Handle());
+        }
+
         vke_common::Result<void> ValidateAssets() const
         {
             using vke_common::AssetManager;
@@ -74,9 +78,17 @@ namespace vke_component
             if (clip.Handle() != 0 && !clip.Get())
             {
                 auto loaded = AssetManager::LoadAudioClip(clip.Handle());
-                if (!loaded) return std::unexpected(loaded.error());
+                if (!loaded)
+                    return std::unexpected(loaded.error());
                 clip.Resolve(std::move(*loaded));
             }
+            return {};
+        }
+
+        vke_common::Result<void> ResolveAssets(const vke_common::BatchResult &loaded)
+        {
+            if (clip.Handle() != 0 && !clip.Get())
+                clip.Resolve(*loaded.audioClips.at(clip.Handle()));
             return {};
         }
 
@@ -217,7 +229,8 @@ namespace vke_component
 
             const std::string context = "audio clip " + std::to_string(newClip->handle) + ": ";
             auto *engine = vke_audio::AudioManager::GetEngine();
-            if (!engine) return std::unexpected(context + "audio engine is unavailable");
+            if (!engine)
+                return std::unexpected(context + "audio engine is unavailable");
 
             auto bufferStorage = std::make_unique<ma_audio_buffer>();
             auto config = ma_audio_buffer_config_init(ma_format_f32, newClip->channels,
@@ -379,7 +392,6 @@ namespace vke_component
                 (ma_uint64)(std::min(seconds, duration) * clip->sampleRate), clip->FrameCount());
             ma_sound_seek_to_pcm_frame(sound.get(), frame);
         }
-
     };
 }
 

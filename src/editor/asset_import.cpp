@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <string>
 #include <system_error>
+#include <utility>
 
 namespace vke_editor
 {
@@ -49,19 +50,37 @@ namespace vke_editor
 
         void DiscardPendingImport()
         {
-            if (!importState.pendingAsset) return;
+            if (!importState.pendingAsset)
+                return;
             auto *db = vke_common::AssetManager::GetAssetDB();
             switch (importState.type)
             {
-            case vke_common::ASSET_MESH: db->RemoveMeshAsset(importState.pendingAsset); break;
-            case vke_common::ASSET_VF_SHADER: db->RemoveVFShaderAsset(importState.pendingAsset); break;
-            case vke_common::ASSET_COMPUTE_SHADER: db->RemoveComputeShaderAsset(importState.pendingAsset); break;
-            case vke_common::ASSET_SKELETON: db->RemoveSkeletonAsset(importState.pendingAsset); break;
-            case vke_common::ASSET_AUDIO_CLIP: db->RemoveAudioClipAsset(importState.pendingAsset); break;
-            case vke_common::ASSET_TEXTURE: db->RemoveTextureAsset(importState.pendingAsset); break;
-            case vke_common::ASSET_ANIMATION: db->RemoveAnimationAsset(importState.pendingAsset); break;
-            case vke_common::ASSET_FONT: db->RemoveFontAsset(importState.pendingAsset); break;
-            default: break;
+            case vke_common::ASSET_MESH:
+                db->RemoveMeshAsset(importState.pendingAsset);
+                break;
+            case vke_common::ASSET_VF_SHADER:
+                db->RemoveVFShaderAsset(importState.pendingAsset);
+                break;
+            case vke_common::ASSET_COMPUTE_SHADER:
+                db->RemoveComputeShaderAsset(importState.pendingAsset);
+                break;
+            case vke_common::ASSET_SKELETON:
+                db->RemoveSkeletonAsset(importState.pendingAsset);
+                break;
+            case vke_common::ASSET_AUDIO_CLIP:
+                db->RemoveAudioClipAsset(importState.pendingAsset);
+                break;
+            case vke_common::ASSET_TEXTURE:
+                db->RemoveTextureAsset(importState.pendingAsset);
+                break;
+            case vke_common::ASSET_ANIMATION:
+                db->RemoveAnimationAsset(importState.pendingAsset);
+                break;
+            case vke_common::ASSET_FONT:
+                db->RemoveFontAsset(importState.pendingAsset);
+                break;
+            default:
+                break;
             }
             importState.pendingAsset = 0;
         }
@@ -322,7 +341,7 @@ namespace vke_editor
                             vke_common::MeshAsset asset;
                             asset.name = importState.name;
                             asset.path = relativePath;
-                            importState.pendingAsset = assetDB->CreateMeshAsset(asset);
+                            importState.pendingAsset = assetDB->CreateMeshAsset(std::move(asset));
                             break;
                         }
                         case vke_common::ASSET_VF_SHADER:
@@ -331,7 +350,7 @@ namespace vke_editor
                             asset.name = importState.name;
                             asset.path = relativePath;
                             asset.fragPath = relativeFragmentPath;
-                            importState.pendingAsset = assetDB->CreateVFShaderAsset(asset);
+                            importState.pendingAsset = assetDB->CreateVFShaderAsset(std::move(asset));
                             break;
                         }
                         case vke_common::ASSET_COMPUTE_SHADER:
@@ -339,7 +358,7 @@ namespace vke_editor
                             vke_common::ComputeShaderAsset asset;
                             asset.name = importState.name;
                             asset.path = relativePath;
-                            importState.pendingAsset = assetDB->CreateComputeShaderAsset(asset);
+                            importState.pendingAsset = assetDB->CreateComputeShaderAsset(std::move(asset));
                             break;
                         }
                         case vke_common::ASSET_SKELETON:
@@ -347,7 +366,7 @@ namespace vke_editor
                             vke_common::SkeletonAsset asset;
                             asset.name = importState.name;
                             asset.path = relativePath;
-                            importState.pendingAsset = assetDB->CreateSkeletonAsset(asset);
+                            importState.pendingAsset = assetDB->CreateSkeletonAsset(std::move(asset));
                             break;
                         }
                         case vke_common::ASSET_AUDIO_CLIP:
@@ -355,7 +374,7 @@ namespace vke_editor
                             vke_common::AudioClipAsset asset;
                             asset.name = importState.name;
                             asset.path = relativePath;
-                            importState.pendingAsset = assetDB->CreateAudioClipAsset(asset);
+                            importState.pendingAsset = assetDB->CreateAudioClipAsset(std::move(asset));
                             break;
                         }
                         case vke_common::ASSET_TEXTURE:
@@ -382,7 +401,7 @@ namespace vke_editor
                                     break;
                                 }
                             }
-                            importState.pendingAsset = assetDB->CreateTextureAsset(asset);
+                            importState.pendingAsset = assetDB->CreateTextureAsset(std::move(asset));
                             break;
                         }
                         case vke_common::ASSET_ANIMATION:
@@ -391,7 +410,7 @@ namespace vke_editor
                             asset.name = importState.name;
                             asset.path = relativePath;
                             asset.hasRootMotion = importState.animationHasRootMotion;
-                            importState.pendingAsset = assetDB->CreateAnimationAsset(asset);
+                            importState.pendingAsset = assetDB->CreateAnimationAsset(std::move(asset));
                             break;
                         }
                         case vke_common::ASSET_FONT:
@@ -403,7 +422,7 @@ namespace vke_editor
                             asset.characterCount = static_cast<uint32_t>(importState.fontCharacterCount);
                             asset.firstCodepoint = static_cast<uint32_t>(importState.fontFirstCodepoint);
                             asset.characters = importState.fontCharacters;
-                            importState.pendingAsset = assetDB->CreateFontAsset(asset);
+                            importState.pendingAsset = assetDB->CreateFontAsset(std::move(asset));
                             break;
                         }
                         default:

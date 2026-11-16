@@ -49,6 +49,12 @@ namespace vke_component
               weight(json.value("weight", 0.0f)), playbackSpeed(json.value("speed", 1.0f)),
               timeRatio(json.value("timeRatio", 0.0f)), playing(json.value("playing", true)),
               loop(json.value("loop", true)) {}
+        void ConstructAssetLoadBatch(vke_common::LoadBatch &batch) const
+        {
+            if (!animation.Get())
+                batch[vke_common::ASSET_ANIMATION].insert(animation.Handle());
+        }
+
         vke_common::Result<void> ValidateAssets() const
         {
             using vke_common::AssetManager;
@@ -65,10 +71,17 @@ namespace vke_component
             if (!animation.Get())
             {
                 auto loaded = AssetManager::LoadAnimation(animation.Handle());
-                if (!loaded) return std::unexpected(loaded.error());
+                if (!loaded)
+                    return std::unexpected(loaded.error());
                 animation.Resolve(std::move(*loaded));
             }
             return {};
+        }
+
+        void ResolveAssets(const vke_common::BatchResult &loaded)
+        {
+            if (!animation.Get())
+                animation.Resolve(*loaded.animations.at(animation.Handle()));
         }
 
         nlohmann::json ToJSON() const
@@ -130,6 +143,18 @@ namespace vke_component
                 animations.push_back(std::move(state));
             }
         }
+        void ConstructAssetLoadBatch(vke_common::LoadBatch &batch) const
+        {
+            if (!material.Get())
+                batch[vke_common::ASSET_MATERIAL].insert(material.Handle());
+            if (!mesh.Get())
+                batch[vke_common::ASSET_MESH].insert(mesh.Handle());
+            if (!skeleton.Get())
+                batch[vke_common::ASSET_SKELETON].insert(skeleton.Handle());
+            for (const auto &state : animations)
+                state.ConstructAssetLoadBatch(batch);
+        }
+
         vke_common::Result<void> ValidateAssets() const
         {
             using vke_common::AssetManager;
@@ -155,40 +180,41 @@ namespace vke_component
             if (!material.Get())
             {
                 auto loaded = AssetManager::LoadMaterial(material.Handle());
-                if (!loaded) return std::unexpected(loaded.error());
+                if (!loaded)
+                    return std::unexpected(loaded.error());
                 material.Resolve(std::move(*loaded));
             }
             if (!mesh.Get())
             {
                 auto loaded = AssetManager::LoadMesh(mesh.Handle());
-                if (!loaded) return std::unexpected(loaded.error());
+                if (!loaded)
+                    return std::unexpected(loaded.error());
                 mesh.Resolve(std::move(*loaded));
             }
             if (!skeleton.Get())
             {
                 auto loaded = AssetManager::LoadSkeleton(skeleton.Handle());
-                if (!loaded) return std::unexpected(loaded.error());
+                if (!loaded)
+                    return std::unexpected(loaded.error());
                 skeleton.Resolve(std::move(*loaded));
             }
-            const int jointCount = skeleton.Get()->skeleton.num_joints();
-            if (jointCount == 0)
-                return std::unexpected("skeleton: no joints");
-            if (mesh.Get()->joints.empty() || mesh.Get()->joints.size() > MAX_BONE_PER_SKELETON)
-                return std::unexpected("mesh: skin joint count must be between 1 and " + std::to_string(MAX_BONE_PER_SKELETON));
-            for (int joint : mesh.Get()->joints)
-                if (joint < 0 || joint >= jointCount)
-                    return std::unexpected("mesh: skin joint index is outside the skeleton");
-            if (!mesh.Get()->invBindMatrices.empty() && mesh.Get()->invBindMatrices.size() != mesh.Get()->joints.size())
-                return std::unexpected("mesh: inverse bind matrix count must match skin joint count");
             for (size_t i = 0; i < animations.size(); ++i)
-            {
-                auto &state = animations[i];
-                if (auto result = state.LoadAssets(); !result)
+                if (auto result = animations[i].LoadAssets(); !result)
                     return std::unexpected("animations[" + std::to_string(i) + "]: " + result.error());
-                if (auto result = state.animation.Get()->ValidateSkeleton(skeleton.Get()->skeleton); !result)
-                    return std::unexpected("animations[" + std::to_string(i) + "]: " + result.error());
-            }
-            return {};
+            return validateResolvedAssets();
+        }
+
+        vke_common::Result<void> ResolveAssets(const vke_common::BatchResult &loaded)
+        {
+            if (!material.Get())
+                material.Resolve(*loaded.materials.at(material.Handle()));
+            if (!mesh.Get())
+                mesh.Resolve(*loaded.meshes.at(mesh.Handle()));
+            if (!skeleton.Get())
+                skeleton.Resolve(*loaded.skeletons.at(skeleton.Handle()));
+            for (auto &state : animations)
+                state.ResolveAssets(loaded);
+            return validateResolvedAssets();
         }
 
         nlohmann::json ToJSON() const
@@ -203,6 +229,28 @@ namespace vke_component
                     {"skeleton", skeleton.Handle()},
                     {"animations", animationArray},
                     {"castsShadow", castsShadow}};
+        }
+
+    private:
+        vke_common::Result<void> validateResolvedAssets() const
+        {
+            const int jointCount = skeleton.Get()->skeleton.num_joints();
+            if (jointCount == 0)
+                return std::unexpected("skeleton: no joints");
+            if (mesh.Get()->joints.empty() || mesh.Get()->joints.size() > MAX_BONE_PER_SKELETON)
+                return std::unexpected("mesh: skin joint count must be between 1 and " + std::to_string(MAX_BONE_PER_SKELETON));
+            for (int joint : mesh.Get()->joints)
+                if (joint < 0 || joint >= jointCount)
+                    return std::unexpected("mesh: skin joint index is outside the skeleton");
+            if (!mesh.Get()->invBindMatrices.empty() && mesh.Get()->invBindMatrices.size() != mesh.Get()->joints.size())
+                return std::unexpected("mesh: inverse bind matrix count must match skin joint count");
+            for (size_t i = 0; i < animations.size(); ++i)
+            {
+                const auto &state = animations[i];
+                if (auto result = state.animation.Get()->ValidateSkeleton(skeleton.Get()->skeleton); !result)
+                    return std::unexpected("animations[" + std::to_string(i) + "]: " + result.error());
+            }
+            return {};
         }
     };
 

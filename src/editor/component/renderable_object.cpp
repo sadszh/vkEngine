@@ -29,7 +29,7 @@ namespace vke_editor
                 : renderable.renderUnit->mesh->handle;
 
         {
-            auto *mat = ShowAssetReadResult(vke_common::AssetManager::GetMaterialAsset(materialHandle));
+            auto *mat = ShowAssetReadResult(vke_common::AssetManager::GetMaterialAssetReadOnly(materialHandle));
             const std::string selectedMaterial = AssetDisplayName(materialHandle, mat ? mat->name.c_str() : nullptr);
             if (ImGui::BeginCombo("Material", selectedMaterial.c_str()))
             {
@@ -57,7 +57,7 @@ namespace vke_editor
             renderable.SetCastShadow(castsShadow);
 
         {
-            auto *meshAsset = ShowAssetReadResult(vke_common::AssetManager::GetMeshAsset(meshHandle));
+            auto *meshAsset = ShowAssetReadResult(vke_common::AssetManager::GetMeshAssetReadOnly(meshHandle));
             const std::string selectedMesh = AssetDisplayName(meshHandle, meshAsset ? meshAsset->name.c_str() : nullptr);
             if (ImGui::BeginCombo("Mesh", selectedMesh.c_str()))
             {

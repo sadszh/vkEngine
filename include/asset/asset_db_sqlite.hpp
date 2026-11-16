@@ -11,7 +11,8 @@ namespace vke_common
 {
 
 #define DBSQLITE_GET_ASSET_FUNC(tp, cache, tbl, deleted)           \
-    virtual Result<tp *> Get##tp(AssetHandle id) override          \
+protected:                                                         \
+    virtual Result<tp *> get##tp(AssetHandle id) override          \
     {                                                              \
         auto it = cache.find(id);                                  \
         if (it != cache.end())                                     \
@@ -25,16 +26,19 @@ namespace vke_common
         if (!*loaded)                                              \
             return nullptr;                                        \
         return &cache.emplace(id, std::move(asset)).first->second; \
-    }
+    }                                                              \
+                                                                   \
+public:
 
 #define DBSQLITE_SET_ASSET_FUNC(tp, cache, dirty, deleted) \
-    virtual void Set##tp(tp &asset) override               \
+    virtual void Set##tp(tp &&asset) override              \
     {                                                      \
-        cache[asset.id] = asset;                           \
-        dirty.insert(asset.id);                            \
-        deleted.erase(asset.id);                           \
-        if (asset.id >= ids[tp::type])                     \
-            ids[tp::type] = asset.id + 1;                  \
+        const AssetHandle id = asset.id;                   \
+        cache.insert_or_assign(id, std::move(asset));      \
+        dirty.insert(id);                                  \
+        deleted.erase(id);                                 \
+        if (id >= ids[tp::type])                           \
+            ids[tp::type] = id + 1;                        \
     }
 
 #define DBSQLITE_SYNC_ASSET_FUNC(tp, cache, dirty, deleted, tbl)                  \
@@ -58,11 +62,11 @@ namespace vke_common
     }
 
 #define DBSQLITE_CREATE_ASSET_FUNC(tp, cache, dirty, deleted) \
-    virtual AssetHandle Create##tp(tp &asset) override        \
+    virtual AssetHandle Create##tp(tp &&asset) override       \
     {                                                         \
         AssetHandle newId = ids[tp::type]++;                  \
         asset.id = newId;                                     \
-        cache[newId] = asset;                                 \
+        cache.insert_or_assign(newId, std::move(asset));      \
         dirty.insert(newId);                                  \
         deleted.erase(newId);                                 \
         return newId;                                         \
@@ -71,7 +75,7 @@ namespace vke_common
 #define DBSQLITE_REMOVE_ASSET_FUNC(tp, cache, dirty, deleted) \
     virtual void Remove##tp(AssetHandle id) override          \
     {                                                         \
-        cache.erase(id);                                      \
+        eraseCachedAsset(cache, id);                          \
         dirty.erase(id);                                      \
         deleted.insert(id);                                   \
     }
@@ -105,6 +109,8 @@ namespace vke_common
 
     class AssetDBSQLite : public AssetDBBase
     {
+        friend class AssetManager;
+
     public:
         AssetDBSQLite(const std::filesystem::path &dbPath, AssetHandle stid = 1);
         AssetDBSQLite(const AssetDBSQLite &) = delete;
@@ -128,6 +134,7 @@ namespace vke_common
         DBSQLITE_ASSET_OP_FUNCS(AudioClipAsset, audioCache, dirtyAudio, deletedAudio, "audio_clip_assets")
 
     private:
+        void clearCaches();
         sqlite3 *db = nullptr;
         AssetHandle ids[ASSET_CNT_FLAG] = {};
 

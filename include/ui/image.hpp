@@ -19,9 +19,11 @@ namespace vke_ui
               preserveAspect(json.value("preserveAspect", false))
         {
             if (json.contains("color"))
-                for (int i = 0; i < 4; ++i) color[i] = json["color"][i].get<float>();
+                for (int i = 0; i < 4; ++i)
+                    color[i] = json["color"][i].get<float>();
             if (json.contains("uvRect"))
-                for (int i = 0; i < 4; ++i) uvRect[i] = json["uvRect"][i].get<float>();
+                for (int i = 0; i < 4; ++i)
+                    uvRect[i] = json["uvRect"][i].get<float>();
         }
 
         static vke_common::Result<void> ValidateUVRect(const glm::vec4 &value)
@@ -37,13 +39,15 @@ namespace vke_ui
         static vke_common::Result<void> ValidateJSON(const nlohmann::json &json)
         {
             using namespace vke_common::json_validation;
-            if (auto valid = Object(json).Unsigneds({"texture"}).Vectors({"color", "uvRect"}, 4)
-                    .Booleans({"preserveAspect"}).Result(); !valid) return valid;
+            if (auto valid = Object(json).Unsigneds({"texture"}).Vectors({"color", "uvRect"}, 4).Booleans({"preserveAspect"}).Result(); !valid)
+                return valid;
             if (json.contains("uvRect"))
             {
                 const auto &uv = json["uvRect"];
                 if (auto valid = ValidateUVRect({uv[0].get<float>(), uv[1].get<float>(),
-                                                uv[2].get<float>(), uv[3].get<float>()}); !valid) return valid;
+                                                 uv[2].get<float>(), uv[3].get<float>()});
+                    !valid)
+                    return valid;
             }
             return validateCommonJSON(json);
         }
@@ -53,8 +57,16 @@ namespace vke_ui
 
         vke_common::Result<void> Validate() const override
         {
-            if (auto valid = ValidateUVRect(uvRect); !valid) return valid;
+            if (auto valid = ValidateUVRect(uvRect); !valid)
+                return valid;
             return UINodeData::Validate();
+        }
+
+        void ConstructAssetLoadBatch(vke_common::LoadBatch &batch) const override
+        {
+            if (texture.Handle() != 0 && !texture.Get())
+                batch[vke_common::ASSET_TEXTURE].insert(texture.Handle());
+            UINodeData::ConstructAssetLoadBatch(batch);
         }
 
         vke_common::Result<void> ValidateAssets() const override
@@ -70,10 +82,18 @@ namespace vke_ui
             if (texture.Handle() != 0 && !texture.Get())
             {
                 auto loaded = vke_common::AssetManager::LoadTexture2D(texture.Handle());
-                if (!loaded) return std::unexpected("image: " + loaded.error());
+                if (!loaded)
+                    return std::unexpected("image: " + loaded.error());
                 texture.Resolve(std::move(*loaded));
             }
             return UINodeData::LoadAssets();
+        }
+
+        vke_common::Result<void> ResolveAssets(const vke_common::BatchResult &loaded) override
+        {
+            if (texture.Handle() != 0 && !texture.Get())
+                texture.Resolve(*loaded.textures.at(texture.Handle()));
+            return UINodeData::ResolveAssets(loaded);
         }
 
         nlohmann::json ToJSON() const override
@@ -122,13 +142,16 @@ namespace vke_ui
             if (handle != 0)
             {
                 auto result = AssetManager::LoadTexture2D(handle);
-                if (!result) return std::unexpected("image: " + result.error());
+                if (!result)
+                    return std::unexpected("image: " + result.error());
                 loaded = std::move(*result);
             }
-            if (quadIDs.empty()) return std::unexpected("image quad is not allocated");
+            if (quadIDs.empty())
+                return std::unexpected("image quad is not allocated");
             auto *renderer = vke_render::Renderer::GetLayered2DRenderer();
             auto registered = renderer->RegisterImageTexture(loaded);
-            if (!registered) return std::unexpected(registered.error());
+            if (!registered)
+                return std::unexpected(registered.error());
             auto quad = getQuad();
             if (quad.atlasInfo.x != UINT32_MAX)
                 renderer->UnregisterImageTexture(quad.atlasInfo.x);
@@ -141,15 +164,18 @@ namespace vke_ui
 
         virtual vke_common::Result<void> SetColor(const glm::vec4 &value)
         {
-            if (quadIDs.empty()) return std::unexpected("image quad is not allocated");
+            if (quadIDs.empty())
+                return std::unexpected("image quad is not allocated");
             setQuadColor(value);
             return {};
         }
 
         vke_common::Result<void> SetUVRect(const glm::vec4 &value)
         {
-            if (auto valid = UIImageData::ValidateUVRect(value); !valid) return valid;
-            if (quadIDs.empty()) return std::unexpected("image quad is not allocated");
+            if (auto valid = UIImageData::ValidateUVRect(value); !valid)
+                return valid;
+            if (quadIDs.empty())
+                return std::unexpected("image quad is not allocated");
             auto quad = getQuad();
             quad.uvRect = value;
             invalidateLayout();
@@ -185,7 +211,8 @@ namespace vke_ui
         glm::vec2 measureContent(std::optional<float> width) const override
         {
             const auto &asset = texture.Get();
-            if (!asset) return glm::vec2(0);
+            if (!asset)
+                return glm::vec2(0);
             const auto uv = GetUVRect();
             return glm::vec2(asset->width, asset->height) * glm::vec2(uv.z - uv.x, uv.w - uv.y);
         }
@@ -211,7 +238,8 @@ namespace vke_ui
 
         void onSizeChanged() override
         {
-            if (!quadIDs.empty()) updateGeometry(getQuad());
+            if (!quadIDs.empty())
+                updateGeometry(getQuad());
         }
 
         void updateGeometry(vke_render::QuadInstanceGPU quad)
@@ -221,9 +249,10 @@ namespace vke_ui
             {
                 const auto &asset = texture.Get();
                 const glm::vec2 pixels = glm::vec2(asset ? asset->width : 1, asset ? asset->height : 1) *
-                    glm::vec2(quad.uvRect.z - quad.uvRect.x, quad.uvRect.w - quad.uvRect.y);
+                                         glm::vec2(quad.uvRect.z - quad.uvRect.x, quad.uvRect.w - quad.uvRect.y);
                 size = pixels.x > 0 && pixels.y > 0
-                    ? pixels * glm::min(size.x / pixels.x, size.y / pixels.y) : glm::vec2(0);
+                           ? pixels * glm::min(size.x / pixels.x, size.y / pixels.y)
+                           : glm::vec2(0);
             }
             const auto offset = (resolvedSize - size) * 0.5f;
             quad.quadRect = {offset.x, offset.y, offset.x + size.x, offset.y + size.y};

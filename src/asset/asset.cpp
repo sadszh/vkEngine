@@ -1,4 +1,5 @@
 #include <asset/asset_manager.hpp>
+#include <scene.hpp>
 #include <vector>
 #include <fstream>
 #include <string>
@@ -17,9 +18,8 @@ namespace vke_common
         auto *manager = new AssetManager();
         manager->assetDB = std::move(db);
         auto result = manager->assetDB->Init();
-        if (result && FT_Init_FreeType(&manager->ftLibrary))
-            result = std::unexpected("Failed to initialize FreeType library");
-        if (result) result = manager->initBuiltinAssets();
+        if (result)
+            result = manager->initBuiltinAssets();
         if (!result)
         {
             delete manager;
@@ -36,21 +36,44 @@ namespace vke_common
 
     Result<void> AssetManager::initBuiltinAssets()
     {
-        if (auto result = builtinAssets->Init(); !result) return result;
+        if (auto result = builtinAssets->Init(); !result)
+            return result;
         MeshAsset plane(BUILTIN_MESH_PLANE_ID, "Plane", "");
         plane.val = std::make_shared<vke_render::Mesh>(BUILTIN_MESH_PLANE_ID,
                                                        std::span<const vke_render::Vertex>(planeVertices),
                                                        std::span<const uint32_t>(planeIndices));
-        builtinAssets->SetMeshAsset(plane);
+        plane.loadState = AssetLoadState::Loaded;
+        builtinAssets->SetMeshAsset(std::move(plane));
         return {};
     }
 
-#define AM_GET_IMPL(tp)                                  \
-    Result<tp *> AssetManager::Get##tp(AssetHandle id)   \
-    {                                                    \
-        if (id < CUSTOM_ASSET_ID_ST)                     \
-            return instance->builtinAssets->Get##tp(id); \
-        return instance->assetDB->Get##tp(id);           \
+#define AM_GET_IMPL(tp)                                                                              \
+    Result<tp *> AssetManager::get##tp(AssetHandle id)                                               \
+    {                                                                                                \
+        if (id < CUSTOM_ASSET_ID_ST)                                                                 \
+            return instance->builtinAssets->get##tp(id);                                             \
+        return instance->assetDB->get##tp(id);                                                       \
+    }                                                                                                \
+    Result<const tp *> AssetManager::Get##tp##ReadOnly(AssetHandle id)                               \
+    {                                                                                                \
+        auto found = get##tp(id);                                                                    \
+        if (!found)                                                                                  \
+            return std::unexpected(found.error());                                                   \
+        return *found;                                                                               \
+    }                                                                                                \
+    Result<tp *> AssetManager::Get##tp(AssetHandle id)                                               \
+    {                                                                                                \
+        auto found = get##tp(id);                                                                    \
+        if (!found)                                                                                  \
+            return std::unexpected(found.error());                                                   \
+        if (*found && (*found)->loadTask)                                                            \
+        {                                                                                            \
+            (void)waitAsyncLoad(**found);                                                            \
+            (*found)->loadTask.reset();                                                              \
+            (*found)->loadReferences = 0;                                                            \
+            (*found)->loadState = (*found)->val ? AssetLoadState::Loaded : AssetLoadState::Unloaded; \
+        }                                                                                            \
+        return found;                                                                                \
     }
 
     AM_GET_IMPL(TextureAsset)
@@ -66,11 +89,12 @@ namespace vke_common
 
 #undef AM_GET_IMPL
 
-#define AM_ITERATE_IMPL(tp)                                                                 \
-    Result<void> AssetManager::Iterate##tp(std::function<void(const tp &)> op)              \
-    {                                                                                       \
-        if (auto result = instance->builtinAssets->Iterate##tp(op); !result) return result; \
-        return instance->assetDB->Iterate##tp(op);                                          \
+#define AM_ITERATE_IMPL(tp)                                                    \
+    Result<void> AssetManager::Iterate##tp(std::function<void(const tp &)> op) \
+    {                                                                          \
+        if (auto result = instance->builtinAssets->Iterate##tp(op); !result)   \
+            return result;                                                     \
+        return instance->assetDB->Iterate##tp(op);                             \
     }
 
     AM_ITERATE_IMPL(TextureAsset)
