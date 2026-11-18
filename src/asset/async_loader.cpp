@@ -3,6 +3,13 @@
 
 namespace vke_common
 {
+    void AssetLoadTaskState::WaitForLoad() const
+    {
+        cpuComplete.wait(false, std::memory_order_acquire);
+        if (timelineValue != 0)
+            AssetManager::instance->uploadTimeline.Wait(timelineValue);
+    }
+
     Result<void> AssetManager::AsyncLoadTexture2D(AssetHandle handle)
     {
         auto found = getTextureAsset(handle);
@@ -11,8 +18,8 @@ namespace vke_common
         auto *asset = *found;
         if (!asset)
             return std::unexpected("Texture2D " + std::to_string(handle) + ": asset not found");
-        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path), handle]()
-                         { return prepareTexture2D(handle, *asset, path); });
+        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path), handle](AssetUploadContext &upload)
+                         { return loadTexture2D(handle, *asset, path, &upload); });
     }
 
     Result<std::shared_ptr<vke_render::Texture2D>> AssetManager::WaitAsyncLoadTexture2D(AssetHandle handle)
@@ -44,8 +51,8 @@ namespace vke_common
         auto *asset = *found;
         if (!asset)
             return std::unexpected("Mesh " + std::to_string(handle) + ": asset not found");
-        return asyncLoad(*asset, [path = resolveAssetPath(handle, asset->path), handle]()
-                         { return prepareMesh(handle, path); });
+        return asyncLoad(*asset, [path = resolveAssetPath(handle, asset->path), handle](AssetUploadContext &upload)
+                         { return loadMesh(handle, path, &upload); });
     }
 
     Result<std::shared_ptr<vke_render::Mesh>> AssetManager::WaitAsyncLoadMesh(AssetHandle handle)
@@ -77,8 +84,8 @@ namespace vke_common
         auto *asset = *found;
         if (!asset)
             return std::unexpected("VertFragShader " + std::to_string(handle) + ": asset not found");
-        return asyncLoad(*asset, [path = resolveAssetPath(handle, asset->path), fragmentPath = resolveAssetPath(handle, asset->fragPath)]()
-                         { return prepareVertFragShader(path, fragmentPath); });
+        return asyncLoad(*asset, [path = resolveAssetPath(handle, asset->path), fragmentPath = resolveAssetPath(handle, asset->fragPath)](AssetUploadContext &)
+                         { return loadVertFragShader(path, fragmentPath); });
     }
 
     Result<std::shared_ptr<vke_render::ShaderModuleSet>> AssetManager::WaitAsyncLoadVertFragShader(AssetHandle handle)
@@ -110,8 +117,8 @@ namespace vke_common
         auto *asset = *found;
         if (!asset)
             return std::unexpected("ComputeShader " + std::to_string(handle) + ": asset not found");
-        return asyncLoad(*asset, [path = resolveAssetPath(handle, asset->path)]()
-                         { return prepareComputeShader(path); });
+        return asyncLoad(*asset, [path = resolveAssetPath(handle, asset->path)](AssetUploadContext &)
+                         { return loadComputeShader(path); });
     }
 
     Result<std::shared_ptr<vke_render::ShaderModuleSet>> AssetManager::WaitAsyncLoadComputeShader(AssetHandle handle)
@@ -183,6 +190,35 @@ namespace vke_common
                 finishCancelled(getTextureAsset(texture));
             finishCancelled(getVFShaderAsset(asset.shader));
         }
+        if (asset.loadState == AssetLoadState::Loading)
+        {
+            auto material = std::make_shared<vke_render::Material>(asset.id);
+            std::string error;
+            for (auto handle : asset.textures)
+            {
+                auto texture = WaitAsyncLoadTexture2D(handle);
+                if (texture)
+                    material->textures.push_back(std::move(*texture));
+                else if (error.empty())
+                    error = texture.error();
+            }
+            auto shader = WaitAsyncLoadVertFragShader(asset.shader);
+            if (shader)
+                material->shader = std::move(*shader);
+            else if (error.empty())
+                error = shader.error();
+            if (!error.empty())
+                asset.loadTask->result = std::unexpected("material " + std::to_string(asset.id) + ": " + error);
+            else
+            {
+                material->renderMode = asset.renderMode;
+                material->blendMode = asset.blendMode;
+                material->textureBindingInfos = asset.textureBindingInfos;
+                material->pushConstantInfos = asset.pushConstantInfos;
+                material->pushConstantData = asset.pushConstantData;
+                asset.loadTask->result = std::move(material);
+            }
+        }
         return waitAsyncLoad<MaterialAsset>(asset);
     }
 
@@ -194,8 +230,8 @@ namespace vke_common
         auto *asset = *found;
         if (!asset)
             return std::unexpected("Skeleton " + std::to_string(handle) + ": asset not found");
-        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path)]()
-                         { return prepareSkeleton(*asset, path); });
+        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path)](AssetUploadContext &)
+                         { return loadSkeleton(*asset, path); });
     }
 
     Result<std::shared_ptr<Skeleton>> AssetManager::WaitAsyncLoadSkeleton(AssetHandle handle)
@@ -227,8 +263,8 @@ namespace vke_common
         auto *asset = *found;
         if (!asset)
             return std::unexpected("Animation " + std::to_string(handle) + ": asset not found");
-        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path)]()
-                         { return prepareAnimation(*asset, path); });
+        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path)](AssetUploadContext &)
+                         { return loadAnimation(*asset, path); });
     }
 
     Result<std::shared_ptr<Animation>> AssetManager::WaitAsyncLoadAnimation(AssetHandle handle)
@@ -260,8 +296,8 @@ namespace vke_common
         auto *asset = *found;
         if (!asset)
             return std::unexpected("Font " + std::to_string(handle) + ": asset not found");
-        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path)]()
-                         { return prepareFont(*asset, path); });
+        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path)](AssetUploadContext &upload)
+                         { return loadFont(*asset, path, &upload); });
     }
 
     Result<std::shared_ptr<Font>> AssetManager::WaitAsyncLoadFont(AssetHandle handle)
@@ -293,8 +329,8 @@ namespace vke_common
         auto *asset = *found;
         if (!asset)
             return std::unexpected("AudioClip " + std::to_string(handle) + ": asset not found");
-        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path)]()
-                         { return prepareAudioClip(*asset, path); });
+        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path)](AssetUploadContext &)
+                         { return loadAudioClip(*asset, path); });
     }
 
     Result<std::shared_ptr<vke_audio::AudioClip>> AssetManager::WaitAsyncLoadAudioClip(AssetHandle handle)
@@ -324,8 +360,7 @@ namespace vke_common
         {
             const auto count = std::max(1u, std::thread::hardware_concurrency());
             for (unsigned i = 0; i < count; ++i)
-                workers.emplace_back([this]
-                                     { runWorker(); });
+                workers.emplace_back(&AssetManager::runWorker, this);
         }
         {
             std::lock_guard lock(loadMutex);
@@ -335,27 +370,61 @@ namespace vke_common
         loadReady.notify_one();
     }
 
+    AssetManager::LoadJob AssetManager::takeLoadJob()
+    {
+        while (loadQueues[nextLoadQueue].empty())
+            nextLoadQueue = (nextLoadQueue + 1) % ASSET_CNT_FLAG;
+        auto &queue = loadQueues[nextLoadQueue];
+        LoadJob job = std::move(queue.front());
+        queue.pop_front();
+        --queuedLoads;
+        nextLoadQueue = (nextLoadQueue + 1) % ASSET_CNT_FLAG;
+        return job;
+    }
+
     void AssetManager::runWorker()
     {
+        AssetUploadContext upload(uploadTimeline);
         for (;;)
         {
             LoadJob job;
             {
                 std::unique_lock lock(loadMutex);
-                loadReady.wait(lock, [this]
-                               { return stopping || queuedLoads != 0; });
+                if (queuedLoads == 0 && !stopping)
+                {
+                    lock.unlock();
+                    upload.Drain();
+                    lock.lock();
+                    loadReady.wait(lock, [this]
+                                   { return stopping || queuedLoads != 0; });
+                }
                 if (queuedLoads == 0)
                     return;
-                // The number of resource types is fixed; rotate to avoid starving a queue.
-                while (loadQueues[nextLoadQueue].empty())
-                    nextLoadQueue = (nextLoadQueue + 1) % ASSET_CNT_FLAG;
-                auto &queue = loadQueues[nextLoadQueue];
-                job = std::move(queue.front());
-                queue.pop_front();
-                --queuedLoads;
-                nextLoadQueue = (nextLoadQueue + 1) % ASSET_CNT_FLAG;
+                job = takeLoadJob();
             }
-            job();
+            std::array<std::shared_ptr<AssetLoadTaskState>, MaxJobs> uploadTasks;
+            size_t uploadCount = 0;
+
+            for (size_t i = 0; i < MaxJobs; ++i)
+            {
+                const auto stagedBytes = upload.GetStagedBytes();
+                job.execute(upload);
+                if (upload.GetStagedBytes() != stagedBytes)
+                    uploadTasks[uploadCount++] = std::move(job.task);
+                else
+                    job.task->Complete();
+
+                if (i + 1 == MaxJobs || upload.GetStagedBytes() >= TargetUploadBytes)
+                    break;
+                std::lock_guard lock(loadMutex);
+                if (queuedLoads == 0)
+                    break;
+                job = takeLoadJob();
+            }
+
+            const auto value = upload.Submit();
+            for (size_t i = 0; i < uploadCount; ++i)
+                uploadTasks[i]->Complete(value);
         }
     }
 
@@ -412,33 +481,7 @@ namespace vke_common
             return;
         }
         auto task = std::make_shared<AssetLoadTask<vke_render::Material>>();
-        task->result = [&asset]() -> Result<std::unique_ptr<vke_render::Material>>
-        {
-            auto material = std::make_unique<vke_render::Material>(asset.id);
-            std::string error;
-            for (auto handle : asset.textures)
-            {
-                auto texture = WaitAsyncLoadTexture2D(handle);
-                if (texture)
-                    material->textures.push_back(std::move(*texture));
-                else if (error.empty())
-                    error = texture.error();
-            }
-            auto shader = WaitAsyncLoadVertFragShader(asset.shader);
-            if (shader)
-                material->shader = std::move(*shader);
-            else if (error.empty())
-                error = shader.error();
-            if (!error.empty())
-                return std::unexpected("material " + std::to_string(asset.id) + ": " + error);
-            material->renderMode = asset.renderMode;
-            material->blendMode = asset.blendMode;
-            material->textureBindingInfos = asset.textureBindingInfos;
-            material->pushConstantInfos = asset.pushConstantInfos;
-            material->pushConstantData = asset.pushConstantData;
-            return material;
-        };
-        task->complete.store(true, std::memory_order_release);
+        task->Complete();
         asset.loadTask = std::move(task);
         asset.loadState = AssetLoadState::Loading;
         asset.loadReferences = 1;

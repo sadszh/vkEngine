@@ -4,12 +4,14 @@
 
 namespace vke_common
 {
-    Result<AssetFinalizer<vke_render::Texture2D>> prepareTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::filesystem::path &fullPath);
-    Result<AssetFinalizer<vke_render::Mesh>> prepareMesh(const AssetHandle hdl, const std::filesystem::path &path);
-    Result<AssetFinalizer<vke_render::ShaderModuleSet>> prepareVertFragShader(const std::filesystem::path &vpth, const std::filesystem::path &fpth);
-    Result<AssetFinalizer<vke_render::ShaderModuleSet>> prepareComputeShader(const std::filesystem::path &pth);
-    Result<AssetFinalizer<Skeleton>> prepareSkeleton(const SkeletonAsset &asset, const std::filesystem::path &fullPath);
-    Result<AssetFinalizer<Animation>> prepareAnimation(const AnimationAsset &asset, const std::filesystem::path &fullPath);
-    Result<AssetFinalizer<Font>> prepareFont(const FontAsset &asset, const std::filesystem::path &fullPath);
-    Result<AssetFinalizer<vke_audio::AudioClip>> prepareAudioClip(const AudioClipAsset &asset, const std::filesystem::path &fullPath);
+    class AssetUploadContext;
+
+    Result<std::unique_ptr<vke_render::Texture2D>> loadTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::filesystem::path &fullPath, AssetUploadContext *upload = nullptr);
+    Result<std::unique_ptr<vke_render::Mesh>> loadMesh(const AssetHandle hdl, const std::filesystem::path &path, AssetUploadContext *upload = nullptr);
+    Result<std::unique_ptr<vke_render::ShaderModuleSet>> loadVertFragShader(const std::filesystem::path &vpth, const std::filesystem::path &fpth);
+    Result<std::unique_ptr<vke_render::ShaderModuleSet>> loadComputeShader(const std::filesystem::path &pth);
+    Result<std::unique_ptr<Skeleton>> loadSkeleton(const SkeletonAsset &asset, const std::filesystem::path &fullPath);
+    Result<std::unique_ptr<Animation>> loadAnimation(const AnimationAsset &asset, const std::filesystem::path &fullPath);
+    Result<std::unique_ptr<Font>> loadFont(const FontAsset &asset, const std::filesystem::path &fullPath, AssetUploadContext *upload = nullptr);
+    Result<std::unique_ptr<vke_audio::AudioClip>> loadAudioClip(const AudioClipAsset &asset, const std::filesystem::path &fullPath);
 }

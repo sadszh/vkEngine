@@ -174,6 +174,7 @@ commonsrc = (
         "./src/render/frame_graph.cpp",
         "./src/render/profile.cpp",
         "./src/render/queue.cpp",
+        "./src/asset/asset_upload.cpp",
         "./src/component.cpp",
         "./src/scene.cpp",
         "./src/scene_data.cpp",

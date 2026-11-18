@@ -107,6 +107,9 @@ Or launch the editor with your project's config:
   - [x] directional light CSM with PCF
   - [x] spot light shadows
   - [ ] point light shadows
+  - [ ] anti-aliasing
+  - [ ] baked irradiance probes
+  - [ ] baked reflection probes
 - **UI**
   - [x] SDF Font
   - [x] UI transform: anchor, pivot, size, scale
@@ -142,6 +145,19 @@ Or launch the editor with your project's config:
   - [x] 3D spatial audio: attenuation, rolloff, doppler
   - [ ] audio DSP filters
   - [ ] audio bus / effect chain
+- **Asset Management**:
+  - [x] JSON / SQLite asset databases
+  - [x] asset handles and shared resource caching
+  - [x] material and prefab dependency resolution
+  - [x] asynchronous batch loading with GPU uploads and cancellation
+  - [ ] texture preprocessing: GPU compression and offline mipmaps
+  - [ ] asset streaming
+- **Path Finding**:
+  - [ ] navmesh generation and serialization
+  - [ ] nearest navigable point and path queries
+  - [ ] agent path following
+- **Particles**
+  - [ ] particle simulation & rendering
 - **Editor**:
   - [x] editor layout
   - [x] asset database
@@ -149,3 +165,4 @@ Or launch the editor with your project's config:
   - [x] game state snapshot
   - [x] gizmo
   - [ ] assets preivew
+  - [ ] project export

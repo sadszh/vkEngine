@@ -220,16 +220,6 @@ namespace vke_common
             return {};
         }
 
-        void UploadStaticAtlas()
-        {
-            atlasTexture = std::make_shared<vke_render::Texture2D>(
-                handle, staticAtlasPixels.data(), ATLAS_SIZE, ATLAS_SIZE,
-                VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false, false);
-        }
-
         Glyph *GetOrCreateGlyph(uint32_t codepoint)
         {
             auto staticIt = glyphs.find(codepoint);
@@ -281,6 +271,7 @@ namespace vke_common
             return &it->second;
         }
 
+        const std::vector<uint8_t> &GetStaticAtlasPixels() const { return staticAtlasPixels; }
         const std::vector<uint8_t> &GetDynamicAtlasPixels() const { return dynamicAtlasPixels; }
         uint32_t GetDynamicAtlasUpdateCnt() const { return dynamicAtlasUpdateCnt; }
         void ConsumeDynamicAtlasUpdate()

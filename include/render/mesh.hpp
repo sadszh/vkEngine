@@ -79,18 +79,12 @@ namespace vke_render
             bounds = calculateBounds(infos, vertices.data(), indices.data());
         }
 
-        Mesh(vke_common::AssetHandle hdl, std::span<const char> vertices, std::span<const char> indices,
+        Mesh(vke_common::AssetHandle hdl, std::unique_ptr<DeviceBuffer> vertices, std::unique_ptr<DeviceBuffer> indices,
              std::vector<MeshInfo> &&infos, const AABB &bounds,
              std::vector<ozz::math::Float4x4> &&invBindMatrices, std::vector<int> &&joints)
-            : handle(hdl),
-              vertexBuffer(std::make_unique<DeviceBuffer>(vertices.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)),
-              indexBuffer(std::make_unique<DeviceBuffer>(indices.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT)),
+            : handle(hdl), vertexBuffer(std::move(vertices)), indexBuffer(std::move(indices)),
               invBindMatrices(std::move(invBindMatrices)), joints(std::move(joints)),
-              infos(std::move(infos)), bounds(bounds)
-        {
-            vertexBuffer->ToBuffer(0, vertices.data(), vertices.size());
-            indexBuffer->ToBuffer(0, indices.data(), indices.size());
-        }
+              infos(std::move(infos)), bounds(bounds) {}
 
         ~Mesh() {}
 

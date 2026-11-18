@@ -2,11 +2,13 @@
 #define ASSET_MANAGER_H
 
 #include <asset/asset_db_json.hpp>
+#include <asset/asset_upload.hpp>
 #include <filesystem>
 #include <common.hpp>
 #include <type_traits>
 #include <unordered_set>
 #include <array>
+#include <atomic>
 #include <deque>
 #include <mutex>
 #include <condition_variable>
@@ -27,6 +29,9 @@ namespace vke_common
     class AssetManager
     {
     private:
+        static constexpr size_t MaxJobs = 8;
+        static constexpr size_t TargetUploadBytes = 16 * 1024 * 1024;
+
         static AssetManager *instance;
         AssetManager()
             : builtinAssets(std::make_unique<AssetDBJSON>(Paths::Engine(BuiltinAssetLUTPath))) {};
@@ -167,7 +172,13 @@ namespace vke_common
             return found;
         }
 
-        using LoadJob = std::move_only_function<void()>;
+        struct LoadJob
+        {
+            std::shared_ptr<AssetLoadTaskState> task;
+            std::move_only_function<void(AssetUploadContext &)> execute;
+        };
+        friend struct AssetLoadTaskState;
+        AssetUploadTimeline uploadTimeline;
         std::array<std::deque<LoadJob>, ASSET_CNT_FLAG> loadQueues;
         std::mutex loadMutex;
         std::condition_variable loadReady;
@@ -177,6 +188,7 @@ namespace vke_common
         bool stopping = false;
 
         void enqueueLoad(AssetType type, LoadJob job);
+        LoadJob takeLoadJob();
         void runWorker();
         void stopWorkers();
         static Result<std::vector<MaterialAsset *>> expandLoadBatch(LoadBatch &batch);
@@ -186,8 +198,8 @@ namespace vke_common
         template <typename A, typename Load>
         static Result<decltype(A::val)> loadFromCacheOrUpdate(A &asset, Load &&load);
 
-        template <typename A, typename Prepare>
-        static Result<void> asyncLoad(A &asset, Prepare prepare)
+        template <typename A, typename Load>
+        static Result<void> asyncLoad(A &asset, Load load)
         {
             if (asset.val)
                 return {};
@@ -207,11 +219,8 @@ namespace vke_common
             asset.loadTask = task;
             asset.loadState = AssetLoadState::Loading;
             asset.loadReferences = 1;
-            instance->enqueueLoad(A::type, [task, prepare = std::move(prepare)]() mutable
-                                  {
-                task->result = prepare();
-                task->complete.store(true, std::memory_order_release);
-                task->complete.notify_all(); });
+            instance->enqueueLoad(A::type, {task, [task = task.get(), load = std::move(load)](AssetUploadContext &upload) mutable
+                                            { task->result = load(upload); }});
             return {};
         }
 
@@ -224,29 +233,24 @@ namespace vke_common
                 return asset.val;
             if (!asset.loadTask)
                 return std::unexpected("asset has no pending load");
-            asset.loadTask->Wait();
+            asset.loadTask->WaitForLoad();
             if (asset.loadState == AssetLoadState::Cancelled)
             {
                 asset.loadTask.reset();
                 asset.loadState = AssetLoadState::Unloaded;
                 return std::unexpected("asset load was cancelled");
             }
-            auto &prepared = asset.loadTask->result;
+            auto &loaded = asset.loadTask->result;
             asset.loadReferences = 0;
-            if (prepared)
+            if (loaded)
             {
-                auto loaded = (*prepared)();
-                if (loaded)
-                {
-                    asset.val = std::move(*loaded);
-                    asset.loadTask.reset();
-                    asset.loadState = AssetLoadState::Loaded;
-                    return asset.val;
-                }
-                prepared = std::unexpected(loaded.error());
+                asset.val = std::move(*loaded);
+                asset.loadTask.reset();
+                asset.loadState = AssetLoadState::Loaded;
+                return asset.val;
             }
             asset.loadState = AssetLoadState::Failed;
-            return std::unexpected(prepared.error());
+            return std::unexpected(loaded.error());
         }
 
         template <typename A>
@@ -256,7 +260,7 @@ namespace vke_common
                 asset.loadState = AssetLoadState::Cancelled;
             if (wait && asset.loadState == AssetLoadState::Cancelled)
             {
-                asset.loadTask->Wait();
+                asset.loadTask->WaitForLoad();
                 asset.loadTask.reset();
                 asset.loadState = AssetLoadState::Unloaded;
             }

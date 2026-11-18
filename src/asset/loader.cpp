@@ -128,7 +128,37 @@ namespace vke_common
         return asset.val;
     }
 
-    Result<AssetFinalizer<vke_render::Texture2D>> prepareTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::filesystem::path &fullPath)
+    static std::unique_ptr<vke_render::Texture2D> createTexture2D(
+        AssetHandle handle, const void *pixels, int width, int height,
+        VkFormat format, VkImageUsageFlags usage, VkImageLayout layout,
+        VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode,
+        bool anisotropyEnable, bool generateMipMap, AssetUploadContext *upload)
+    {
+        using namespace vke_render;
+        if (!upload)
+            return std::make_unique<Texture2D>(handle, pixels, width, height, format, usage, layout,
+                                               minFilter, magFilter, addressMode, anisotropyEnable, generateMipMap);
+
+        const uint32_t mipLevels = generateMipMap ? static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1 : 1;
+        VkImage image;
+        VmaAllocation allocation;
+        VulkanResourceManager::CreateImage(width, height, format, VK_IMAGE_TILING_OPTIMAL,
+                                           VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | usage,
+                                           mipLevels, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &image, &allocation, nullptr);
+        const size_t size = static_cast<size_t>(width) * height * VulkanResourceManager::GetTextureBytesPerPixel(format);
+        const auto commands = upload->UploadImage(image, pixels, size, width, height, mipLevels);
+        if (generateMipMap)
+            VulkanResourceManager::GenerateMipmaps2D(commands, image, width, height, mipLevels);
+        else
+            VulkanResourceManager::MakeLayoutTransition(commands, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                                        image, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels,
+                                                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        return std::make_unique<Texture2D>(handle, image, allocation, width, height, mipLevels, format,
+                                           minFilter, magFilter, addressMode, anisotropyEnable);
+    }
+
+    Result<std::unique_ptr<vke_render::Texture2D>> loadTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::filesystem::path &fullPath, AssetUploadContext *upload)
     {
         const std::string context = "texture " + std::to_string(hdl) + " (" + PathToUTF8(fullPath) + "): ";
         if (IsSVGPath(asset.path))
@@ -138,12 +168,9 @@ namespace vke_common
             auto image = LoadSVG(fullPath, asset.rasterWidth, asset.rasterHeight);
             if (!image)
                 return std::unexpected(context + image.error());
-            return [hdl, &asset, image = std::move(*image)]() mutable -> Result<std::unique_ptr<vke_render::Texture2D>>
-            {
-                return std::make_unique<vke_render::Texture2D>(hdl, image.pixels.data(), image.width, image.height,
-                                                               asset.format, asset.usage, asset.layout, asset.minFilter, asset.magFilter, asset.addressMode,
-                                                               asset.anisotropyEnable, asset.generateMipMap);
-            };
+            return createTexture2D(hdl, image->pixels.data(), image->width, image->height,
+                                   asset.format, asset.usage, asset.layout, asset.minFilter, asset.magFilter, asset.addressMode,
+                                   asset.anisotropyEnable, asset.generateMipMap, upload);
         }
         int texWidth, texHeight, texChannels;
         std::unique_ptr<FILE, decltype(&fclose)> input(_wfopen(fullPath.c_str(), L"rb"), fclose);
@@ -160,20 +187,9 @@ namespace vke_common
             const char *reason = stbi_failure_reason();
             return std::unexpected(context + "image decode failed: " + (reason ? reason : "unknown image error"));
         }
-        return [hdl, &asset, pixels = std::move(pixels), texWidth, texHeight]() -> Result<std::unique_ptr<vke_render::Texture2D>>
-        {
-            return std::make_unique<vke_render::Texture2D>(hdl, pixels.get(), texWidth, texHeight,
-                                                           asset.format, asset.usage, asset.layout, asset.minFilter, asset.magFilter, asset.addressMode,
-                                                           asset.anisotropyEnable, asset.generateMipMap);
-        };
-    }
-
-    static Result<std::unique_ptr<vke_render::Texture2D>> loadTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::filesystem::path &fullPath)
-    {
-        auto prepared = prepareTexture2D(hdl, asset, fullPath);
-        if (!prepared)
-            return std::unexpected(prepared.error());
-        return (*prepared)();
+        return createTexture2D(hdl, pixels.get(), texWidth, texHeight,
+                               asset.format, asset.usage, asset.layout, asset.minFilter, asset.magFilter, asset.addressMode,
+                               asset.anisotropyEnable, asset.generateMipMap, upload);
     }
 
     Result<std::unique_ptr<vke_render::Texture2D>> AssetManager::LoadTexture2DUnique(const AssetHandle hdl)
@@ -199,7 +215,7 @@ namespace vke_common
                                      { return loadTexture2D(hdl, *asset, resolveAssetPath(hdl, asset->path)); });
     }
 
-    Result<AssetFinalizer<vke_render::Mesh>> prepareMesh(const AssetHandle hdl, const std::filesystem::path &path)
+    Result<std::unique_ptr<vke_render::Mesh>> loadMesh(const AssetHandle hdl, const std::filesystem::path &path, AssetUploadContext *upload)
     {
         const std::string context = "mesh " + std::to_string(hdl) + " (" + PathToUTF8(path) + "): ";
         std::vector<char> fileData;
@@ -299,21 +315,20 @@ namespace vke_common
                 return std::unexpected(context + "unexpected trailing mesh data");
         }
 
-        return [hdl, fileData = std::move(fileData), vertices, indices, infos = std::move(infos), bounds,
-                invBindMatrices = std::move(invBindMatrices), joints = std::move(joints)]() mutable
-                   -> Result<std::unique_ptr<vke_render::Mesh>>
+        auto vertexBuffer = std::make_unique<vke_render::DeviceBuffer>(vertices.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        auto indexBuffer = std::make_unique<vke_render::DeviceBuffer>(indices.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        if (upload)
         {
-            return std::make_unique<vke_render::Mesh>(hdl, vertices, indices, std::move(infos), bounds,
-                                                      std::move(invBindMatrices), std::move(joints));
-        };
-    }
-
-    static Result<std::unique_ptr<vke_render::Mesh>> loadMesh(const AssetHandle hdl, const std::filesystem::path &path)
-    {
-        auto prepared = prepareMesh(hdl, path);
-        if (!prepared)
-            return std::unexpected(prepared.error());
-        return (*prepared)();
+            upload->UploadBuffer(vertexBuffer->buffer, 0, vertices.data(), vertices.size());
+            upload->UploadBuffer(indexBuffer->buffer, 0, indices.data(), indices.size());
+        }
+        else
+        {
+            vertexBuffer->ToBuffer(0, vertices.data(), vertices.size());
+            indexBuffer->ToBuffer(0, indices.data(), indices.size());
+        }
+        return std::make_unique<vke_render::Mesh>(hdl, std::move(vertexBuffer), std::move(indexBuffer), std::move(infos), bounds,
+                                                  std::move(invBindMatrices), std::move(joints));
     }
 
     Result<std::unique_ptr<vke_render::Mesh>> AssetManager::LoadMeshUnique(const AssetHandle hdl)
@@ -341,7 +356,7 @@ namespace vke_common
                                      { return loadMesh(hdl, resolveAssetPath(hdl, asset->path)); });
     }
 
-    Result<AssetFinalizer<vke_render::ShaderModuleSet>> prepareVertFragShader(const std::filesystem::path &vpth, const std::filesystem::path &fpth)
+    Result<std::unique_ptr<vke_render::ShaderModuleSet>> loadVertFragShader(const std::filesystem::path &vpth, const std::filesystem::path &fpth)
     {
         std::vector<char> vcode, fcode;
         if (auto read = ReadFile(vpth, vcode); !read)
@@ -351,18 +366,7 @@ namespace vke_common
         auto loaded = vke_render::ShaderModuleSet::Create({{VK_SHADER_STAGE_VERTEX_BIT, vcode}, {VK_SHADER_STAGE_FRAGMENT_BIT, fcode}});
         if (!loaded)
             return std::unexpected(PathToUTF8(vpth) + " / " + PathToUTF8(fpth) + ": " + loaded.error());
-        return [set = std::move(*loaded)]() mutable -> Result<std::unique_ptr<vke_render::ShaderModuleSet>>
-        {
-            return std::move(set);
-        };
-    }
-
-    static Result<std::unique_ptr<vke_render::ShaderModuleSet>> loadVertFragShader(const std::filesystem::path &vpth, const std::filesystem::path &fpth)
-    {
-        auto prepared = prepareVertFragShader(vpth, fpth);
-        if (!prepared)
-            return std::unexpected(prepared.error());
-        return (*prepared)();
+        return loaded;
     }
 
     Result<std::unique_ptr<vke_render::ShaderModuleSet>> AssetManager::LoadVertFragShaderUnique(const AssetHandle hdl)
@@ -396,7 +400,7 @@ namespace vke_common
             return loaded; });
     }
 
-    Result<AssetFinalizer<vke_render::ShaderModuleSet>> prepareComputeShader(const std::filesystem::path &pth)
+    Result<std::unique_ptr<vke_render::ShaderModuleSet>> loadComputeShader(const std::filesystem::path &pth)
     {
         std::vector<char> code;
         if (auto read = ReadFile(pth, code); !read)
@@ -404,18 +408,7 @@ namespace vke_common
         auto loaded = vke_render::ShaderModuleSet::Create({{VK_SHADER_STAGE_COMPUTE_BIT, code}});
         if (!loaded)
             return std::unexpected(PathToUTF8(pth) + ": " + loaded.error());
-        return [set = std::move(*loaded)]() mutable -> Result<std::unique_ptr<vke_render::ShaderModuleSet>>
-        {
-            return std::move(set);
-        };
-    }
-
-    static Result<std::unique_ptr<vke_render::ShaderModuleSet>> loadComputeShader(const std::filesystem::path &pth)
-    {
-        auto prepared = prepareComputeShader(pth);
-        if (!prepared)
-            return std::unexpected(prepared.error());
-        return (*prepared)();
+        return loaded;
     }
 
     Result<std::unique_ptr<vke_render::ShaderModuleSet>> AssetManager::LoadComputeShaderUnique(const AssetHandle hdl)
@@ -495,7 +488,7 @@ namespace vke_common
                                      { return loadMaterial(*asset); });
     }
 
-    Result<AssetFinalizer<Skeleton>> prepareSkeleton(const SkeletonAsset &asset, const std::filesystem::path &fullPath)
+    Result<std::unique_ptr<Skeleton>> loadSkeleton(const SkeletonAsset &asset, const std::filesystem::path &fullPath)
     {
         const std::string context = "skeleton " + std::to_string(asset.id) + " (" + PathToUTF8(fullPath) + "): ";
         ozz::io::File file(_wfopen(fullPath.c_str(), L"rb"));
@@ -506,16 +499,7 @@ namespace vke_common
             return std::unexpected(context + "invalid skeleton archive type tag");
         auto ret = std::make_unique<Skeleton>(asset.id);
         archive >> ret->skeleton;
-        return [ret = std::move(ret)]() mutable -> Result<std::unique_ptr<Skeleton>>
-        { return std::move(ret); };
-    }
-
-    static Result<std::unique_ptr<Skeleton>> loadSkeleton(const SkeletonAsset &asset, const std::filesystem::path &fullPath)
-    {
-        auto prepared = prepareSkeleton(asset, fullPath);
-        if (!prepared)
-            return std::unexpected(prepared.error());
-        return (*prepared)();
+        return ret;
     }
 
     Result<std::unique_ptr<Skeleton>> AssetManager::LoadSkeletonUnique(const AssetHandle hdl)
@@ -543,7 +527,7 @@ namespace vke_common
                                      { return loadSkeleton(*asset, resolveAssetPath(hdl, asset->path)); });
     }
 
-    Result<AssetFinalizer<Animation>> prepareAnimation(const AnimationAsset &asset, const std::filesystem::path &fullPath)
+    Result<std::unique_ptr<Animation>> loadAnimation(const AnimationAsset &asset, const std::filesystem::path &fullPath)
     {
         const std::string context = "animation " + std::to_string(asset.id) + " (" + PathToUTF8(fullPath) + "): ";
         ozz::io::File file(_wfopen(fullPath.c_str(), L"rb"));
@@ -590,16 +574,7 @@ namespace vke_common
             ret->rootMotionCyclePosition = glm::vec3(endPosition.x, endPosition.y, endPosition.z) -
                                            ret->rootMotionCycleRotation * glm::vec3(startPosition.x, startPosition.y, startPosition.z);
         }
-        return [ret = std::move(ret)]() mutable -> Result<std::unique_ptr<Animation>>
-        { return std::move(ret); };
-    }
-
-    static Result<std::unique_ptr<Animation>> loadAnimation(const AnimationAsset &asset, const std::filesystem::path &fullPath)
-    {
-        auto prepared = prepareAnimation(asset, fullPath);
-        if (!prepared)
-            return std::unexpected(prepared.error());
-        return (*prepared)();
+        return ret;
     }
 
     Result<std::unique_ptr<Animation>> AssetManager::LoadAnimationUnique(const AssetHandle hdl)
@@ -627,7 +602,7 @@ namespace vke_common
                                      { return loadAnimation(*asset, resolveAssetPath(hdl, asset->path)); });
     }
 
-    Result<AssetFinalizer<Font>> prepareFont(const FontAsset &asset, const std::filesystem::path &fullPath)
+    Result<std::unique_ptr<Font>> loadFont(const FontAsset &asset, const std::filesystem::path &fullPath, AssetUploadContext *upload)
     {
         const std::string context = "font " + std::to_string(asset.id) + " (" + PathToUTF8(fullPath) + "): ";
         if (asset.pixelSize == 0)
@@ -664,16 +639,10 @@ namespace vke_common
         ret->lineHeight = static_cast<int>(ret->face->size->metrics.height >> 6);
         if (auto built = ret->PrepareStaticAtlas(asset.characters, asset.characterCount, asset.firstCodepoint); !built)
             return std::unexpected(context + built.error());
-        return [ret = std::move(ret)]() mutable -> Result<std::unique_ptr<Font>>
-        { ret->UploadStaticAtlas(); return std::move(ret); };
-    }
-
-    static Result<std::unique_ptr<Font>> loadFont(const FontAsset &asset, const std::filesystem::path &fullPath)
-    {
-        auto prepared = prepareFont(asset, fullPath);
-        if (!prepared)
-            return std::unexpected(prepared.error());
-        return (*prepared)();
+        ret->atlasTexture = createTexture2D(asset.id, ret->GetStaticAtlasPixels().data(), Font::ATLAS_SIZE, Font::ATLAS_SIZE,
+                                            VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                            VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false, false, upload);
+        return ret;
     }
 
     Result<std::unique_ptr<Font>> AssetManager::LoadFontUnique(const AssetHandle hdl)
@@ -701,7 +670,7 @@ namespace vke_common
                                      { return loadFont(*asset, resolveAssetPath(hdl, asset->path)); });
     }
 
-    Result<AssetFinalizer<vke_audio::AudioClip>> prepareAudioClip(const AudioClipAsset &asset, const std::filesystem::path &fullPath)
+    Result<std::unique_ptr<vke_audio::AudioClip>> loadAudioClip(const AudioClipAsset &asset, const std::filesystem::path &fullPath)
     {
         const std::string context = "audio clip " + std::to_string(asset.id) + " (" + PathToUTF8(fullPath) + "): ";
         std::vector<char> encoded;
@@ -720,16 +689,7 @@ namespace vke_common
         clip->frameCount = frameCount;
         clip->channels = config.channels;
         clip->sampleRate = config.sampleRate;
-        return [clip = std::move(clip)]() mutable -> Result<std::unique_ptr<vke_audio::AudioClip>>
-        { return std::move(clip); };
-    }
-
-    static Result<std::unique_ptr<vke_audio::AudioClip>> loadAudioClip(const AudioClipAsset &asset, const std::filesystem::path &fullPath)
-    {
-        auto prepared = prepareAudioClip(asset, fullPath);
-        if (!prepared)
-            return std::unexpected(prepared.error());
-        return (*prepared)();
+        return clip;
     }
 
     Result<std::unique_ptr<vke_audio::AudioClip>> AssetManager::LoadAudioClipUnique(const AssetHandle hdl)

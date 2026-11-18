@@ -160,3 +160,22 @@ glyph修好了，现在只有loadtoengine的时候才会实际计算glyph数据�
   - 把loadbatch中的加载需求，逐个按类似单个AsyncLoad的方式把还没完成加载的加入任务队列
   - 等待时会等待所有，并把结果插入到一个`std::unordered_map<AssetType,std::unordered_set<Result<>>>`的BatchResult里
 - 场景调用AsyncBatchLoad和WaitAsyncBatchLoad进行实际加载，然后用之前的LoadAssets完成实际的资源赋值
+
+## 9e0a16b525b173c96ddf5bc5f0800260fc5d024b synchronize queue access & shard sampler cache
+
+这一轮修改要把CPU和GPU间的传输和布局转换也交给单独的线程做
+
+- 给Queue添加mutex
+- 资源管理器加一个timeline semaphore，以及一个全局的原子变量，表示当前提交的最大值，每次提交command buffer就会原子的+1
+- 每个worker thread有以下状态
+  - 一个command buffer pool 和几个command buffer
+  - 大小与 command buffer 数量对应的 int64 数组，每个位置表示该command buffer已提交的最大 timeline semaphore 值，用于判断和等待该command buffer对应的任务是否结束
+- 每个task也对应一个std::optional<int64_t> 的 timeline semaphore 值，用于等待传输任务结束
+- 每种asset提供根据元信息推算传输数据量的功能
+- 调度器按传输数据量的budget划分batch，一个batch包含总传输量大于等于budget，并且小于给定的最大task数量的最小数量的task，每次能够构成一个batch的时候就通知一个worker线程获取这个batch并执行，这个batch的task在完成CPU解码后录制GPU传输和布局转换指令并进行提交，里面涉及传输和布局转换的所有task共享同一个semaphore进度值
+- worker在处理这个batch的时候，分两种情况
+  - 不涉及传输的，在工作执行结束之后立刻触发原子变量
+  - 涉及传输和布局转换的，只有完成所有CPU工作，以及传输指令录制并提交时，才会更新所有task的timeline semaphore值并触发原子变量
+- 等待一个task的时候先等待CPU的原子变量，然后等待timeline semaphore，二者都通过后才算是task完成
+
+这一轮折腾了好几天终于搞定了，在6.2 Astra发布之前的一两天 6 Astra突然降智了，写出来巨复杂的lambda表达式嵌套，改了两天都没改利索，今天直接用6.2改好了，这回的逻辑相对清晰了不少。

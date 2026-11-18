@@ -1,9 +1,9 @@
 #ifndef ASSET_H
 #define ASSET_H
 #include <common.hpp>
-#include <atomic>
 #include <functional>
 #include <memory>
+#include <atomic>
 #include <utility>
 #include <render/material.hpp>
 #include <render/mesh.hpp>
@@ -110,20 +110,26 @@ namespace vke_common
         Cancelled
     };
 
-    template <typename T>
-    using AssetFinalizer = std::move_only_function<Result<std::unique_ptr<T>>()>;
-
-    template <typename T>
-    struct AssetLoadTask
+    struct AssetLoadTaskState
     {
-        std::atomic<bool> complete{false};
-        Result<AssetFinalizer<T>> result;
-
-        void Wait() const
+        void Complete(uint64_t value = 0)
         {
-            while (!complete.load(std::memory_order_acquire))
-                complete.wait(false, std::memory_order_acquire);
+            timelineValue = value;
+            cpuComplete.store(true, std::memory_order_release);
+            cpuComplete.notify_all();
         }
+
+        void WaitForLoad() const;
+
+    private:
+        std::atomic<bool> cpuComplete{false};
+        uint64_t timelineValue = 0;
+    };
+
+    template <typename T>
+    struct AssetLoadTask : AssetLoadTaskState
+    {
+        Result<std::shared_ptr<T>> result;
     };
 
     template <AssetType TID, typename T, typename VT>
@@ -142,7 +148,7 @@ namespace vke_common
         void WaitForLoad() const
         {
             if (loadTask)
-                loadTask->Wait();
+                loadTask->WaitForLoad();
         }
 
         ~Asset() = default;

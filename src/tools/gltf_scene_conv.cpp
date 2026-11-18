@@ -22,6 +22,7 @@
 #include <set>
 #include <span>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -74,12 +75,14 @@ namespace
         fs::path outputDir;
         std::string baseName;
         bool meshOnly = false;
+        bool bakeSkins = false;
+        std::vector<glm::mat4> worldTransforms;
         json assets = json::array();
         AssetIds ids;
         std::map<std::pair<int, bool>, uint64_t> textureAssets;
         std::map<int, uint64_t> materialAssets;
         std::map<uint32_t, uint64_t> shaderAssets;
-        std::map<std::pair<int, int>, PrimitiveAsset> primitiveAssets;
+        std::map<std::tuple<int, int, int>, PrimitiveAsset> primitiveAssets;
         fs::path commonVertexSourcePath;
         fs::path commonVertexBinaryPath;
         bool commonVertexShaderGenerated = false;
@@ -90,7 +93,10 @@ namespace
         }
 
         bool Run();
-        bool ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsset &out);
+        bool ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsset &out, int skinNode = -1);
+        bool bakeSkin(int nodeIndex, const tinygltf::Primitive &primitive,
+                      std::vector<glm::vec3> &positions, std::vector<glm::vec3> &normals,
+                      std::vector<glm::vec4> &tangents);
         bool ExportMaterial(int materialIndex, uint64_t &out);
         bool ExportTexture(int textureIndex, bool srgb, uint64_t &out);
         bool ExportShader(int materialIndex, uint64_t &out);
@@ -649,9 +655,106 @@ layout(location = 3) out float outLinearDepth;
     }
 }
 
-bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsset &out)
+bool Converter::bakeSkin(int nodeIndex, const tinygltf::Primitive &primitive,
+                         std::vector<glm::vec3> &positions, std::vector<glm::vec3> &normals,
+                         std::vector<glm::vec4> &tangents)
 {
-    const auto key = std::make_pair(meshIndex, primitiveIndex);
+    const auto &node = model.nodes[nodeIndex];
+    if (node.skin >= static_cast<int>(model.skins.size()))
+        return false;
+    const auto &skin = model.skins[node.skin];
+    std::vector<glm::vec4> joints, weights;
+    if (!ReadAttribute(model, primitive, "JOINTS_0", 4, joints) ||
+        !ReadAttribute(model, primitive, "WEIGHTS_0", 4, weights) ||
+        joints.size() != positions.size() || weights.size() != positions.size() ||
+        primitive.attributes.contains("JOINTS_1"))
+    {
+        LogError("static skin baking requires four influences per vertex");
+        return false;
+    }
+    std::vector<double> inverseBinds;
+    int components = 0;
+    if (skin.inverseBindMatrices >= 0 &&
+        (!AccessorData(model, skin.inverseBindMatrices, inverseBinds, components) ||
+         components != 16 || inverseBinds.size() != skin.joints.size() * 16))
+        return false;
+    const glm::mat4 &world = worldTransforms[nodeIndex];
+    const float worldDeterminant = glm::determinant(world);
+    if (!std::isfinite(worldDeterminant) || worldDeterminant == 0.0f)
+    {
+        LogError("skinned mesh node has a singular or non-finite world transform");
+        return false;
+    }
+    const glm::mat4 inverseWorld = glm::inverse(world);
+    std::vector<glm::mat4> matrices;
+    matrices.reserve(skin.joints.size());
+    for (size_t i = 0; i < skin.joints.size(); ++i)
+    {
+        const int joint = skin.joints[i];
+        if (joint < 0 || joint >= static_cast<int>(worldTransforms.size()))
+            return false;
+        glm::mat4 inverseBind(1.0f);
+        if (!inverseBinds.empty())
+            for (int c = 0; c < 4; ++c)
+                for (int r = 0; r < 4; ++r)
+                    inverseBind[c][r] = static_cast<float>(inverseBinds[i * 16 + c * 4 + r]);
+        matrices.push_back(inverseWorld * worldTransforms[joint] * inverseBind);
+    }
+    const bool hasNormals = normals.size() == positions.size();
+    const bool hasTangents = tangents.size() == positions.size();
+    for (size_t i = 0; i < positions.size(); ++i)
+    {
+        glm::mat4 matrix(0.0f);
+        float totalWeight = 0.0f;
+        for (int influence = 0; influence < 4; ++influence)
+        {
+            const float weight = weights[i][influence];
+            const float joint = joints[i][influence];
+            if (!std::isfinite(weight) || weight < 0.0f || !std::isfinite(joint) ||
+                joint < 0.0f || joint >= matrices.size() || std::floor(joint) != joint)
+                return false;
+            matrix += weight * matrices[static_cast<size_t>(joint)];
+            totalWeight += weight;
+        }
+        if (!std::isfinite(totalWeight) || totalWeight <= 0.0f)
+            return false;
+        matrix /= totalWeight;
+        positions[i] = glm::vec3(matrix * glm::vec4(positions[i], 1.0f));
+        if (glm::any(glm::isnan(positions[i])) || glm::any(glm::isinf(positions[i])))
+            return false;
+        if (!hasNormals && !hasTangents)
+            continue;
+
+        const glm::mat3 linear(matrix);
+        const float determinant = glm::determinant(linear);
+        if (!std::isfinite(determinant) || determinant == 0.0f)
+        {
+            LogError("vertex " + std::to_string(i) + " has a singular or non-finite skin transform");
+            return false;
+        }
+        if (hasNormals)
+        {
+            const glm::vec3 normal = glm::transpose(glm::inverse(linear)) * normals[i];
+            const float length = glm::length(normal);
+            if (!std::isfinite(length) || length == 0.0f)
+                return false;
+            normals[i] = normal / length;
+        }
+        if (hasTangents)
+        {
+            const glm::vec3 tangent = linear * glm::vec3(tangents[i]);
+            const float length = glm::length(tangent);
+            if (!std::isfinite(length) || length == 0.0f || !std::isfinite(tangents[i].w))
+                return false;
+            tangents[i] = glm::vec4(tangent / length, determinant < 0.0f ? -tangents[i].w : tangents[i].w);
+        }
+    }
+    return true;
+}
+
+bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsset &out, int skinNode)
+{
+    const auto key = std::make_tuple(meshIndex, primitiveIndex, skinNode);
     auto existing = primitiveAssets.find(key);
     if (existing != primitiveAssets.end())
     {
@@ -681,6 +784,11 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
                              tangents.size() == positions.size();
     const bool hasTexCoords = ReadAttribute(model, primitive, "TEXCOORD_0", 2, texCoords) &&
                               texCoords.size() == positions.size();
+    if (skinNode >= 0 && !bakeSkin(skinNode, primitive, positions, normals, tangents))
+    {
+        LogError("cannot bake skin for node " + std::to_string(skinNode));
+        return false;
+    }
 
     std::vector<uint32_t> sourceIndices;
     std::vector<uint32_t> indices;
@@ -717,7 +825,8 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
 
     const std::string meshName = SafeName(
         baseName + "_" + (mesh.name.empty() ? "mesh" + std::to_string(meshIndex) : mesh.name) +
-        "_p" + std::to_string(primitiveIndex));
+        "_p" + std::to_string(primitiveIndex) +
+        (skinNode >= 0 ? "_node" + std::to_string(skinNode) : ""));
     const fs::path meshPath = outputDir / (meshName + ".mesh");
     std::ofstream meshOutput(meshPath, std::ios::binary);
     if (!meshOutput)
@@ -1000,17 +1109,21 @@ bool Converter::WriteScene(size_t sceneIndex)
                  model.scenes.size())
     std::set<int> reachable;
     std::vector<int> order;
-    const auto visit = [&](const auto &self, int nodeIndex) -> void
+    worldTransforms.assign(model.nodes.size(), glm::mat4(1.0f));
+    const auto visit = [&](const auto &self, int nodeIndex, const glm::mat4 &parentWorld) -> void
     {
         if (nodeIndex < 0 || nodeIndex >= static_cast<int>(model.nodes.size()) ||
             !reachable.insert(nodeIndex).second)
             return;
         order.push_back(nodeIndex);
+        const auto transform = NodeTransform(model.nodes[nodeIndex]);
+        worldTransforms[nodeIndex] = parentWorld * glm::translate(glm::mat4(1.0f), transform.position) *
+                                     glm::mat4_cast(transform.rotation) * glm::scale(glm::mat4(1.0f), transform.scale);
         for (int child : model.nodes[nodeIndex].children)
-            self(self, child);
+            self(self, child, worldTransforms[nodeIndex]);
     };
     for (int root : gltfScene.nodes)
-        visit(visit, root);
+        visit(visit, root, glm::mat4(1.0f));
 
     std::unordered_map<int, uint32_t> nodeIds;
     uint32_t nextObjectId = 2;
@@ -1065,7 +1178,8 @@ bool Converter::WriteScene(size_t sceneIndex)
                  primitiveIndex < static_cast<int>(mesh.primitives.size()); ++primitiveIndex)
             {
                 PrimitiveAsset primitiveAsset;
-                if (!ExportPrimitive(node.mesh, primitiveIndex, primitiveAsset))
+                if (!ExportPrimitive(node.mesh, primitiveIndex, primitiveAsset,
+                                     bakeSkins && node.skin >= 0 ? nodeIndex : -1))
                     return false;
                 meshPrimitives.push_back(primitiveAsset);
             }
@@ -1215,7 +1329,7 @@ int wmain(int argc, wchar_t **argv)
 {
     if (argc < 4)
     {
-        std::cerr << "usage: gltf_scene_conv <input.glb> <resource_dir> <output_dir> [--mesh-only] [--project-root <dir>]\n";
+        std::cerr << "usage: gltf_scene_conv <input.glb> <resource_dir> <output_dir> [--mesh-only] [--bake-skins] [--project-root <dir>]\n";
         return EXIT_FAILURE;
     }
     Converter converter;
@@ -1228,6 +1342,8 @@ int wmain(int argc, wchar_t **argv)
         const std::wstring option(argv[i]);
         if (option == L"--mesh-only")
             converter.meshOnly = true;
+        else if (option == L"--bake-skins")
+            converter.bakeSkins = true;
         else if (option == L"--project-root" && i + 1 < argc)
             projectRoot = fs::absolute(argv[++i]);
         else
@@ -1237,6 +1353,11 @@ int wmain(int argc, wchar_t **argv)
         }
     }
     vke_common::Paths::Init(projectRoot / "project.json");
+    if (converter.meshOnly && converter.bakeSkins)
+    {
+        LogError("--bake-skins requires scene export");
+        return EXIT_FAILURE;
+    }
     try
     {
         (void)vke_common::Paths::ProjectRelative(converter.outputDir);
