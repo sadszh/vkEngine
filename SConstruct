@@ -140,7 +140,6 @@ commonsrc = (
     + freetypeObjs
     + recastObjs
     + sqliteObjs
-    + svgObjs
     + [
         "./src/render/environment.cpp",
         "./src/paths.cpp",
@@ -148,7 +147,7 @@ commonsrc = (
         "./src/asset/asset_json.cpp",
         "./src/asset/loader.cpp",
         "./src/asset/async_loader.cpp",
-        "./src/asset/svg.cpp",
+        "./src/asset/texture_data.cpp",
         "./src/asset/scene_loader.cpp",
         "./src/asset/builtin.cpp",
         "./src/asset/asset_db_json.cpp",
@@ -198,8 +197,6 @@ commonsrc = (
         "./src/script.cpp",
         "./third_party/spirv_reflect/spirv_reflect.cpp",
         "./third_party/vma/vma.cpp",
-        "./third_party/stb/stb_image.cpp",
-        "./third_party/tinygltf/tiny_gltf.cpp",
         "./third_party/miniaudio/miniaudio.c",
         "./src/interop/native.cpp",
         "./src/interop/light.cpp",
@@ -220,15 +217,18 @@ libs.append("nethost")
 ### tools
 
 toolCommonSrc = ["./src/paths.cpp", "./src/logger.cpp"]
+textureConversionSrc = ["./src/tools/texture_conversion.cpp", "./src/tools/svg.cpp",
+                        "./third_party/bc7enc/bc7enc.cpp", "./src/asset/texture_data.cpp"] + svgObjs
 
 targetinfo = [
+    ["tools/texture_conv", ["./src/tools/texture_conv.cpp", "./third_party/stb/stb_image.cpp"] + textureConversionSrc],
     [
         "tools/gltf_conv",
         [
             "./third_party/stb/stb_image.cpp",
             "./third_party/tinygltf/tiny_gltf.cpp",
             "./src/tools/gltf_conv.cpp",
-        ],
+        ] + textureConversionSrc,
     ],
     [
         "tools/gltf_anim_conv",
@@ -245,7 +245,7 @@ targetinfo = [
             "./third_party/stb/stb_image.cpp",
             "./third_party/tinygltf/tiny_gltf.cpp",
             "./src/tools/gltf_scene_conv.cpp",
-        ],
+        ] + textureConversionSrc,
     ],
     [
         "tools/gltf_log",
@@ -267,6 +267,14 @@ for info in targetinfo:
         CPPPATH=cpppath,
         CPPDEFINES=cppdefines + jolt_cppdefines,
     )
+
+for icon in ("camera", "sun", "bulb", "lamp-2"):
+    iconTexture = env.Command(
+        f"editor_assets/icons/{icon}.texture",
+        [f"editor_assets/icons/{icon}.svg", "tools/texture_conv.exe"],
+        '"${SOURCES[1]}" "${SOURCES[0]}" "$TARGET" --width 96 --height 96 --purpose data --format rgba8 --no-mips',
+    )
+    env.Depends("out/editor.exe", iconTexture)
 
 imguiObjs = SConscript(["third_party/imgui/Sconscript"], exports=["env", "VULKAN_PATH"])
 editorsrc = [

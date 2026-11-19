@@ -318,8 +318,8 @@ namespace vke_render
         imageMaterial->renderMode = MaterialRenderMode::BLEND_MODE;
         uint32_t white = 0xffffffff;
         whiteTexture = std::make_shared<Texture2D>(0, &white, 1, 1,
-                                                   VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                                   VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false, false);
+                                                   VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,
+                                                   VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false);
         resetImageTextures();
 
         constructFrameGraph(frameGraph, blackboard, currentResourceNodeID);
@@ -341,9 +341,8 @@ namespace vke_render
                 font->handle, const_cast<uint8_t *>(font->GetDynamicAtlasPixels().data()),
                 vke_common::Font::ATLAS_SIZE, vke_common::Font::ATLAS_SIZE,
                 VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_FILTER_LINEAR, VK_FILTER_LINEAR,
-                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false, false);
+                VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false);
             state->descriptorSets[frame] = textShader->CreateDescriptorSet(0);
             VkDescriptorBufferInfo quadBufferInfo = quadManager->GetDescriptorBufferInfo(frame);
 

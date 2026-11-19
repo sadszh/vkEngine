@@ -1,6 +1,5 @@
 #include <editor/editor.hpp>
 #include <editor/editor_config.hpp>
-#include <asset/svg.hpp>
 #include <imgui/dialog/ImGuiFileDialog.h>
 #include <algorithm>
 #include <cstring>
@@ -27,14 +26,10 @@ namespace vke_editor
             char path[assetPathBufferSize]{};
             char fragmentPath[assetPathBufferSize]{};
 
-            int textureFormat = 0;
             int textureMinFilter = 0;
             int textureMagFilter = 0;
             int textureAddressMode = 0;
             bool textureAnisotropy = true;
-            bool textureGenerateMipMap = true;
-            int textureRasterWidth = 0;
-            int textureRasterHeight = 0;
 
             bool animationHasRootMotion = false;
 
@@ -85,13 +80,6 @@ namespace vke_editor
             importState.pendingAsset = 0;
         }
 
-        const char *textureFormatNames[] = {
-            "R8G8B8A8_SRGB", "R8G8B8A8_UNORM", "R8G8B8A8_SNORM",
-            "B8G8R8A8_SRGB", "B8G8R8A8_UNORM", "R8_UNORM"};
-        const VkFormat textureFormatValues[] = {
-            VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_SNORM,
-            VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8_UNORM};
-        constexpr int textureFormatCount = static_cast<int>(sizeof(textureFormatNames) / sizeof(textureFormatNames[0]));
 
         const char *textureFilterNames[] = {"Linear", "Nearest"};
         const VkFilter textureFilterValues[] = {VK_FILTER_LINEAR, VK_FILTER_NEAREST};
@@ -118,7 +106,7 @@ namespace vke_editor
             case vke_common::ASSET_AUDIO_CLIP:
                 return ".wav,.mp3,.ogg,.flac";
             case vke_common::ASSET_TEXTURE:
-                return ".png,.jpg,.jpeg,.bmp,.tga,.hdr,.ktx,.svg,.SVG";
+                return ".texture,.TEXTURE";
             case vke_common::ASSET_FONT:
                 return ".ttf,.otf";
             default:
@@ -172,10 +160,6 @@ namespace vke_editor
                 return false;
             if (importState.type == vke_common::ASSET_VF_SHADER && importState.fragmentPath[0] == '\0')
                 return false;
-            if (importState.type == vke_common::ASSET_TEXTURE && vke_common::IsSVGPath(importState.path))
-                return importState.textureRasterWidth >= 0 && importState.textureRasterHeight >= 0 &&
-                       importState.textureRasterWidth <= vke_common::MaxSVGDimension &&
-                       importState.textureRasterHeight <= vke_common::MaxSVGDimension;
             return importState.type != vke_common::ASSET_FONT || IsFontConfigurationValid();
         }
 
@@ -275,23 +259,12 @@ namespace vke_editor
             if (importState.type == vke_common::ASSET_TEXTURE)
             {
                 ImGui::SeparatorText("Texture Settings");
-                const bool svg = vke_common::IsSVGPath(importState.path);
-                if (svg)
-                {
-                    if (importState.textureFormat > 1)
-                        importState.textureFormat = 0;
-                    ImGui::InputInt("Raster Width", &importState.textureRasterWidth);
-                    ImGui::InputInt("Raster Height", &importState.textureRasterHeight);
-                    ImGui::TextDisabled("0 = automatic; maximum 4096 pixels per dimension.");
-                }
-                ImGui::Combo("Format", &importState.textureFormat, textureFormatNames, svg ? 2 : textureFormatCount);
+                ImGui::TextDisabled("Dimensions, format and mips are read from the .texture file.");
                 ImGui::Combo("Min Filter", &importState.textureMinFilter, textureFilterNames, textureFilterCount);
                 ImGui::Combo("Mag Filter", &importState.textureMagFilter, textureFilterNames, textureFilterCount);
                 ImGui::Combo("Address Mode", &importState.textureAddressMode,
                              textureAddressModeNames, textureAddressModeCount);
                 ImGui::Checkbox("Anisotropy", &importState.textureAnisotropy);
-                ImGui::SameLine();
-                ImGui::Checkbox("Generate MipMap", &importState.textureGenerateMipMap);
             }
 
             if (importState.type == vke_common::ASSET_ANIMATION)
@@ -382,25 +355,21 @@ namespace vke_editor
                             vke_common::TextureAsset asset;
                             asset.name = importState.name;
                             asset.path = relativePath;
-                            asset.format = textureFormatValues[importState.textureFormat];
                             asset.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-                            asset.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                             asset.minFilter = textureFilterValues[importState.textureMinFilter];
                             asset.magFilter = textureFilterValues[importState.textureMagFilter];
                             asset.addressMode = textureAddressModeValues[importState.textureAddressMode];
                             asset.anisotropyEnable = importState.textureAnisotropy;
-                            asset.generateMipMap = importState.textureGenerateMipMap;
-                            asset.rasterWidth = importState.textureRasterWidth;
-                            asset.rasterHeight = importState.textureRasterHeight;
-                            if (vke_common::IsSVGPath(asset.path))
+                            const auto fullPath = vke_common::Paths::Project(asset.path);
+                            if (!vke_common::IsTexturePath(fullPath))
                             {
-                                auto image = vke_common::LoadSVG(vke_common::Paths::Project(asset.path), asset.rasterWidth, asset.rasterHeight);
-                                if (!image)
-                                {
-                                    importState.error = image.error();
-                                    break;
-                                }
+                                importState.error = "Texture assets require .texture.";
+                                break;
                             }
+                            std::ifstream input(fullPath, std::ios::binary);
+                            if (!input) { importState.error = "Cannot open texture file."; break; }
+                            auto info = vke_common::TextureFileInfo::Read(input);
+                            if (!info) { importState.error = info.error(); break; }
                             importState.pendingAsset = assetDB->CreateTextureAsset(std::move(asset));
                             break;
                         }

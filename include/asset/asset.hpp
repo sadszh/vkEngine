@@ -1,5 +1,6 @@
 #ifndef ASSET_H
 #define ASSET_H
+#include <asset/texture_data.hpp>
 #include <common.hpp>
 #include <functional>
 #include <memory>
@@ -245,45 +246,30 @@ namespace vke_common
     class TextureAsset : public Asset<ASSET_TEXTURE, TextureAsset, vke_render::Texture2D>
     {
     public:
-        VkFormat format;
         VkImageUsageFlags usage;
-        VkImageLayout layout;
         VkFilter minFilter;
         VkFilter magFilter;
         VkSamplerAddressMode addressMode;
         bool anisotropyEnable;
-        bool generateMipMap;
-        int rasterWidth = 0;
-        int rasterHeight = 0;
 
         TextureAsset() {}
 
         TextureAsset(AssetHandle id, const nlohmann::json &json) : Asset(id, json)
         {
-            format = json.contains("format") ? (VkFormat)json["format"] : VK_FORMAT_R8G8B8A8_SRGB;
             usage = json.contains("usage") ? (VkImageUsageFlags)json["usage"] : VK_IMAGE_USAGE_SAMPLED_BIT;
-            layout = json.contains("layout") ? (VkImageLayout)json["layout"] : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             minFilter = json.contains("minFilter") ? (VkFilter)json["minFilter"] : VK_FILTER_LINEAR;
             magFilter = json.contains("magFilter") ? (VkFilter)json["magFilter"] : VK_FILTER_LINEAR;
             addressMode = json.contains("addressMode") ? (VkSamplerAddressMode)json["addressMode"] : VK_SAMPLER_ADDRESS_MODE_REPEAT;
             anisotropyEnable = json.contains("anisotropy") ? (bool)json["anisotropy"] : true;
-            generateMipMap = json.contains("genMipMap") ? (bool)json["genMipMap"] : true;
-            rasterWidth = json.value("rasterWidth", 0);
-            rasterHeight = json.value("rasterHeight", 0);
         }
 
         void writeJSON(nlohmann::json &json) const
         {
-            json["format"] = format;
             json["usage"] = usage;
-            json["layout"] = layout;
             json["minFilter"] = minFilter;
             json["magFilter"] = magFilter;
             json["addressMode"] = addressMode;
             json["anisotropy"] = anisotropyEnable;
-            json["genMipMap"] = generateMipMap;
-            json["rasterWidth"] = rasterWidth;
-            json["rasterHeight"] = rasterHeight;
         }
     };
 

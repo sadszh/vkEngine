@@ -6,479 +6,411 @@
     "type": 1
   },
   {
-    "format": 37,
     "id": 2048,
     "name": "sponza_Tex_2048",
-    "path": "./tests/sponza-gltf-pbr/2476780530225283311.png",
+    "path": "tests/sponza-gltf-pbr/2476780530225283311_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2049,
     "name": "sponza_Tex_2049",
-    "path": "./tests/sponza-gltf-pbr/9902244931375451333.png",
+    "path": "tests/sponza-gltf-pbr/9902244931375451333_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2050,
     "name": "sponza_Tex_2050",
-    "path": "./tests/sponza-gltf-pbr/13403324930296584722.png",
+    "path": "tests/sponza-gltf-pbr/13403324930296584722_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2051,
     "name": "sponza_Tex_2051",
-    "path": "./tests/sponza-gltf-pbr/14889877426847768220.png",
+    "path": "tests/sponza-gltf-pbr/14889877426847768220_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2052,
     "name": "sponza_Tex_2052",
-    "path": "./tests/sponza-gltf-pbr/15763468896848997518.png",
+    "path": "tests/sponza-gltf-pbr/15763468896848997518_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2053,
     "name": "sponza_Tex_2053",
-    "path": "./tests/sponza-gltf-pbr/9690544065500475605.png",
+    "path": "tests/sponza-gltf-pbr/9690544065500475605_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2054,
     "name": "sponza_Tex_2054",
-    "path": "./tests/sponza-gltf-pbr/12594002301861873831.png",
+    "path": "tests/sponza-gltf-pbr/12594002301861873831_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2055,
     "name": "sponza_Tex_2055",
-    "path": "./tests/sponza-gltf-pbr/1542529576189667841.png",
+    "path": "tests/sponza-gltf-pbr/1542529576189667841_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2056,
     "name": "sponza_Tex_2056",
-    "path": "./tests/sponza-gltf-pbr/5664105101133334238.png",
+    "path": "tests/sponza-gltf-pbr/5664105101133334238_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2057,
     "name": "sponza_Tex_2057",
-    "path": "./tests/sponza-gltf-pbr/3024505075340887865.png",
+    "path": "tests/sponza-gltf-pbr/3024505075340887865_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2058,
     "name": "sponza_Tex_2058",
-    "path": "./tests/sponza-gltf-pbr/1032882375854590004.png",
+    "path": "tests/sponza-gltf-pbr/1032882375854590004_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2059,
     "name": "sponza_Tex_2059",
-    "path": "./tests/sponza-gltf-pbr/16629179577494203696.png",
+    "path": "tests/sponza-gltf-pbr/16629179577494203696_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2060,
     "name": "sponza_Tex_2060",
-    "path": "./tests/sponza-gltf-pbr/1180362371129094107.png",
+    "path": "tests/sponza-gltf-pbr/1180362371129094107_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2061,
     "name": "sponza_Tex_2061",
-    "path": "./tests/sponza-gltf-pbr/8759994149281352776.png",
+    "path": "tests/sponza-gltf-pbr/8759994149281352776_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2062,
     "name": "sponza_Tex_2062",
-    "path": "./tests/sponza-gltf-pbr/8131002636958089324.png",
+    "path": "tests/sponza-gltf-pbr/8131002636958089324_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2063,
     "name": "sponza_Tex_2063",
-    "path": "./tests/sponza-gltf-pbr/7972573899771518506.png",
+    "path": "tests/sponza-gltf-pbr/7972573899771518506_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2064,
     "name": "sponza_Tex_2064",
-    "path": "./tests/sponza-gltf-pbr/5832062518599983612.png",
+    "path": "tests/sponza-gltf-pbr/5832062518599983612_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2065,
     "name": "sponza_Tex_2065",
-    "path": "./tests/sponza-gltf-pbr/1028279501752930479.png",
+    "path": "tests/sponza-gltf-pbr/1028279501752930479_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2066,
     "name": "sponza_Tex_2066",
-    "path": "./tests/sponza-gltf-pbr/3923303327751769896.png",
+    "path": "tests/sponza-gltf-pbr/3923303327751769896_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2067,
     "name": "sponza_Tex_2067",
-    "path": "./tests/sponza-gltf-pbr/8296618020194622850.png",
+    "path": "tests/sponza-gltf-pbr/8296618020194622850_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2068,
     "name": "sponza_Tex_2068",
-    "path": "./tests/sponza-gltf-pbr/16356796650360613890.png",
+    "path": "tests/sponza-gltf-pbr/16356796650360613890_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2069,
     "name": "sponza_Tex_2069",
-    "path": "./tests/sponza-gltf-pbr/14756318304758091217.png",
+    "path": "tests/sponza-gltf-pbr/14756318304758091217_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2070,
     "name": "sponza_Tex_2070",
-    "path": "./tests/sponza-gltf-pbr/11951833815537665903.png",
+    "path": "tests/sponza-gltf-pbr/11951833815537665903_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2071,
     "name": "sponza_Tex_2071",
-    "path": "./tests/sponza-gltf-pbr/11767032366500980006.png",
+    "path": "tests/sponza-gltf-pbr/11767032366500980006_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2072,
     "name": "sponza_Tex_2072",
-    "path": "./tests/sponza-gltf-pbr/2079865044350246831.png",
+    "path": "tests/sponza-gltf-pbr/2079865044350246831_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2073,
     "name": "sponza_Tex_2073",
-    "path": "./tests/sponza-gltf-pbr/17895787136451829206.png",
+    "path": "tests/sponza-gltf-pbr/17895787136451829206_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2074,
     "name": "sponza_Tex_2074",
-    "path": "./tests/sponza-gltf-pbr/11730337235035663189.png",
+    "path": "tests/sponza-gltf-pbr/11730337235035663189_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2075,
     "name": "sponza_Tex_2075",
-    "path": "./tests/sponza-gltf-pbr/12329509035612604735.png",
+    "path": "tests/sponza-gltf-pbr/12329509035612604735_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2076,
     "name": "sponza_Tex_2076",
-    "path": "./tests/sponza-gltf-pbr/1998971870295487297.png",
+    "path": "tests/sponza-gltf-pbr/1998971870295487297_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2077,
     "name": "sponza_Tex_2077",
-    "path": "./tests/sponza-gltf-pbr/13409925532914268225.png",
+    "path": "tests/sponza-gltf-pbr/13409925532914268225_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2078,
     "name": "sponza_Tex_2078",
-    "path": "./tests/sponza-gltf-pbr/1122449420293395305.png",
+    "path": "tests/sponza-gltf-pbr/1122449420293395305_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2079,
     "name": "sponza_Tex_2079",
-    "path": "./tests/sponza-gltf-pbr/18323644941784144220.png",
+    "path": "tests/sponza-gltf-pbr/18323644941784144220_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2080,
     "name": "sponza_Tex_2080",
-    "path": "./tests/sponza-gltf-pbr/13595501589012174731.png",
+    "path": "tests/sponza-gltf-pbr/13595501589012174731_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2081,
     "name": "sponza_Tex_2081",
-    "path": "./tests/sponza-gltf-pbr/14205398132421384128.png",
+    "path": "tests/sponza-gltf-pbr/14205398132421384128_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2082,
     "name": "sponza_Tex_2082",
-    "path": "./tests/sponza-gltf-pbr/16011208436118768083.png",
+    "path": "tests/sponza-gltf-pbr/16011208436118768083_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2083,
     "name": "sponza_Tex_2083",
-    "path": "./tests/sponza-gltf-pbr/1584091021348870901.png",
+    "path": "tests/sponza-gltf-pbr/1584091021348870901_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2084,
     "name": "sponza_Tex_2084",
-    "path": "./tests/sponza-gltf-pbr/3978994262251708158.png",
+    "path": "tests/sponza-gltf-pbr/3978994262251708158_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2085,
     "name": "sponza_Tex_2085",
-    "path": "./tests/sponza-gltf-pbr/16477962303174451462.png",
+    "path": "tests/sponza-gltf-pbr/16477962303174451462_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2086,
     "name": "sponza_Tex_2086",
-    "path": "./tests/sponza-gltf-pbr/14579308432899259383.png",
+    "path": "tests/sponza-gltf-pbr/14579308432899259383_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2087,
     "name": "sponza_Tex_2087",
-    "path": "./tests/sponza-gltf-pbr/14688151170495968673.png",
+    "path": "tests/sponza-gltf-pbr/14688151170495968673_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2088,
     "name": "sponza_Tex_2088",
-    "path": "./tests/sponza-gltf-pbr/1140786120295422654.png",
+    "path": "tests/sponza-gltf-pbr/1140786120295422654_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2089,
     "name": "sponza_Tex_2089",
-    "path": "./tests/sponza-gltf-pbr/16821249183869841744.png",
+    "path": "tests/sponza-gltf-pbr/16821249183869841744_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2090,
     "name": "sponza_Tex_2090",
-    "path": "./tests/sponza-gltf-pbr/6310083497554052894.png",
+    "path": "tests/sponza-gltf-pbr/6310083497554052894_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2091,
     "name": "sponza_Tex_2091",
-    "path": "./tests/sponza-gltf-pbr/14930275953430797156.png",
+    "path": "tests/sponza-gltf-pbr/14930275953430797156_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2092,
     "name": "sponza_Tex_2092",
-    "path": "./tests/sponza-gltf-pbr/10052086730298500641.png",
+    "path": "tests/sponza-gltf-pbr/10052086730298500641_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2093,
     "name": "sponza_Tex_2093",
-    "path": "./tests/sponza-gltf-pbr/2882036392247032076.png",
+    "path": "tests/sponza-gltf-pbr/2882036392247032076_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2094,
     "name": "sponza_Tex_2094",
-    "path": "./tests/sponza-gltf-pbr/11135942082434865011.png",
+    "path": "tests/sponza-gltf-pbr/11135942082434865011_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2095,
     "name": "sponza_Tex_2095",
-    "path": "./tests/sponza-gltf-pbr/6868100442424064722.png",
+    "path": "tests/sponza-gltf-pbr/6868100442424064722_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2096,
     "name": "sponza_Tex_2096",
-    "path": "./tests/sponza-gltf-pbr/9324166217220601391.png",
+    "path": "tests/sponza-gltf-pbr/9324166217220601391_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2097,
     "name": "sponza_Tex_2097",
-    "path": "./tests/sponza-gltf-pbr/11767596326202387460.png",
+    "path": "tests/sponza-gltf-pbr/11767596326202387460_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2098,
     "name": "sponza_Tex_2098",
-    "path": "./tests/sponza-gltf-pbr/10048691058615206298.png",
+    "path": "tests/sponza-gltf-pbr/10048691058615206298_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2099,
     "name": "sponza_Tex_2099",
-    "path": "./tests/sponza-gltf-pbr/5884384475331579104.png",
+    "path": "tests/sponza-gltf-pbr/5884384475331579104_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2100,
     "name": "sponza_Tex_2100",
-    "path": "./tests/sponza-gltf-pbr/2763628767906623784.png",
+    "path": "tests/sponza-gltf-pbr/2763628767906623784_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2101,
     "name": "sponza_Tex_2101",
-    "path": "./tests/sponza-gltf-pbr/1580937199681144457.png",
+    "path": "tests/sponza-gltf-pbr/1580937199681144457_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2102,
     "name": "sponza_Tex_2102",
-    "path": "./tests/sponza-gltf-pbr/10522109282340384846.png",
+    "path": "tests/sponza-gltf-pbr/10522109282340384846_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2103,
     "name": "sponza_Tex_2103",
-    "path": "./tests/sponza-gltf-pbr/6589266898288282879.png",
+    "path": "tests/sponza-gltf-pbr/6589266898288282879_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2104,
     "name": "sponza_Tex_2104",
-    "path": "./tests/sponza-gltf-pbr/5341784451809001011.png",
+    "path": "tests/sponza-gltf-pbr/5341784451809001011_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2105,
     "name": "sponza_Tex_2105",
-    "path": "./tests/sponza-gltf-pbr/3466468048949695469.png",
+    "path": "tests/sponza-gltf-pbr/3466468048949695469_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2106,
     "name": "sponza_Tex_2106",
-    "path": "./tests/sponza-gltf-pbr/9502968375209926516.png",
+    "path": "tests/sponza-gltf-pbr/9502968375209926516_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2107,
     "name": "sponza_Tex_2107",
-    "path": "./tests/sponza-gltf-pbr/7377890232508786340.png",
+    "path": "tests/sponza-gltf-pbr/7377890232508786340_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2108,
     "name": "sponza_Tex_2108",
-    "path": "./tests/sponza-gltf-pbr/1774157975403286845.png",
+    "path": "tests/sponza-gltf-pbr/1774157975403286845_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2109,
     "name": "sponza_Tex_2109",
-    "path": "./tests/sponza-gltf-pbr/8114265492436541323.png",
+    "path": "tests/sponza-gltf-pbr/8114265492436541323_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2110,
     "name": "sponza_Tex_2110",
-    "path": "./tests/sponza-gltf-pbr/7151673072344121468.png",
+    "path": "tests/sponza-gltf-pbr/7151673072344121468_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2111,
     "name": "sponza_Tex_2111",
-    "path": "./tests/sponza-gltf-pbr/5775677410124227070.png",
+    "path": "tests/sponza-gltf-pbr/5775677410124227070_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2112,
     "name": "sponza_Tex_2112",
-    "path": "./tests/sponza-gltf-pbr/7385312956576678639.png",
+    "path": "tests/sponza-gltf-pbr/7385312956576678639_data_37_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2113,
     "name": "sponza_Tex_2113",
-    "path": "./tests/sponza-gltf-pbr/8148743991790068494.png",
+    "path": "tests/sponza-gltf-pbr/8148743991790068494_normal_37_mips.texture",
     "type": 0
   },
   {
-    "format": 43,
     "id": 2114,
     "name": "sponza_Tex_2114",
-    "path": "./tests/sponza-gltf-pbr/17644577987043643793.png",
+    "path": "tests/sponza-gltf-pbr/17644577987043643793_color_43_mips.texture",
     "type": 0
   },
   {
-    "format": 37,
     "id": 2115,
     "name": "sponza_Tex_2115",
-    "path": "./tests/sponza-gltf-pbr/823547076410903191.png",
+    "path": "tests/sponza-gltf-pbr/823547076410903191_data_37_mips.texture",
     "type": 0
   },
   {

@@ -1,8 +1,7 @@
 #include <asset/asset_manager.hpp>
 #include <asset/loader.hpp>
-#include <asset/svg.hpp>
 #include <logger.hpp>
-#include <stb/stb_image.h>
+#include <asset/texture_data.hpp>
 #include <cstring>
 #include <span>
 #include <vector>
@@ -128,68 +127,48 @@ namespace vke_common
         return asset.val;
     }
 
-    static std::unique_ptr<vke_render::Texture2D> createTexture2D(
-        AssetHandle handle, const void *pixels, int width, int height,
-        VkFormat format, VkImageUsageFlags usage, VkImageLayout layout,
-        VkFilter minFilter, VkFilter magFilter, VkSamplerAddressMode addressMode,
-        bool anisotropyEnable, bool generateMipMap, AssetUploadContext *upload)
-    {
-        using namespace vke_render;
-        if (!upload)
-            return std::make_unique<Texture2D>(handle, pixels, width, height, format, usage, layout,
-                                               minFilter, magFilter, addressMode, anisotropyEnable, generateMipMap);
-
-        const uint32_t mipLevels = generateMipMap ? static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1 : 1;
-        VkImage image;
-        VmaAllocation allocation;
-        VulkanResourceManager::CreateImage(width, height, format, VK_IMAGE_TILING_OPTIMAL,
-                                           VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | usage,
-                                           mipLevels, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &image, &allocation, nullptr);
-        const size_t size = static_cast<size_t>(width) * height * VulkanResourceManager::GetTextureBytesPerPixel(format);
-        const auto commands = upload->UploadImage(image, pixels, size, width, height, mipLevels);
-        if (generateMipMap)
-            VulkanResourceManager::GenerateMipmaps2D(commands, image, width, height, mipLevels);
-        else
-            VulkanResourceManager::MakeLayoutTransition(commands, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-                                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                                        image, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels,
-                                                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-        return std::make_unique<Texture2D>(handle, image, allocation, width, height, mipLevels, format,
-                                           minFilter, magFilter, addressMode, anisotropyEnable);
-    }
-
     Result<std::unique_ptr<vke_render::Texture2D>> loadTexture2D(const AssetHandle hdl, const TextureAsset &asset, const std::filesystem::path &fullPath, AssetUploadContext *upload)
     {
         const std::string context = "texture " + std::to_string(hdl) + " (" + PathToUTF8(fullPath) + "): ";
-        if (IsSVGPath(asset.path))
-        {
-            if (asset.format != VK_FORMAT_R8G8B8A8_SRGB && asset.format != VK_FORMAT_R8G8B8A8_UNORM)
-                return std::unexpected(context + "SVG textures require R8G8B8A8_SRGB or R8G8B8A8_UNORM");
-            auto image = LoadSVG(fullPath, asset.rasterWidth, asset.rasterHeight);
-            if (!image)
-                return std::unexpected(context + image.error());
-            return createTexture2D(hdl, image->pixels.data(), image->width, image->height,
-                                   asset.format, asset.usage, asset.layout, asset.minFilter, asset.magFilter, asset.addressMode,
-                                   asset.anisotropyEnable, asset.generateMipMap, upload);
-        }
-        int texWidth, texHeight, texChannels;
-        std::unique_ptr<FILE, decltype(&fclose)> input(_wfopen(fullPath.c_str(), L"rb"), fclose);
+        if (!IsTexturePath(asset.path))
+            return std::unexpected(context + "texture assets require .texture");
+        std::ifstream input(fullPath, std::ios::binary);
         if (!input)
             return std::unexpected(context + "cannot open texture file");
-        void *decoded = asset.format == VK_FORMAT_R16G16B16A16_UNORM
-                            ? static_cast<void *>(stbi_load_from_file_16(input.get(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha))
-                            : static_cast<void *>(stbi_load_from_file(input.get(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha));
-        std::unique_ptr<void, decltype(&stbi_image_free)> pixels(decoded, stbi_image_free);
-        if (ferror(input.get()))
-            return std::unexpected(context + "cannot read texture file");
-        if (!pixels)
-        {
-            const char *reason = stbi_failure_reason();
-            return std::unexpected(context + "image decode failed: " + (reason ? reason : "unknown image error"));
-        }
-        return createTexture2D(hdl, pixels.get(), texWidth, texHeight,
-                               asset.format, asset.usage, asset.layout, asset.minFilter, asset.magFilter, asset.addressMode,
-                               asset.anisotropyEnable, asset.generateMipMap, upload);
+        auto info = TextureFileInfo::Read(input);
+        if (!info)
+            return std::unexpected(context + info.error());
+        const auto &metadata = info->metadata;
+        using namespace vke_render;
+        auto *environment = RenderEnvironment::GetInstance();
+        VkImageFormatProperties properties{};
+        const auto usage = asset.usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        if (vkGetPhysicalDeviceImageFormatProperties(environment->physicalDevice, metadata.format, VK_IMAGE_TYPE_2D,
+                                                     VK_IMAGE_TILING_OPTIMAL, usage, 0, &properties) != VK_SUCCESS ||
+            metadata.width > properties.maxExtent.width || metadata.height > properties.maxExtent.height ||
+            metadata.mipCount > properties.maxMipLevels)
+            return std::unexpected(context + "texture dimensions or format/usage unsupported by device");
+        std::vector<char> pixels(static_cast<size_t>(info->layout.size));
+        if (!input.read(pixels.data(), static_cast<std::streamsize>(pixels.size())))
+            return std::unexpected(context + "cannot read texture data");
+
+        if (!upload)
+            return std::make_unique<Texture2D>(hdl, pixels.data(), pixels.size(), metadata.width, metadata.height,
+                                               metadata.mipCount, metadata.format, info->layout.regions, asset.usage,
+                                               asset.minFilter, asset.magFilter, asset.addressMode, asset.anisotropyEnable);
+
+        VkImage image;
+        VmaAllocation allocation;
+        VulkanResourceManager::CreateImage(metadata.width, metadata.height, metadata.format, VK_IMAGE_TILING_OPTIMAL,
+                                           usage, metadata.mipCount, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                           &image, &allocation, nullptr);
+        const auto commands = upload->UploadImage(image, pixels.data(), pixels.size(), metadata.mipCount, info->layout.regions);
+        VulkanResourceManager::MakeLayoutTransition(commands, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                                    image, VK_IMAGE_ASPECT_COLOR_BIT, metadata.mipCount,
+                                                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        return std::make_unique<Texture2D>(hdl, image, allocation, metadata.width, metadata.height, metadata.mipCount, metadata.format,
+                                           asset.minFilter, asset.magFilter, asset.addressMode, asset.anisotropyEnable);
     }
 
     Result<std::unique_ptr<vke_render::Texture2D>> AssetManager::LoadTexture2DUnique(const AssetHandle hdl)
@@ -639,9 +618,33 @@ namespace vke_common
         ret->lineHeight = static_cast<int>(ret->face->size->metrics.height >> 6);
         if (auto built = ret->PrepareStaticAtlas(asset.characters, asset.characterCount, asset.firstCodepoint); !built)
             return std::unexpected(context + built.error());
-        ret->atlasTexture = createTexture2D(asset.id, ret->GetStaticAtlasPixels().data(), Font::ATLAS_SIZE, Font::ATLAS_SIZE,
-                                            VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                                            VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false, false, upload);
+        using namespace vke_render;
+        const auto &pixels = ret->GetStaticAtlasPixels();
+        if (!upload)
+        {
+            ret->atlasTexture = std::make_shared<Texture2D>(asset.id, pixels.data(), Font::ATLAS_SIZE, Font::ATLAS_SIZE,
+                                                            VK_FORMAT_R8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT,
+                                                            VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false);
+        }
+        else
+        {
+            VkImage image;
+            VmaAllocation allocation;
+            VulkanResourceManager::CreateImage(Font::ATLAS_SIZE, Font::ATLAS_SIZE, VK_FORMAT_R8_UNORM, VK_IMAGE_TILING_OPTIMAL,
+                                               VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                               1, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &image, &allocation, nullptr);
+            VkBufferImageCopy region{};
+            region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+            region.imageExtent = {Font::ATLAS_SIZE, Font::ATLAS_SIZE, 1};
+            const auto commands = upload->UploadImage(image, pixels.data(), pixels.size(), 1, {&region, 1});
+            VulkanResourceManager::MakeLayoutTransition(commands, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                                        image, VK_IMAGE_ASPECT_COLOR_BIT, 1,
+                                                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            ret->atlasTexture = std::make_shared<Texture2D>(asset.id, image, allocation, Font::ATLAS_SIZE, Font::ATLAS_SIZE, 1,
+                                                            VK_FORMAT_R8_UNORM, VK_FILTER_LINEAR, VK_FILTER_LINEAR,
+                                                            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, false);
+        }
         return ret;
     }
 

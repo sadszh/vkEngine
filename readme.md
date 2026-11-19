@@ -35,6 +35,7 @@ scons
 - build the test gameplay assembly under `tests/csharp`
 - run the reflection code generator for `GameConfig`
 - compile the builtin shaders
+- convert editor SVG icon sources into `.texture` files with `tools/texture_conv.exe`
 
 `init_project.py` creates the local build/generated directories and generates the builtin LUT textures needed by the renderer.
 
@@ -71,6 +72,7 @@ Or launch the editor with your project's config:
 
 - [glfw](https://github.com/glfw/glfw) 
 - [SPIRV-Reflect](https://github.com/KhronosGroup/SPIRV-Reflect) 
+- [bc7enc](https://github.com/richgel999/bc7enc_rdo)
 - [stb_image](https://github.com/nothings/stb) 
 - [assimp](https://github.com/assimp/assimp) 
 - [tinygltf](https://github.com/syoyo/tinygltf)
@@ -150,7 +152,7 @@ Or launch the editor with your project's config:
   - [x] asset handles and shared resource caching
   - [x] material and prefab dependency resolution
   - [x] asynchronous batch loading with GPU uploads and cancellation
-  - [ ] texture preprocessing: GPU compression and offline mipmaps
+  - [x] texture preprocessing: GPU compression (BC7) and offline mipmaps
   - [ ] asset streaming
 - **Path Finding**:
   - [ ] navmesh generation and serialization

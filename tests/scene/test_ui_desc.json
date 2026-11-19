@@ -3,15 +3,12 @@
     "type": 0,
     "id": 1024,
     "name": "UIShowcasePortrait",
-    "path": "./tests/texture/texture.jpg",
-    "format": 43,
+    "path": "tests/texture/texture.texture",
     "usage": 4,
-    "layout": 5,
     "minFilter": 1,
     "magFilter": 1,
     "addressMode": 2,
-    "anisotropy": false,
-    "genMipMap": true
+    "anisotropy": false
   },
   {
     "type": 7,

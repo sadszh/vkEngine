@@ -2,7 +2,6 @@ import math
 import os
 import struct
 import sys
-import zlib
 
 
 def radical_inverse_vdc(bits):
@@ -101,29 +100,6 @@ def integrate_brdf(n_dot_v, roughness, sample_count):
     return a * inv_count, b * inv_count
 
 
-def png_chunk(chunk_type, data):
-    chunk = chunk_type + data
-    return struct.pack(">I", len(data)) + chunk + struct.pack(">I", zlib.crc32(chunk) & 0xFFFFFFFF)
-
-
-def write_png(path, width, height, rgba):
-    raw = bytearray()
-    stride = width * 8
-    for y in range(height):
-        raw.append(0)
-        row_start = y * stride
-        raw.extend(rgba[row_start:row_start + stride])
-
-    png = bytearray()
-    png.extend(b"\x89PNG\r\n\x1a\n")
-    png.extend(png_chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 16, 6, 0, 0, 0)))
-    png.extend(png_chunk(b"IDAT", zlib.compress(bytes(raw), 9)))
-    png.extend(png_chunk(b"IEND", b""))
-
-    with open(path, "wb") as f:
-        f.write(png)
-
-
 def main():
     out_dir = sys.argv[1] if len(sys.argv) > 1 else "./builtin_assets/texture"
     size = int(sys.argv[2]) if len(sys.argv) > 2 else 256
@@ -137,18 +113,14 @@ def main():
             n_dot_v = (x + 0.5) / size
             a, b = integrate_brdf(n_dot_v, roughness, sample_count)
             idx = (y * size + x) * 8
-            r = max(0, min(65535, round(a * 65535.0)))
-            g = max(0, min(65535, round(b * 65535.0)))
-            pixels[idx + 0] = (r >> 8) & 0xFF
-            pixels[idx + 1] = r & 0xFF
-            pixels[idx + 2] = (g >> 8) & 0xFF
-            pixels[idx + 3] = g & 0xFF
-            pixels[idx + 4] = 0
-            pixels[idx + 5] = 0
-            pixels[idx + 6] = 0xFF
-            pixels[idx + 7] = 0xFF
+            struct.pack_into("<4H", pixels, idx,
+                             max(0, min(65535, round(a * 65535.0))),
+                             max(0, min(65535, round(b * 65535.0))), 0, 65535)
 
-    write_png(os.path.join(out_dir, "brdf_lut.png"), size, size, pixels)
+    texture_path = os.path.join(out_dir, "brdf_lut.texture")
+    with open(texture_path, "wb") as output:
+        output.write(struct.pack("<4s5I", b"VKET", 1, size, size, 1, 91))
+        output.write(pixels)
 
 
 if __name__ == "__main__":

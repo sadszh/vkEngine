@@ -201,14 +201,15 @@ namespace vke_common
     }
 
     VkCommandBuffer AssetUploadContext::UploadImage(VkImage image, const void *data, size_t size,
-                                                    uint32_t width, uint32_t height, uint32_t mipLevels)
+                                                    uint32_t mipLevels, std::span<const VkBufferImageCopy> regions)
     {
         const auto source = stage(data, size);
         auto &slot = slots[slotIndex];
         vke_render::VulkanResourceManager::MakeLayoutTransition(slot.transfer, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
                                                                 VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, image,
                                                                 VK_IMAGE_ASPECT_COLOR_BIT, mipLevels, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-        vke_render::VulkanResourceManager::CopyBufferToImage(slot.transfer, source, image, width, height);
+        vkCmdCopyBufferToImage(slot.transfer, source, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                               static_cast<uint32_t>(regions.size()), regions.data());
         if (transferFamily != graphicsFamily)
         {
             VkImageMemoryBarrier barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};

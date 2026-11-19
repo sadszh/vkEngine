@@ -25,8 +25,14 @@ namespace vke_common
         switch (json["type"].get<AssetType>())
         {
         case ASSET_TEXTURE:
-            return Object(json).Unsigneds({"format", "layout", "minFilter", "magFilter", "addressMode", "rasterWidth", "rasterHeight"}, INT32_MAX)
-                .Unsigneds({"usage"}, UINT32_MAX).Booleans({"anisotropy", "genMipMap"}).Result();
+        {
+            auto settings = Object(json).Unsigneds({"minFilter", "magFilter", "addressMode"}, INT32_MAX)
+                .Unsigneds({"usage"}, UINT32_MAX).Booleans({"anisotropy"}).Result();
+            if (!settings) return settings;
+            const auto path = PathFromUTF8(json["path"].get<std::string>());
+            if (!IsTexturePath(path)) return std::unexpected("texture assets require .texture");
+            return {};
+        }
         case ASSET_VF_SHADER:
             return Object(json).Require({"fragPath"}).RelativePaths({"fragPath"}).Result();
         case ASSET_ANIMATION:

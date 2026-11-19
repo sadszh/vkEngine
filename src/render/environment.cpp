@@ -326,6 +326,9 @@ namespace vke_render
         deviceFeatures.shaderInt64 = VK_TRUE;
         deviceFeatures.shaderInt16 = VK_TRUE;
         deviceFeatures.multiDrawIndirect = VK_TRUE;
+        VkPhysicalDeviceFeatures supportedFeatures{};
+        vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
+        deviceFeatures.textureCompressionBC = supportedFeatures.textureCompressionBC;
 
         VkPhysicalDeviceVulkan13Features deviceFeatures13 = {};
         deviceFeatures13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;

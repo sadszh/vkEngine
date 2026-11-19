@@ -1,4 +1,4 @@
-#include <asset/svg.hpp>
+#include <tools/svg.hpp>
 #include <lunasvg/include/lunasvg.h>
 #include <algorithm>
 #include <cmath>
@@ -6,8 +6,10 @@
 #include <fstream>
 #include <iterator>
 
-namespace vke_common
+namespace vke_tools
 {
+    using namespace vke_common;
+
     bool IsSVGPath(const std::filesystem::path &path)
     {
         const auto extension = path.extension().string();

@@ -105,9 +105,6 @@ namespace vke_render
                                          VkPipelineStageFlags sourceStage,
                                          VkPipelineStageFlags destinationStage);
 
-        static void GenerateMipmaps2D(VkCommandBuffer commandBuffer, VkImage image,
-                                      int32_t width, int32_t height, uint32_t mipLevels);
-
         static size_t GetTextureBytesPerPixel(VkFormat format);
 
         static void CopyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);

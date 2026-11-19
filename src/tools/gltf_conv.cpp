@@ -1,3 +1,4 @@
+#include <tools/texture_conversion.hpp>
 #include <common.hpp>
 #include <render/mesh.hpp>
 #include <tinygltf/tiny_gltf.h>
@@ -33,6 +34,7 @@ void saveJSON(const std::filesystem::path &pth, const nlohmann::json &json)
     std::ofstream ofs(pth, std::ios::out);
     ofs << json;
     ofs.close();
+    VKE_FATAL_IF(!ofs, "Cannot write JSON: {}", vke_common::PathToUTF8(pth))
 }
 
 int main(int argc, char **argv)
@@ -116,8 +118,8 @@ int main(int argc, char **argv)
     scene["maxid"] = maxID + 1;
     scene["objects"].push_back(gameObject);
 
-    // saveJSON(assetPth, assetLUT);
-    // saveJSON(scenePth, scene);
+    saveJSON(assetPth, assetLUT);
+    saveJSON(scenePth, scene);
     return 0;
 }
 
@@ -250,65 +252,48 @@ bool checkScene(const tinygltf::Model &model, const tinygltf::Scene &scene)
 void processMaterial(const tinygltf::Model &model, const tinygltf::Node &node, nlohmann::json &assetLUT, nlohmann::json &textureIndices, const std::filesystem::path &odir)
 {
     std::unordered_set<int> materialSet;
-    std::map<int, uint32_t> textureMap;
-    std::unordered_set<int> srgbTextures;
-
+    using vke_tools::TexturePurpose;
+    std::map<std::pair<int, TexturePurpose>, uint32_t> textureMap;
     auto &mesh = model.meshes[node.mesh];
-    for (auto &prim : mesh.primitives)
-        materialSet.insert(prim.material);
-
+    for (auto &prim : mesh.primitives) materialSet.insert(prim.material);
     bool textureMissing = false;
     for (auto matID : materialSet)
     {
-        // logMaterialInfo(model, matID);
         auto &mat = model.materials[matID];
-        VKE_LOG_INFO("MAT ID {}", matID)
-        auto &metallicRoughness = mat.pbrMetallicRoughness;
-        auto &baseColorTexture = metallicRoughness.baseColorTexture;
-        auto &metallicRoughnessTexture = metallicRoughness.metallicRoughnessTexture;
-        auto &normalTexture = mat.normalTexture;
-        // auto &occlusionTexture = mat.occlusionTexture;
-        // auto &emissiveTexture = mat.emissiveTexture;
-
-        if (baseColorTexture.index == -1 || metallicRoughnessTexture.index == -1 || normalTexture.index == -1)
-            textureMissing = true;
-        if (baseColorTexture.index != -1 && textureMap.find(baseColorTexture.index) == textureMap.end())
-        {
-            textureMap[baseColorTexture.index] = 0;
-            srgbTextures.insert(baseColorTexture.index);
-        }
-
-        if (metallicRoughnessTexture.index != -1 && textureMap.find(metallicRoughnessTexture.index) == textureMap.end())
-            textureMap[metallicRoughnessTexture.index] = 0;
-        if (normalTexture.index != -1 && textureMap.find(normalTexture.index) == textureMap.end())
-            textureMap[normalTexture.index] = 0;
-
-        VKE_LOG_INFO("baseColorTexture {} {}", baseColorTexture.index, baseColorTexture.index == -1 ? "" : model.images[model.textures[baseColorTexture.index].source].uri)
-        VKE_LOG_INFO("metallicRoughnessTexture {}", metallicRoughnessTexture.index)
-        VKE_LOG_INFO("normalTexture {}", normalTexture.index)
-        // VKE_LOG_INFO("occlusionTexture {}", occlusionTexture.index)
-        // VKE_LOG_INFO("emissiveTexture {}", emissiveTexture.index)
+        const std::pair<int, TexturePurpose> keys[] = {
+            {mat.pbrMetallicRoughness.baseColorTexture.index, TexturePurpose::Color},
+            {mat.pbrMetallicRoughness.metallicRoughnessTexture.index, TexturePurpose::Data},
+            {mat.normalTexture.index, TexturePurpose::Normal}};
+        for (const auto &key : keys)
+            if (key.first < 0) textureMissing = true;
+            else textureMap.try_emplace(key, 0);
     }
 
     auto texArr = nlohmann::json::array();
     if (textureMissing)
         texArr.push_back(1);
     uint32_t textureOffset = textureMissing ? 1 : 0;
-    for (auto &[texID, texAssetID] : textureMap)
+    for (auto &[key, texAssetID] : textureMap)
     {
+        const auto [texID, purpose] = key;
         texAssetID = textureOffset++;
-        std::filesystem::path oTexPath = odir / model.images[model.textures[texID].source].uri;
-
-        assetLUT.push_back({{"type", 0},
-                            {"id", ++maxTextureID},
-                            {"name", gltfName + std::string("_Tex_") + std::to_string(maxTextureID)},
-                            {"path", oTexPath.string()},
-                            {"format", srgbTextures.find(texID) == srgbTextures.end() ? 37 : 43}});
+        const auto &image = model.images[model.textures[texID].source];
+        const auto oTexPath = odir / (gltfName + "_texture_" + std::to_string(texID) + "_" +
+                                     std::to_string(static_cast<int>(purpose)) + ".texture");
+        auto source = vke_tools::DecodeTextureSource(image.image, image.width, image.height, image.component, image.bits);
+        VKE_FATAL_IF(!source, "{}", source.error())
+        auto metadata = vke_tools::WriteTexture(std::move(*source), oTexPath, {purpose});
+        VKE_FATAL_IF(!metadata, "{}", metadata.error())
+        auto record = nlohmann::json::object();
+        record.update({{"type", 0}, {"id", ++maxTextureID},
+                       {"name", gltfName + "_Tex_" + std::to_string(maxTextureID)},
+                       {"path", vke_common::PathToUTF8(oTexPath)}});
+        assetLUT.push_back(std::move(record));
         texArr.push_back(maxTextureID);
     }
-
     if (textureMissing)
-        textureMap[-1] = 0;
+        for (auto purpose : {TexturePurpose::Color, TexturePurpose::Data, TexturePurpose::Normal})
+            textureMap[{-1, purpose}] = 0;
 
     assetLUT.push_back({{"type", 4},
                         {"id", ++maxMaterialID},
@@ -328,9 +313,9 @@ void processMaterial(const tinygltf::Model &model, const tinygltf::Node &node, n
         auto &metallicRoughnessTexture = metallicRoughness.metallicRoughnessTexture;
         auto &normalTexture = mat.normalTexture;
 
-        textureIndices.push_back({textureMap[baseColorTexture.index],
-                                  textureMap[metallicRoughnessTexture.index],
-                                  textureMap[normalTexture.index]});
+        textureIndices.push_back({textureMap[{baseColorTexture.index, TexturePurpose::Color}],
+                                  textureMap[{metallicRoughnessTexture.index, TexturePurpose::Data}],
+                                  textureMap[{normalTexture.index, TexturePurpose::Normal}]});
     }
 }
 

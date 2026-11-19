@@ -2,6 +2,7 @@
 
 #include <render/render_common.hpp>
 #include <array>
+#include <span>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -45,7 +46,7 @@ namespace vke_common
         size_t GetStagedBytes() const { return stagedBytes; }
         void UploadBuffer(VkBuffer destination, size_t offset, const void *data, size_t size);
         VkCommandBuffer UploadImage(VkImage image, const void *data, size_t size,
-                                    uint32_t width, uint32_t height, uint32_t mipLevels);
+                                    uint32_t mipLevels, std::span<const VkBufferImageCopy> regions);
 
     private:
         static constexpr size_t SlotCount = 3;

@@ -3,29 +3,23 @@
     "type": 0,
     "id": 1,
     "name": "DefaultTex",
-    "path": "builtin_assets/texture/default.png",
-    "format": 43,
+    "path": "builtin_assets/texture/default.texture",
     "usage": 4,
-    "layout": 5,
     "minFilter": 1,
     "magFilter": 1,
     "addressMode": 0,
-    "anisotropy": true,
-    "genMipMap": true
+    "anisotropy": true
   },
   {
     "type": 0,
     "id": 2,
     "name": "BRDFLUT",
-    "path": "builtin_assets/texture/brdf_lut.png",
-    "format": 91,
+    "path": "builtin_assets/texture/brdf_lut.texture",
     "usage": 4,
-    "layout": 5,
     "minFilter": 1,
     "magFilter": 1,
     "addressMode": 2,
-    "anisotropy": false,
-    "genMipMap": false
+    "anisotropy": false
   },
   {
     "type": 1,

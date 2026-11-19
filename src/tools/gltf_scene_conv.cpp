@@ -1,6 +1,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <common.hpp>
+#include <tools/texture_conversion.hpp>
 #include <render/mesh.hpp>
 #include <tinygltf/tiny_gltf.h>
 #include <nlohmann/json.hpp>
@@ -79,7 +80,7 @@ namespace
         std::vector<glm::mat4> worldTransforms;
         json assets = json::array();
         AssetIds ids;
-        std::map<std::pair<int, bool>, uint64_t> textureAssets;
+        std::map<std::pair<int, vke_tools::TexturePurpose>, uint64_t> textureAssets;
         std::map<int, uint64_t> materialAssets;
         std::map<uint32_t, uint64_t> shaderAssets;
         std::map<std::tuple<int, int, int>, PrimitiveAsset> primitiveAssets;
@@ -98,7 +99,7 @@ namespace
                       std::vector<glm::vec3> &positions, std::vector<glm::vec3> &normals,
                       std::vector<glm::vec4> &tangents);
         bool ExportMaterial(int materialIndex, uint64_t &out);
-        bool ExportTexture(int textureIndex, bool srgb, uint64_t &out);
+        bool ExportTexture(int textureIndex, vke_tools::TexturePurpose purpose, uint64_t &out);
         bool ExportShader(int materialIndex, uint64_t &out);
         bool ExportScenes();
         bool WriteScene(size_t sceneIndex);
@@ -442,19 +443,6 @@ namespace
             {"pos", {transform.position.x, transform.position.y, transform.position.z}},
             {"scl", {transform.scale.x, transform.scale.y, transform.scale.z}},
             {"rot", {transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w}}};
-    }
-
-    std::string ImageExtension(const tinygltf::Image &image)
-    {
-        if (image.mimeType == "image/jpeg")
-            return ".jpg";
-        if (image.mimeType == "image/webp")
-            return ".webp";
-        if (image.mimeType == "image/bmp")
-            return ".bmp";
-        if (image.mimeType == "image/gif")
-            return ".gif";
-        return ".png";
     }
 
     VkFilter TextureFilter(int filter)
@@ -859,9 +847,9 @@ bool Converter::ExportPrimitive(int meshIndex, int primitiveIndex, PrimitiveAsse
     return true;
 }
 
-bool Converter::ExportTexture(int textureIndex, bool srgb, uint64_t &out)
+bool Converter::ExportTexture(int textureIndex, vke_tools::TexturePurpose purpose, uint64_t &out)
 {
-    const auto key = std::make_pair(textureIndex, srgb);
+    const auto key = std::make_pair(textureIndex, purpose);
     auto existing = textureAssets.find(key);
     if (existing != textureAssets.end())
     {
@@ -875,46 +863,15 @@ bool Converter::ExportTexture(int textureIndex, bool srgb, uint64_t &out)
         return false;
     const tinygltf::Image &image = model.images[texture.source];
 
-    fs::path texturePath;
-    if (!image.uri.empty() && image.uri.rfind("data:", 0) != 0)
-    {
-        const fs::path sourcePath = resourceDir / vke_common::PathFromUTF8(image.uri);
-        texturePath = outputDir /
-                      (SafeName(baseName + "_image_" + std::to_string(texture.source)) +
-                       sourcePath.extension().string());
-        std::error_code error;
-        if (!fs::equivalent(sourcePath, texturePath, error))
-        {
-            error.clear();
-            fs::copy_file(sourcePath, texturePath, fs::copy_options::overwrite_existing, error);
-            if (error)
-            {
-                LogError("cannot copy texture " + sourcePath.string() + ": " + error.message());
-                return false;
-            }
-        }
-    }
-    else if (image.bufferView >= 0)
-    {
-        const tinygltf::BufferView &view = model.bufferViews[image.bufferView];
-        const tinygltf::Buffer &buffer = model.buffers[view.buffer];
-        if (view.byteOffset + view.byteLength > buffer.data.size())
-            return false;
-        texturePath = outputDir / (SafeName(baseName + "_image_" +
-                                            std::to_string(texture.source)) +
-                                   ImageExtension(image));
-        std::ofstream output(texturePath, std::ios::binary);
-        output.write(reinterpret_cast<const char *>(buffer.data.data() + view.byteOffset),
-                     static_cast<std::streamsize>(view.byteLength));
-        if (!output.good())
-            return false;
-    }
-    else
-    {
-        LogError("image " + std::to_string(texture.source) +
-                 " is decoded-only; use an external URI or bufferView-backed GLB image");
-        return false;
-    }
+    const bool srgb = purpose == vke_tools::TexturePurpose::Color;
+    const std::string suffix = srgb ? "_color" : purpose == vke_tools::TexturePurpose::Normal ? "_normal" : "_data";
+    const fs::path texturePath = outputDir / (SafeName(baseName + "_image_" + std::to_string(texture.source)) + suffix + ".texture");
+    auto source = !image.uri.empty() && image.uri.rfind("data:", 0) != 0
+                      ? vke_tools::LoadTextureSource(resourceDir / vke_common::PathFromUTF8(image.uri))
+                      : vke_tools::DecodeTextureSource(image.image, image.width, image.height, image.component, image.bits);
+    if (!source) { LogError(source.error()); return false; }
+    auto metadata = vke_tools::WriteTexture(std::move(*source), texturePath, {purpose});
+    if (!metadata) { LogError(metadata.error()); return false; }
 
     VkFilter minFilter = VK_FILTER_LINEAR;
     VkFilter magFilter = VK_FILTER_LINEAR;
@@ -933,17 +890,15 @@ bool Converter::ExportTexture(int textureIndex, bool srgb, uint64_t &out)
     out = ids.texture++;
     const std::string textureName =
         SafeName(baseName + "_texture_" + std::to_string(textureIndex) +
-                 (srgb ? "_srgb" : "_linear"));
+                 suffix);
     assets.push_back({{"type", ASSET_TEXTURE},
                       {"id", out},
                       {"name", textureName},
                       {"path", assetPath(texturePath)},
-                      {"format", srgb ? VK_FORMAT_R8G8B8A8_SRGB : VK_FORMAT_R8G8B8A8_UNORM},
                       {"minFilter", minFilter},
                       {"magFilter", magFilter},
                       {"addressMode", addressMode},
-                      {"anisotropy", true},
-                      {"genMipMap", true}});
+                      {"anisotropy", true}});
     textureAssets[key] = out;
     if (textureAssets.size() == 1 || textureAssets.size() % 50 == 0)
         VKE_LOG_INFO("Exported {} texture assets", textureAssets.size())
@@ -1018,21 +973,21 @@ bool Converter::ExportMaterial(int materialIndex, uint64_t &out)
     json textures = json::array();
     json bindings = json::array();
     int binding = 0;
-    const auto addTexture = [&](int textureIndex, bool srgb) -> bool
+    const auto addTexture = [&](int textureIndex, vke_tools::TexturePurpose purpose) -> bool
     {
         if (textureIndex < 0)
             return true;
         uint64_t textureAsset = 0;
-        if (!ExportTexture(textureIndex, srgb, textureAsset))
+        if (!ExportTexture(textureIndex, purpose, textureAsset))
             return false;
         textures.push_back(textureAsset);
         bindings.push_back({{"binding", binding++}, {"offset", 0}, {"cnt", 1}});
         return true;
     };
-    if (!addTexture(material.pbrMetallicRoughness.baseColorTexture.index, true) ||
-        !addTexture(material.pbrMetallicRoughness.metallicRoughnessTexture.index, false) ||
-        !addTexture(material.normalTexture.index, false) ||
-        !addTexture(material.occlusionTexture.index, false))
+    if (!addTexture(material.pbrMetallicRoughness.baseColorTexture.index, vke_tools::TexturePurpose::Color) ||
+        !addTexture(material.pbrMetallicRoughness.metallicRoughnessTexture.index, vke_tools::TexturePurpose::Data) ||
+        !addTexture(material.normalTexture.index, vke_tools::TexturePurpose::Normal) ||
+        !addTexture(material.occlusionTexture.index, vke_tools::TexturePurpose::Data))
         return false;
 
     std::array<double, 4> baseColor{1.0, 1.0, 1.0, 1.0};

@@ -245,11 +245,9 @@ namespace vke_common
                 static_cast<int>(atlasSide),
                 VK_FORMAT_R8G8B8A8_UNORM,
                 VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                 VK_FILTER_LINEAR,
                 VK_FILTER_LINEAR,
                 VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-                false,
                 false);
         }
 
