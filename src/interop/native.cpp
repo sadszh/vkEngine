@@ -68,7 +68,7 @@ namespace vke_interop
             return;
         }
 
-        vke_common::SceneManager::GetInstance()->transformSystem.SetLocalPosition(GetEntity(entity), ToGlm(*position));
+        vke_common::SceneManager::GetInstance()->transformSystem.SetLocalPosition(GetEntity(entity), ToGlm(*position), true);
     }
 
     static void VKE_INTEROP_CDECL GetTransformLocalRotation(uint32_t entity, Quaternion<float> *rotation)
@@ -90,7 +90,7 @@ namespace vke_interop
             return;
         }
 
-        vke_common::SceneManager::GetInstance()->transformSystem.SetLocalRotation(GetEntity(entity), ToGlm(*rotation));
+        vke_common::SceneManager::GetInstance()->transformSystem.SetLocalRotation(GetEntity(entity), ToGlm(*rotation), true);
     }
 
     static void VKE_INTEROP_CDECL GetTransformLocalScale(uint32_t entity, Vector3<float> *scale)
@@ -112,7 +112,7 @@ namespace vke_interop
             return;
         }
 
-        vke_common::SceneManager::GetInstance()->transformSystem.SetLocalScale(GetEntity(entity), ToGlm(*scale));
+        vke_common::SceneManager::GetInstance()->transformSystem.SetLocalScale(GetEntity(entity), ToGlm(*scale), true);
     }
 
     static void VKE_INTEROP_CDECL TranslateTransformLocal(uint32_t entity, const Vector3<float> *det)
@@ -122,7 +122,7 @@ namespace vke_interop
             return;
         }
 
-        vke_common::SceneManager::GetInstance()->transformSystem.TranslateLocal(GetEntity(entity), ToGlm(*det));
+        vke_common::SceneManager::GetInstance()->transformSystem.TranslateLocal(GetEntity(entity), ToGlm(*det), true);
     }
 
     static void VKE_INTEROP_CDECL TranslateTransformGlobal(uint32_t entity, const Vector3<float> *det)
@@ -132,7 +132,7 @@ namespace vke_interop
             return;
         }
 
-        vke_common::SceneManager::GetInstance()->transformSystem.TranslateGlobal(GetEntity(entity), ToGlm(*det));
+        vke_common::SceneManager::GetInstance()->transformSystem.TranslateGlobal(GetEntity(entity), ToGlm(*det), true);
     }
 
     static void VKE_INTEROP_CDECL RotateTransformLocal(uint32_t entity, float det, const Vector3<float> *axis)
@@ -142,7 +142,7 @@ namespace vke_interop
             return;
         }
 
-        vke_common::SceneManager::GetInstance()->transformSystem.RotateLocal(GetEntity(entity), det, ToGlm(*axis));
+        vke_common::SceneManager::GetInstance()->transformSystem.RotateLocal(GetEntity(entity), det, ToGlm(*axis), true);
     }
 
     static void VKE_INTEROP_CDECL RotateTransformGlobal(uint32_t entity, float det, const Vector3<float> *axis)
@@ -152,7 +152,7 @@ namespace vke_interop
             return;
         }
 
-        vke_common::SceneManager::GetInstance()->transformSystem.RotateGlobal(GetEntity(entity), det, ToGlm(*axis));
+        vke_common::SceneManager::GetInstance()->transformSystem.RotateGlobal(GetEntity(entity), det, ToGlm(*axis), true);
     }
 
     static void VKE_INTEROP_CDECL ScaleTransform(uint32_t entity, const Vector3<float> *scale)
@@ -162,7 +162,7 @@ namespace vke_interop
             return;
         }
 
-        vke_common::SceneManager::GetInstance()->transformSystem.Scale(GetEntity(entity), ToGlm(*scale));
+        vke_common::SceneManager::GetInstance()->transformSystem.Scale(GetEntity(entity), ToGlm(*scale), true);
     }
 
     static int32_t VKE_INTEROP_CDECL IsKeyDown(int32_t key)
@@ -336,6 +336,18 @@ namespace vke_interop
             animator->SetBlendWeights(weights, count);
     }
 
+    static void VKE_INTEROP_CDECL GetSkeletonAnimatorRootMotionDeltaPosition(uint32_t entity, Vector3<float> *position)
+    {
+        vke_component::SkeletonAnimator *animator = GetSkeletonAnimator(entity);
+        *position = animator == nullptr ? Vector3<float>{} : ToInterop(animator->rootMotionDeltaPosition);
+    }
+
+    static void VKE_INTEROP_CDECL GetSkeletonAnimatorRootMotionDeltaRotation(uint32_t entity, Quaternion<float> *rotation)
+    {
+        vke_component::SkeletonAnimator *animator = GetSkeletonAnimator(entity);
+        *rotation = animator == nullptr ? Quaternion<float>{0.0f, 0.0f, 0.0f, 1.0f} : ToInterop(animator->rootMotionDeltaRotation);
+    }
+
     static vke_component::CharacterController *GetCharacterController(uint32_t entity)
     {
         auto *scene = vke_common::SceneManager::GetInstance();
@@ -439,6 +451,8 @@ namespace vke_common
             &vke_interop::SetSkeletonAnimatorAnimationWeight,
             &vke_interop::GetSkeletonAnimatorAnimationWeight,
             &vke_interop::SetSkeletonAnimatorBlendWeights,
+            &vke_interop::GetSkeletonAnimatorRootMotionDeltaPosition,
+            &vke_interop::GetSkeletonAnimatorRootMotionDeltaRotation,
             &vke_interop::GetDirectionalLightColor,
             &vke_interop::SetDirectionalLightColor,
             &vke_interop::GetDirectionalLightIntensity,

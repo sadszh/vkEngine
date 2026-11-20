@@ -18,6 +18,8 @@ namespace vkEngine.EngineCore
         private static delegate* unmanaged[Cdecl]<UInt32, UInt32, float, void> setAnimationWeight;
         private static delegate* unmanaged[Cdecl]<UInt32, UInt32, float> getAnimationWeight;
         private static delegate* unmanaged[Cdecl]<UInt32, float*, UInt32, void> setBlendWeights;
+        private static delegate* unmanaged[Cdecl]<UInt32, NVec3*, void> getRootMotionDeltaPosition;
+        private static delegate* unmanaged[Cdecl]<UInt32, NQuat*, void> getRootMotionDeltaRotation;
 
         public SkeletonAnimator(UInt32 entity)
         {
@@ -27,6 +29,26 @@ namespace vkEngine.EngineCore
         public UInt32 Entity => entity;
 
         public UInt32 AnimationCount => getAnimationCount(entity);
+
+        public NVec3 RootMotionDeltaPosition
+        {
+            get
+            {
+                NVec3 value = default;
+                getRootMotionDeltaPosition(entity, &value);
+                return value;
+            }
+        }
+
+        public NQuat RootMotionDeltaRotation
+        {
+            get
+            {
+                NQuat value = default;
+                getRootMotionDeltaRotation(entity, &value);
+                return value;
+            }
+        }
 
         internal static void RegisterNativeFunctions(NativeFunctions* functions)
         {
@@ -42,6 +64,8 @@ namespace vkEngine.EngineCore
             setAnimationWeight = functions->SetSkeletonAnimatorAnimationWeight;
             getAnimationWeight = functions->GetSkeletonAnimatorAnimationWeight;
             setBlendWeights = functions->SetSkeletonAnimatorBlendWeights;
+            getRootMotionDeltaPosition = functions->GetSkeletonAnimatorRootMotionDeltaPosition;
+            getRootMotionDeltaRotation = functions->GetSkeletonAnimatorRootMotionDeltaRotation;
         }
 
         public void SetAnimationSpeed(UInt32 index, float speed)

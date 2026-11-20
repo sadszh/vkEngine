@@ -44,6 +44,8 @@ namespace vkEngine.EngineCore
         public delegate* unmanaged[Cdecl]<UInt32, UInt32, float, void> SetSkeletonAnimatorAnimationWeight;
         public delegate* unmanaged[Cdecl]<UInt32, UInt32, float> GetSkeletonAnimatorAnimationWeight;
         public delegate* unmanaged[Cdecl]<UInt32, float*, UInt32, void> SetSkeletonAnimatorBlendWeights;
+        public delegate* unmanaged[Cdecl]<UInt32, NVec3*, void> GetSkeletonAnimatorRootMotionDeltaPosition;
+        public delegate* unmanaged[Cdecl]<UInt32, NQuat*, void> GetSkeletonAnimatorRootMotionDeltaRotation;
         public delegate* unmanaged[Cdecl]<UInt32, NVec3*, void> GetDirectionalLightColor;
         public delegate* unmanaged[Cdecl]<UInt32, NVec3*, void> SetDirectionalLightColor;
         public delegate* unmanaged[Cdecl]<UInt32, float> GetDirectionalLightIntensity;

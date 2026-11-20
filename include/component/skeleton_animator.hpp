@@ -7,7 +7,6 @@
 #include <utility>
 #include <span>
 #include <component/transform.hpp>
-#include <scene_transform_system.hpp>
 #include <animation.hpp>
 #include <asset/asset_manager.hpp>
 #include <asset/asset_ref.hpp>
@@ -278,6 +277,9 @@ namespace vke_component
         std::unique_ptr<vke_render::RenderUnit> renderUnit;
         std::unique_ptr<vke_render::RenderUnit> shadowRenderUnit;
         bool castsShadow;
+
+        glm::vec3 rootMotionDeltaPosition{0.0f};
+        glm::quat rootMotionDeltaRotation{1.0f, 0.0f, 0.0f, 0.0f};
         // The render update callback captures this. Keep EnTT storage addresses stable.
         static constexpr bool in_place_delete = true;
 
@@ -291,10 +293,10 @@ namespace vke_component
               renderUnit(std::move(other.renderUnit)),
               shadowRenderUnit(std::move(other.shadowRenderUnit)),
               castsShadow(other.castsShadow),
+              rootMotionDeltaPosition(other.rootMotionDeltaPosition),
+              rootMotionDeltaRotation(other.rootMotionDeltaRotation),
               renderID(other.renderID),
               shadowRenderID(std::exchange(other.shadowRenderID, 0)),
-              ownerRegistry(std::exchange(other.ownerRegistry, nullptr)),
-              ownerEntity(std::exchange(other.ownerEntity, entt::null)),
               blendedLocals(std::move(other.blendedLocals)),
               models(std::move(other.models)),
               skinningMatrices(std::move(other.skinningMatrices)),
@@ -322,8 +324,8 @@ namespace vke_component
                 castsShadow = other.castsShadow;
                 renderID = other.renderID;
                 shadowRenderID = std::exchange(other.shadowRenderID, 0);
-                ownerRegistry = std::exchange(other.ownerRegistry, nullptr);
-                ownerEntity = std::exchange(other.ownerEntity, entt::null);
+                rootMotionDeltaPosition = other.rootMotionDeltaPosition;
+                rootMotionDeltaRotation = other.rootMotionDeltaRotation;
                 blendedLocals = std::move(other.blendedLocals);
                 models = std::move(other.models);
                 skinningMatrices = std::move(other.skinningMatrices);
@@ -334,8 +336,7 @@ namespace vke_component
             return *this;
         }
 
-        SkeletonAnimator(entt::registry &registry, entt::entity entity,
-                         vke_common::Transform &transform, const SkeletonAnimatorData &componentData)
+        SkeletonAnimator(vke_common::Transform &transform, const SkeletonAnimatorData &componentData)
             : material(componentData.material.Get()), skeleton(componentData.skeleton.Get()),
               castsShadow(componentData.castsShadow),
               shadowRenderID(0)
@@ -389,8 +390,6 @@ namespace vke_component
                 std::cout << std::string(n) << "\n";
             }
 
-            ownerRegistry = &registry;
-            ownerEntity = entity;
             vke_render::Renderer *renderer = vke_render::Renderer::GetInstance();
             renderID = renderer->GetGBufferPass()->AddUnit(material, renderUnit.get(), true);
             if (castsShadow)
@@ -660,23 +659,10 @@ namespace vke_component
                     glm::normalize(glm::quat(inversePrevious * unwrappedRotation))};
         }
 
-        void applyRootMotion(const glm::vec3 &localDeltaPosition, const glm::quat &localDeltaRotation)
-        {
-            // Use the scene path so children and render snapshots follow root motion too.
-            vke_common::SceneTransformSystem transforms(*ownerRegistry);
-            if (glm::dot(localDeltaPosition, localDeltaPosition) > 0.0f)
-                transforms.TranslateLocal(ownerEntity, localDeltaPosition);
-
-            if (glm::dot(glm::vec3(localDeltaRotation.x, localDeltaRotation.y, localDeltaRotation.z),
-                         glm::vec3(localDeltaRotation.x, localDeltaRotation.y, localDeltaRotation.z)) > 0.0f)
-            {
-                const auto rotation = ownerRegistry->get<vke_common::Transform>(ownerEntity).localRotation;
-                transforms.SetLocalRotation(ownerEntity, glm::normalize(rotation * localDeltaRotation));
-            }
-        }
-
         void updatePose(float deltaTime)
         {
+            rootMotionDeltaPosition = glm::vec3(0.0f);
+            rootMotionDeltaRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
             ozz::vector<ozz::animation::BlendingJob::Layer> layers;
             layers.reserve(animations.size());
             ozz::animation::BlendingJob blending_job;
@@ -764,7 +750,8 @@ namespace vke_component
                     blendedRootMotionRotation.x,
                     blendedRootMotionRotation.y,
                     blendedRootMotionRotation.z);
-                applyRootMotion(blendedRootMotionPosition, glm::normalize(deltaRotation));
+                rootMotionDeltaPosition = blendedRootMotionPosition;
+                rootMotionDeltaRotation = glm::normalize(deltaRotation);
             }
 
             blending_job.layers = make_span(layers);
@@ -800,8 +787,6 @@ namespace vke_component
             shadowRenderUnit->perUnitDescriptorSet = descriptorSets[currentFrame];
         }
 
-        entt::registry *ownerRegistry = nullptr;
-        entt::entity ownerEntity = entt::null;
         ozz::vector<ozz::math::SoaTransform> blendedLocals;
         ozz::vector<ozz::math::Float4x4> models;
         ozz::vector<ozz::math::Float4x4> skinningMatrices;

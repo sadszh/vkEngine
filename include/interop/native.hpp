@@ -50,6 +50,8 @@ namespace vke_interop
     using SetSkeletonAnimatorAnimationWeightFn = void(VKE_INTEROP_CDECL *)(uint32_t, uint32_t, float);
     using GetSkeletonAnimatorAnimationWeightFn = float(VKE_INTEROP_CDECL *)(uint32_t, uint32_t);
     using SetSkeletonAnimatorBlendWeightsFn = void(VKE_INTEROP_CDECL *)(uint32_t, const float *, uint32_t);
+    using GetSkeletonAnimatorRootMotionDeltaPositionFn = void(VKE_INTEROP_CDECL *)(uint32_t, Vector3<float> *);
+    using GetSkeletonAnimatorRootMotionDeltaRotationFn = void(VKE_INTEROP_CDECL *)(uint32_t, Quaternion<float> *);
     using SetCharacterControllerVelocityFn = void(VKE_INTEROP_CDECL *)(uint32_t, const Vector3<float> *);
     using GetCharacterControllerVelocityFn = void(VKE_INTEROP_CDECL *)(uint32_t, Vector3<float> *);
     using IsCharacterControllerGroundedFn = int32_t(VKE_INTEROP_CDECL *)(uint32_t);
@@ -95,6 +97,8 @@ namespace vke_interop
         SetSkeletonAnimatorAnimationWeightFn SetSkeletonAnimatorAnimationWeight;
         GetSkeletonAnimatorAnimationWeightFn GetSkeletonAnimatorAnimationWeight;
         SetSkeletonAnimatorBlendWeightsFn SetSkeletonAnimatorBlendWeights;
+        GetSkeletonAnimatorRootMotionDeltaPositionFn GetSkeletonAnimatorRootMotionDeltaPosition;
+        GetSkeletonAnimatorRootMotionDeltaRotationFn GetSkeletonAnimatorRootMotionDeltaRotation;
         GetDirectionalLightColorFn GetDirectionalLightColor;
         SetDirectionalLightColorFn SetDirectionalLightColor;
         GetDirectionalLightIntensityFn GetDirectionalLightIntensity;

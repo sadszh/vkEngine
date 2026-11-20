@@ -70,7 +70,7 @@ Start 内发出的实例化请求若发生在正在处理的实例化批次内�
 帧边界处理销毁请求（编辑时也执行）
 运行时：
   处理实例化请求（含新组件 Start）
-  C# Update → 原生 Update（动画 CPU 采样及根运动）
+  C# Update → 原生 Update（动画 CPU 采样及根运动增量）
   零次或多次：
     物理接触事件 → C# FixedUpdate → 原生 FixedUpdate（角色控制器）
     → Jolt 模拟 → 物理结果同步到 Transform
@@ -82,7 +82,7 @@ Start 内发出的实例化请求若发生在正在处理的实例化批次内�
 
 编辑模式下，组件保持加载状态，实例化队列和三个运行更新阶段暂停处理，渲染可以继续。
 
-SkeletonAnimator 构造时以零时间计算初始姿态，运行时 Update 推进动画、采样混合并应用根运动。渲染回调在帧 fence 完成后，将已算出的姿态上传至 GPU。
+SkeletonAnimator 构造时以零时间计算初始姿态，运行时 Update 推进动画、采样混合并保存本帧根运动增量，不修改 Transform。增量位于实体局部空间，由脚本通过组件接口读取并决定如何应用；脚本 Update 先于原生 Update 执行，因此读到的是上一次动画更新的增量。渲染回调在帧 fence 完成后，将已算出的姿态上传至 GPU。
 
 AudioSource 构造时从已解码的 AudioClip 创建独立播放实例；音频引擎不可用或播放资源创建失败时，记录错误并终止运行。Start 根据 `playOnStart` 决定是否播放。`SetClip` 返回 `Result<void>`，新声音加载成功后替换当前声音，失败保留当前 Clip 和播放状态；空 Clip 清空声音。主动播放由调用方调用 Play / Replay。CharacterController 在 FixedUpdate 推进，物理模拟后的场景监听器负责同步结果。
 
