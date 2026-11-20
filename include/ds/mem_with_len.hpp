@@ -2,6 +2,7 @@
 #define MEM_WITH_LEN_H
 
 #include <cstddef>
+#include <binary_io.hpp>
 #include <logger.hpp>
 
 namespace vke_ds
@@ -54,8 +55,8 @@ namespace vke_ds
             VKE_LOG_INFO("WriteToBinaryStream {}", size);
             if (size > 0 && data)
             {
-                binary.write((const char *)&size, sizeof(size_t));
-                binary.write((const char *)data, size);
+                vke_common::WriteBytes(binary, &size, sizeof(size_t));
+                vke_common::WriteBytes(binary, data, size);
             }
         }
 

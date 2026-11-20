@@ -132,6 +132,8 @@ public:
         DBSQLITE_ASSET_OP_FUNCS(SceneAsset, sceneCache, dirtyScene, deletedScene, "scene_assets")
         DBSQLITE_ASSET_OP_FUNCS(FontAsset, fontCache, dirtyFont, deletedFont, "font_assets")
         DBSQLITE_ASSET_OP_FUNCS(AudioClipAsset, audioCache, dirtyAudio, deletedAudio, "audio_clip_assets")
+        DBSQLITE_ASSET_OP_FUNCS(NavAgentConfigAsset, navAgentConfigCache, dirtyNavAgentConfig, deletedNavAgentConfig, "nav_agent_config_assets")
+        DBSQLITE_ASSET_OP_FUNCS(NavMeshAsset, navMeshCache, dirtyNavMesh, deletedNavMesh, "nav_mesh_assets")
 
     private:
         void clearCaches();
@@ -148,6 +150,8 @@ public:
         std::map<AssetHandle, SceneAsset> sceneCache;
         std::map<AssetHandle, FontAsset> fontCache;
         std::map<AssetHandle, AudioClipAsset> audioCache;
+        std::map<AssetHandle, NavAgentConfigAsset> navAgentConfigCache;
+        std::map<AssetHandle, NavMeshAsset> navMeshCache;
 
         std::set<AssetHandle> dirtyTexture;
         std::set<AssetHandle> dirtyMesh;
@@ -159,6 +163,8 @@ public:
         std::set<AssetHandle> dirtyScene;
         std::set<AssetHandle> dirtyFont;
         std::set<AssetHandle> dirtyAudio;
+        std::set<AssetHandle> dirtyNavAgentConfig;
+        std::set<AssetHandle> dirtyNavMesh;
 
         std::set<AssetHandle> deletedTexture;
         std::set<AssetHandle> deletedMesh;
@@ -170,6 +176,8 @@ public:
         std::set<AssetHandle> deletedScene;
         std::set<AssetHandle> deletedFont;
         std::set<AssetHandle> deletedAudio;
+        std::set<AssetHandle> deletedNavAgentConfig;
+        std::set<AssetHandle> deletedNavMesh;
 
         std::string databaseError(const std::string &operation) const;
         Result<void> rollback(std::string error);

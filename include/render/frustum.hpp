@@ -23,13 +23,9 @@ namespace vke_render
 
         bool Intersects(const AABB &bounds, const glm::mat4 &model) const
         {
-            const glm::vec3 localCenter = (bounds.min + bounds.max) * 0.5f;
-            const glm::vec3 localExtent = (bounds.max - bounds.min) * 0.5f;
-            const glm::vec3 center = glm::vec3(model * glm::vec4(localCenter, 1.0f));
-            // Enclose the transformed box, including negative scale and shear.
-            const glm::vec3 extent = glm::abs(glm::vec3(model[0])) * localExtent.x +
-                                     glm::abs(glm::vec3(model[1])) * localExtent.y +
-                                     glm::abs(glm::vec3(model[2])) * localExtent.z;
+            const AABB world = bounds.TransformBounds(model);
+            const glm::vec3 center = (world.min + world.max) * 0.5f;
+            const glm::vec3 extent = (world.max - world.min) * 0.5f;
             for (const glm::vec4 &plane : planes)
             {
                 const glm::vec3 normal(plane);

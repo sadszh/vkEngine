@@ -1,4 +1,5 @@
 #include <asset/texture_data.hpp>
+#include <binary_io.hpp>
 #include <array>
 #include <algorithm>
 #include <bit>
@@ -79,7 +80,7 @@ namespace vke_common
     {
         input.seekg(0);
         std::array<unsigned char, TextureHeaderSize> header{};
-        if (!input.read(reinterpret_cast<char *>(header.data()), header.size()))
+        if (!ReadBytes(input, header.data(), header.size()))
             return std::unexpected("cannot read texture header");
         if (header[0] != 'V' || header[1] != 'K' || header[2] != 'E' || header[3] != 'T')
             return std::unexpected("invalid texture magic");
@@ -104,13 +105,13 @@ namespace vke_common
 
     void TextureMetadata::WriteHeader(std::ostream &output) const
     {
-        output.write("VKET", 4);
+        WriteBytes(output, "VKET", 4);
         for (uint32_t field : {textureVersion, width, height,
                                mipCount, static_cast<uint32_t>(format)})
         {
             const unsigned char bytes[]{static_cast<unsigned char>(field), static_cast<unsigned char>(field >> 8),
                                         static_cast<unsigned char>(field >> 16), static_cast<unsigned char>(field >> 24)};
-            output.write(reinterpret_cast<const char *>(bytes), sizeof(bytes));
+            WriteBytes(output, bytes, sizeof(bytes));
         }
     }
 }

@@ -179,7 +179,8 @@ namespace vke_common
         };
         copy(static_cast<std::tuple<TransformData, CameraData, RenderableObjectData, CanvasData,
             SkeletonAnimatorData, RigidBodyData, SensorData, CharacterControllerData, AudioSourceData,
-            AudioListenerData, DirectionalLightData, PointLightData, SpotLightData, ScriptDataList, PrefabReference> *>(nullptr));
+            AudioListenerData, NavMeshRegionData, DirectionalLightData, PointLightData, SpotLightData,
+            ScriptDataList, PrefabReference> *>(nullptr));
     }
 
     SceneData SceneData::Clone() const

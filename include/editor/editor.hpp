@@ -48,6 +48,7 @@ namespace vke_editor
         vke_common::AssetHandle selectedAsset;
         std::map<vke_common::AssetHandle, VkDescriptorSet> texturePreviewDescriptorSets;
         std::map<vke_common::AssetHandle, std::string> texturePreviewErrors;
+        std::map<vke_common::AssetHandle, std::string> navMeshErrors;
         AssetBrowserMode assetBrowserMode;
         AssetTreeNode assetDirectoryTree;
 
@@ -95,6 +96,8 @@ namespace vke_editor
         void drawCanvasComponent();
         void drawAudioSourceComponent();
         void drawAudioListenerComponent();
+        void drawNavMeshRegionComponent();
+        void createNavAgentConfig();
         void drawScriptComponents();
         void showComponentMenu();
         void showAssets();

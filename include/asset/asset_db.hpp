@@ -66,6 +66,8 @@ public:
         DB_ASSET_OP_FUNCS(SceneAsset)
         DB_ASSET_OP_FUNCS(FontAsset)
         DB_ASSET_OP_FUNCS(AudioClipAsset)
+        DB_ASSET_OP_FUNCS(NavAgentConfigAsset)
+        DB_ASSET_OP_FUNCS(NavMeshAsset)
 
         std::filesystem::path path;
 

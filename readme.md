@@ -155,7 +155,7 @@ Or launch the editor with your project's config:
   - [x] texture preprocessing: GPU compression (BC7) and offline mipmaps
   - [ ] asset streaming
 - **Path Finding**:
-  - [ ] navmesh generation and serialization
+  - [x] navmesh generation and serialization
   - [ ] nearest navigable point and path queries
   - [ ] agent path following
 - **Particles**

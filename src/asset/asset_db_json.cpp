@@ -14,6 +14,8 @@ namespace vke_common
         clearAssetCache(sceneCache);
         clearAssetCache(fontCache);
         clearAssetCache(audioCache);
+        clearAssetCache(navAgentConfigCache);
+        clearAssetCache(navMeshCache);
         for (auto &id : ids)
             id = stID;
         return {};
@@ -49,6 +51,8 @@ namespace vke_common
                 LOAD_LUT_CASE(ASSET_SCENE, SceneAsset, sceneCache)
                 LOAD_LUT_CASE(ASSET_FONT, FontAsset, fontCache)
                 LOAD_LUT_CASE(ASSET_AUDIO_CLIP, AudioClipAsset, audioCache)
+                LOAD_LUT_CASE(ASSET_NAV_AGENT, NavAgentConfigAsset, navAgentConfigCache)
+                LOAD_LUT_CASE(ASSET_NAV_MESH, NavMeshAsset, navMeshCache)
             default:
                 break;
             }
@@ -74,6 +78,8 @@ namespace vke_common
         ASSET_TO_JSON(animationCache)
         ASSET_TO_JSON(fontCache)
         ASSET_TO_JSON(audioCache)
+        ASSET_TO_JSON(navAgentConfigCache)
+        ASSET_TO_JSON(navMeshCache)
         for (auto &kv : sceneCache)
             ret.push_back(kv.second.ToJSON());
 

@@ -151,6 +151,14 @@ namespace vke_editor
                                                    { return projectDB->IterateAudioClipAsset(op); });
             !result)
             return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_NAV_AGENT, [&](auto &&op)
+                                                   { return projectDB->IterateNavAgentConfigAsset(op); });
+            !result)
+            return result;
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_NAV_MESH, [&](auto &&op)
+                                                   { return projectDB->IterateNavMeshAsset(op); });
+            !result)
+            return result;
         assetDirectoryTree = std::move(tree);
         return {};
     }

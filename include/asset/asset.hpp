@@ -11,6 +11,7 @@
 #include <animation.hpp>
 #include <font.hpp>
 #include <audio/audio_clip.hpp>
+#include <navigation/navmesh.hpp>
 #include <nlohmann/json.hpp>
 
 #include <physics/physics.hpp>
@@ -75,6 +76,8 @@ namespace vke_common
         ASSET_SCENE,
         ASSET_FONT,
         ASSET_AUDIO_CLIP,
+        ASSET_NAV_AGENT,
+        ASSET_NAV_MESH,
         ASSET_CNT_FLAG
     };
 
@@ -91,10 +94,13 @@ namespace vke_common
         std::unordered_map<AssetHandle, Result<std::shared_ptr<Animation>>> animations;
         std::unordered_map<AssetHandle, Result<std::shared_ptr<Font>>> fonts;
         std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_audio::AudioClip>>> audioClips;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_navmesh::NavAgentConfig>>> navAgentConfigs;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_navmesh::NavMeshData>>> navMeshes;
     };
 
     const std::string AssetTypeToName[] = {"Texture", "Mesh", "VFShader", "ComputeShader",
-                                           "Material", "Skeleton", "Animation", "Scene", "Font", "AudioClip"};
+                                           "Material", "Skeleton", "Animation", "Scene", "Font", "AudioClip",
+                                           "NavAgent", "NavMesh"};
 
     Result<void> ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer);
 
@@ -242,6 +248,48 @@ namespace vke_common
     };
 
     LEAF_ASSET_TYPE(AudioClipAsset, ASSET_AUDIO_CLIP, vke_audio::AudioClip);
+
+    class NavAgentConfigAsset : public Asset<ASSET_NAV_AGENT, NavAgentConfigAsset, vke_navmesh::NavAgentConfig>
+    {
+    public:
+        vke_navmesh::NavAgentConfig config;
+
+        NavAgentConfigAsset() {}
+
+        NavAgentConfigAsset(AssetHandle id, const nlohmann::json &json)
+            : Asset(id, json), config(json) {}
+
+        void SetConfig(const vke_navmesh::NavAgentConfig &value)
+        {
+            config = value;
+            val.reset();
+            loadState = AssetLoadState::Unloaded;
+        }
+
+        void writeJSON(nlohmann::json &json) const
+        {
+            config.WriteJSON(json);
+        }
+    };
+
+    class NavMeshAsset : public Asset<ASSET_NAV_MESH, NavMeshAsset, vke_navmesh::NavMeshData>
+    {
+    public:
+        AssetHandle agentConfig;
+        vke_navmesh::NavMeshBuildSettings settings;
+
+        NavMeshAsset() : agentConfig(0) {}
+
+        NavMeshAsset(AssetHandle id, const nlohmann::json &json)
+            : Asset(id, json), agentConfig(json["agentConfig"]),
+              settings(json["settings"]) {}
+
+        void writeJSON(nlohmann::json &json) const
+        {
+            json["agentConfig"] = agentConfig;
+            json["settings"] = settings.ToJSON();
+        }
+    };
 
     class TextureAsset : public Asset<ASSET_TEXTURE, TextureAsset, vke_render::Texture2D>
     {

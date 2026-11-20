@@ -40,6 +40,19 @@ namespace vke_common
         case ASSET_FONT:
             return Object(json).Unsigneds({"pixelSize", "characterCount", "firstCodepoint"}, UINT32_MAX)
                 .Strings({"characters"}).Result();
+        case ASSET_NAV_AGENT:
+            return vke_navmesh::NavAgentConfig::ValidateJSON(json);
+        case ASSET_NAV_MESH:
+        {
+            auto settings = Object(json).Require({"agentConfig", "settings"}).Unsigneds({"agentConfig"}).Result();
+            if (!settings)
+                return settings;
+            if (json["agentConfig"].get<AssetHandle>() == 0)
+                return std::unexpected("navmesh assets require an agent config");
+            if (PathFromUTF8(json["path"].get<std::string>()).extension() != ".navmesh")
+                return std::unexpected("navmesh assets require .navmesh");
+            return vke_navmesh::NavMeshBuildSettings::ValidateJSON(json["settings"]);
+        }
         case ASSET_MATERIAL:
             break;
         default:

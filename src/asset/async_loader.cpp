@@ -354,6 +354,72 @@ namespace vke_common
         return {};
     }
 
+    Result<void> AssetManager::AsyncLoadNavAgentConfig(AssetHandle handle)
+    {
+        auto found = getNavAgentConfigAsset(handle);
+        if (!found)
+            return std::unexpected(found.error());
+        auto *asset = *found;
+        if (!asset)
+            return std::unexpected("NavAgentConfig " + std::to_string(handle) + ": asset not found");
+        return asyncLoad(*asset, [asset](AssetUploadContext &)
+                         { return loadNavAgentConfig(*asset); });
+    }
+
+    Result<std::shared_ptr<vke_navmesh::NavAgentConfig>> AssetManager::WaitAsyncLoadNavAgentConfig(AssetHandle handle)
+    {
+        auto found = getNavAgentConfigAsset(handle);
+        if (!found)
+            return std::unexpected(found.error());
+        if (!*found)
+            return std::unexpected("NavAgentConfig " + std::to_string(handle) + ": asset not found");
+        return waitAsyncLoad(**found);
+    }
+
+    Result<void> AssetManager::CancelAsyncLoadNavAgentConfig(AssetHandle handle, bool wait)
+    {
+        auto found = getNavAgentConfigAsset(handle);
+        if (!found)
+            return std::unexpected(found.error());
+        if (!*found)
+            return std::unexpected("NavAgentConfig " + std::to_string(handle) + ": asset not found");
+        cancelAsyncLoad(**found, wait);
+        return {};
+    }
+
+    Result<void> AssetManager::AsyncLoadNavMesh(AssetHandle handle)
+    {
+        auto found = getNavMeshAsset(handle);
+        if (!found)
+            return std::unexpected(found.error());
+        auto *asset = *found;
+        if (!asset)
+            return std::unexpected("NavMesh " + std::to_string(handle) + ": asset not found");
+        return asyncLoad(*asset, [path = resolveAssetPath(handle, asset->path)](AssetUploadContext &)
+                         { return loadNavMesh(path); });
+    }
+
+    Result<std::shared_ptr<vke_navmesh::NavMeshData>> AssetManager::WaitAsyncLoadNavMesh(AssetHandle handle)
+    {
+        auto found = getNavMeshAsset(handle);
+        if (!found)
+            return std::unexpected(found.error());
+        if (!*found)
+            return std::unexpected("NavMesh " + std::to_string(handle) + ": asset not found");
+        return waitAsyncLoad(**found);
+    }
+
+    Result<void> AssetManager::CancelAsyncLoadNavMesh(AssetHandle handle, bool wait)
+    {
+        auto found = getNavMeshAsset(handle);
+        if (!found)
+            return std::unexpected(found.error());
+        if (!*found)
+            return std::unexpected("NavMesh " + std::to_string(handle) + ": asset not found");
+        cancelAsyncLoad(**found, wait);
+        return {};
+    }
+
     void AssetManager::enqueueLoad(AssetType type, LoadJob job)
     {
         if (workers.empty())
@@ -507,6 +573,10 @@ namespace vke_common
             return CancelAsyncLoadFont(handle, wait);
         case ASSET_AUDIO_CLIP:
             return CancelAsyncLoadAudioClip(handle, wait);
+        case ASSET_NAV_AGENT:
+            return CancelAsyncLoadNavAgentConfig(handle, wait);
+        case ASSET_NAV_MESH:
+            return CancelAsyncLoadNavMesh(handle, wait);
         case ASSET_MATERIAL:
         {
             auto found = getMaterialAsset(handle);
@@ -561,6 +631,12 @@ namespace vke_common
                 case ASSET_AUDIO_CLIP:
                     requested = AsyncLoadAudioClip(handle);
                     break;
+                case ASSET_NAV_AGENT:
+                    requested = AsyncLoadNavAgentConfig(handle);
+                    break;
+                case ASSET_NAV_MESH:
+                    requested = AsyncLoadNavMesh(handle);
+                    break;
                 }
                 if (!requested)
                 {
@@ -603,6 +679,12 @@ namespace vke_common
         if (auto entries = batch.find(ASSET_AUDIO_CLIP); entries != batch.end())
             for (auto handle : entries->second)
                 result.audioClips.emplace(handle, WaitAsyncLoadAudioClip(handle));
+        if (auto entries = batch.find(ASSET_NAV_AGENT); entries != batch.end())
+            for (auto handle : entries->second)
+                result.navAgentConfigs.emplace(handle, WaitAsyncLoadNavAgentConfig(handle));
+        if (auto entries = batch.find(ASSET_NAV_MESH); entries != batch.end())
+            for (auto handle : entries->second)
+                result.navMeshes.emplace(handle, WaitAsyncLoadNavMesh(handle));
         if (auto entries = batch.find(ASSET_MATERIAL); entries != batch.end())
             for (auto handle : entries->second)
                 result.materials.emplace(handle, WaitAsyncLoadMaterial(handle));

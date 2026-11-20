@@ -321,6 +321,8 @@ namespace vke_editor
                 openAssetImport(vke_common::ASSET_ANIMATION);
             if (ImGui::MenuItem("Import Font"))
                 openAssetImport(vke_common::ASSET_FONT);
+            if (ImGui::MenuItem("Create Nav Agent Config"))
+                createNavAgentConfig();
             ImGui::EndMenu();
         }
 
@@ -537,6 +539,7 @@ namespace vke_editor
         drawCanvasComponent();
         drawAudioSourceComponent();
         drawAudioListenerComponent();
+        drawNavMeshRegionComponent();
         showComponentMenu();
         ImGui::EndDisabled();
         // Script trees remain navigable while their values are read-only.
@@ -564,7 +567,8 @@ namespace vke_editor
             {"SpotLight", vke_common::ComponentType::SpotLight},
             {"Canvas", vke_common::ComponentType::Canvas},
             {"AudioSource", vke_common::ComponentType::AudioSource},
-            {"AudioListener", vke_common::ComponentType::AudioListener}};
+            {"AudioListener", vke_common::ComponentType::AudioListener},
+            {"NavMeshRegion", vke_common::ComponentType::NavMeshRegion}};
 
         ImGui::BeginDisabled(sceneManager->IsPendingDestroy(selectedEntity));
         if (ImGui::BeginCombo("Add Component", "Select component"))

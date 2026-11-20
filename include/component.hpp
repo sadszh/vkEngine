@@ -20,7 +20,8 @@ namespace vke_common
         Script = 10,
         AudioSource = 12,
         AudioListener = 13,
-        Canvas = 14
+        Canvas = 14,
+        NavMeshRegion = 15
     };
 }
 

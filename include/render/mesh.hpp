@@ -2,6 +2,7 @@
 #define MESH_H
 
 #include <render/buffer.hpp>
+#include <binary_io.hpp>
 #include <render/render_common.hpp>
 #include <concepts>
 #include <cstring>
@@ -88,6 +89,14 @@ namespace vke_render
 
         ~Mesh() {}
 
+        void ReadData(std::vector<char> &vertexData, std::vector<char> &indexData) const
+        {
+            vertexData.resize(vertexBuffer->bufferSize);
+            vertexBuffer->FromBuffer(0, vertexData.data(), vertexData.size());
+            indexData.resize(indexBuffer->bufferSize);
+            indexBuffer->FromBuffer(0, indexData.data(), indexData.size());
+        }
+
         void Render(VkCommandBuffer &commandBuffer) const
         {
             VkDeviceSize offset = 0;
@@ -136,10 +145,10 @@ namespace vke_render
             uint64_t vsize = vertices.size_bytes();
             uint64_t isize = indices.size_bytes();
             writeHeader(binary, infos, vertices.data(), indices.data());
-            binary.write((const char *)&vsize, sizeof(uint64_t));
-            binary.write((const char *)(vertices.data()), vsize);
-            binary.write((const char *)&isize, sizeof(uint64_t));
-            binary.write((const char *)(indices.data()), isize);
+            vke_common::WriteBytes(binary, &vsize, sizeof(uint64_t));
+            vke_common::WriteBytes(binary, vertices.data(), vsize);
+            vke_common::WriteBytes(binary, &isize, sizeof(uint64_t));
+            vke_common::WriteBytes(binary, indices.data(), isize);
         }
 
         static void MeshDataToBinary(std::ostream &binary, const std::vector<MeshInfo> &infos,
@@ -157,8 +166,8 @@ namespace vke_render
             MeshDataToBinary(binary, infos, vertices, indices);
             invBindMatrices.WriteToBinaryStream(binary);
             uint32_t jointCnt = joints.size();
-            binary.write((const char *)&jointCnt, sizeof(uint32_t));
-            binary.write((const char *)(joints.data()), jointCnt * sizeof(int));
+            vke_common::WriteBytes(binary, &jointCnt, sizeof(uint32_t));
+            vke_common::WriteBytes(binary, joints.data(), jointCnt * sizeof(int));
         }
 
     private:
@@ -167,10 +176,10 @@ namespace vke_render
         {
             const AABB bounds = calculateBounds(infos, vertices, indices);
             const uint32_t infoCnt = infos.size();
-            binary.write((const char *)&bounds.min, 3 * sizeof(float));
-            binary.write((const char *)&bounds.max, 3 * sizeof(float));
-            binary.write((const char *)&infoCnt, sizeof(infoCnt));
-            binary.write((const char *)infos.data(), infoCnt * sizeof(MeshInfo));
+            vke_common::WriteBytes(binary, &bounds.min, 3 * sizeof(float));
+            vke_common::WriteBytes(binary, &bounds.max, 3 * sizeof(float));
+            vke_common::WriteBytes(binary, &infoCnt, sizeof(infoCnt));
+            vke_common::WriteBytes(binary, infos.data(), infoCnt * sizeof(MeshInfo));
         }
 
         static AABB calculateBounds(const std::vector<MeshInfo> &infos, const void *vertices, const void *indices)

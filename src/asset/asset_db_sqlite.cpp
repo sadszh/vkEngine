@@ -45,6 +45,8 @@ namespace vke_common
         clearAssetCache(sceneCache);
         clearAssetCache(fontCache);
         clearAssetCache(audioCache);
+        clearAssetCache(navAgentConfigCache);
+        clearAssetCache(navMeshCache);
     }
 
     AssetDBSQLite::~AssetDBSQLite()
@@ -68,6 +70,8 @@ namespace vke_common
         "scene_assets",
         "font_assets",
         "audio_clip_assets",
+        "nav_agent_config_assets",
+        "nav_mesh_assets",
     };
 
     Result<void> AssetDBSQLite::execSQL(const std::string &sql)
@@ -200,6 +204,8 @@ namespace vke_common
         dirtyScene.clear();
         dirtyFont.clear();
         dirtyAudio.clear();
+        dirtyNavAgentConfig.clear();
+        dirtyNavMesh.clear();
 
         deletedTexture.clear();
         deletedMesh.clear();
@@ -211,6 +217,8 @@ namespace vke_common
         deletedScene.clear();
         deletedFont.clear();
         deletedAudio.clear();
+        deletedNavAgentConfig.clear();
+        deletedNavMesh.clear();
         return {};
     }
 
@@ -252,6 +260,8 @@ namespace vke_common
                 CACHE_IMPORTED_ASSET(ASSET_SCENE, SceneAsset, sceneCache, dirtyScene, deletedScene)
                 CACHE_IMPORTED_ASSET(ASSET_FONT, FontAsset, fontCache, dirtyFont, deletedFont)
                 CACHE_IMPORTED_ASSET(ASSET_AUDIO_CLIP, AudioClipAsset, audioCache, dirtyAudio, deletedAudio)
+                CACHE_IMPORTED_ASSET(ASSET_NAV_AGENT, NavAgentConfigAsset, navAgentConfigCache, dirtyNavAgentConfig, deletedNavAgentConfig)
+                CACHE_IMPORTED_ASSET(ASSET_NAV_MESH, NavMeshAsset, navMeshCache, dirtyNavMesh, deletedNavMesh)
             }
             ids[type] = std::max(ids[type], id + 1);
         }
@@ -284,6 +294,10 @@ namespace vke_common
             return rollback(result.error());
         if (auto result = flushChanges("audio_clip_assets", audioCache, dirtyAudio, deletedAudio); !result)
             return rollback(result.error());
+        if (auto result = flushChanges("nav_agent_config_assets", navAgentConfigCache, dirtyNavAgentConfig, deletedNavAgentConfig); !result)
+            return rollback(result.error());
+        if (auto result = flushChanges("nav_mesh_assets", navMeshCache, dirtyNavMesh, deletedNavMesh); !result)
+            return rollback(result.error());
         if (auto result = execSQL("COMMIT"); !result)
             return rollback(result.error());
 
@@ -297,6 +311,8 @@ namespace vke_common
         dirtyScene.clear();
         dirtyFont.clear();
         dirtyAudio.clear();
+        dirtyNavAgentConfig.clear();
+        dirtyNavMesh.clear();
 
         deletedTexture.clear();
         deletedMesh.clear();
@@ -308,6 +324,8 @@ namespace vke_common
         deletedScene.clear();
         deletedFont.clear();
         deletedAudio.clear();
+        deletedNavAgentConfig.clear();
+        deletedNavMesh.clear();
         return {};
     }
 
@@ -405,6 +423,8 @@ namespace vke_common
     template Result<bool> AssetDBSQLite::loadAssetFromDB<SceneAsset>(const std::string &, AssetHandle, SceneAsset &);
     template Result<bool> AssetDBSQLite::loadAssetFromDB<FontAsset>(const std::string &, AssetHandle, FontAsset &);
     template Result<bool> AssetDBSQLite::loadAssetFromDB<AudioClipAsset>(const std::string &, AssetHandle, AudioClipAsset &);
+    template Result<bool> AssetDBSQLite::loadAssetFromDB<NavAgentConfigAsset>(const std::string &, AssetHandle, NavAgentConfigAsset &);
+    template Result<bool> AssetDBSQLite::loadAssetFromDB<NavMeshAsset>(const std::string &, AssetHandle, NavMeshAsset &);
 
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<TextureAsset>(const std::string &, std::map<AssetHandle, TextureAsset> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<MeshAsset>(const std::string &, std::map<AssetHandle, MeshAsset> &, const std::set<AssetHandle> &);
@@ -416,6 +436,8 @@ namespace vke_common
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<SceneAsset>(const std::string &, std::map<AssetHandle, SceneAsset> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<FontAsset>(const std::string &, std::map<AssetHandle, FontAsset> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<AudioClipAsset>(const std::string &, std::map<AssetHandle, AudioClipAsset> &, const std::set<AssetHandle> &);
+    template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<NavAgentConfigAsset>(const std::string &, std::map<AssetHandle, NavAgentConfigAsset> &, const std::set<AssetHandle> &);
+    template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<NavMeshAsset>(const std::string &, std::map<AssetHandle, NavMeshAsset> &, const std::set<AssetHandle> &);
 
     template Result<void> AssetDBSQLite::flushChanges<TextureAsset>(const std::string &, std::map<AssetHandle, TextureAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::flushChanges<MeshAsset>(const std::string &, std::map<AssetHandle, MeshAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
@@ -427,5 +449,7 @@ namespace vke_common
     template Result<void> AssetDBSQLite::flushChanges<SceneAsset>(const std::string &, std::map<AssetHandle, SceneAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::flushChanges<FontAsset>(const std::string &, std::map<AssetHandle, FontAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::flushChanges<AudioClipAsset>(const std::string &, std::map<AssetHandle, AudioClipAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
+    template Result<void> AssetDBSQLite::flushChanges<NavAgentConfigAsset>(const std::string &, std::map<AssetHandle, NavAgentConfigAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
+    template Result<void> AssetDBSQLite::flushChanges<NavMeshAsset>(const std::string &, std::map<AssetHandle, NavMeshAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
 
 }

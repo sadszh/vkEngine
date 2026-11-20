@@ -1,5 +1,6 @@
 #include <asset/asset_manager.hpp>
 #include <asset/loader.hpp>
+#include <binary_io.hpp>
 #include <logger.hpp>
 #include <asset/texture_data.hpp>
 #include <cstring>
@@ -59,6 +60,16 @@ namespace vke_common
         return validateAsset(handle, GetAudioClipAssetReadOnly);
     }
 
+    Result<void> AssetManager::ValidateNavAgentConfig(AssetHandle handle)
+    {
+        return validateAsset(handle, GetNavAgentConfigAssetReadOnly);
+    }
+
+    Result<void> AssetManager::ValidateNavMesh(AssetHandle handle)
+    {
+        return validateAsset(handle, GetNavMeshAssetReadOnly);
+    }
+
     Result<void> AssetManager::checkPath(AssetHandle handle, const std::filesystem::path &path) const
     {
         const auto full = resolveAssetPath(handle, path);
@@ -79,6 +90,13 @@ namespace vke_common
         for (auto texture : material->textures)
             if (auto result = ValidateTexture2D(texture); !result)
                 return std::unexpected("texture: " + result.error());
+        return {};
+    }
+
+    Result<void> AssetManager::checkAsset(const NavAgentConfigAsset *agentConfig) const
+    {
+        if (!agentConfig)
+            return std::unexpected("nav agent config not found");
         return {};
     }
 
@@ -107,8 +125,7 @@ namespace vke_common
         buffer.resize(fileSize);
 
         file.seekg(0);
-        file.read(buffer.data(), fileSize);
-        if (!file)
+        if (!ReadBytes(file, buffer.data(), buffer.size()))
             return std::unexpected(PathToUTF8(filename) + ": cannot read file");
 
         return {};
@@ -149,7 +166,7 @@ namespace vke_common
             metadata.mipCount > properties.maxMipLevels)
             return std::unexpected(context + "texture dimensions or format/usage unsupported by device");
         std::vector<char> pixels(static_cast<size_t>(info->layout.size));
-        if (!input.read(pixels.data(), static_cast<std::streamsize>(pixels.size())))
+        if (!ReadBytes(input, pixels.data(), pixels.size()))
             return std::unexpected(context + "cannot read texture data");
 
         if (!upload)
@@ -720,5 +737,73 @@ namespace vke_common
             return std::unexpected(context + "asset not found");
         return loadFromCacheOrUpdate(*asset, [&]
                                      { return loadAudioClip(*asset, resolveAssetPath(hdl, asset->path)); });
+    }
+
+    Result<std::unique_ptr<vke_navmesh::NavAgentConfig>> loadNavAgentConfig(const NavAgentConfigAsset &asset)
+    {
+        const std::string context = "nav agent config " + std::to_string(asset.id) + ": ";
+        if (auto valid = asset.config.Validate(); !valid)
+            return std::unexpected(context + valid.error());
+        return std::make_unique<vke_navmesh::NavAgentConfig>(asset.config);
+    }
+
+    Result<std::unique_ptr<vke_navmesh::NavAgentConfig>> AssetManager::LoadNavAgentConfigUnique(const AssetHandle hdl)
+    {
+        const std::string context = "nav agent config " + std::to_string(hdl) + ": ";
+        auto result = GetNavAgentConfigAssetReadOnly(hdl);
+        if (!result)
+            return std::unexpected(context + result.error());
+        auto *asset = *result;
+        if (!asset)
+            return std::unexpected(context + "asset not found");
+        return loadNavAgentConfig(*asset);
+    }
+
+    Result<std::shared_ptr<vke_navmesh::NavAgentConfig>> AssetManager::LoadNavAgentConfig(const AssetHandle hdl)
+    {
+        const std::string context = "nav agent config " + std::to_string(hdl) + ": ";
+        auto result = getAssetForLoad(getNavAgentConfigAsset(hdl));
+        if (!result)
+            return std::unexpected(context + result.error());
+        auto *asset = *result;
+        if (!asset)
+            return std::unexpected(context + "asset not found");
+        return loadFromCacheOrUpdate(*asset, [&]
+                                     { return loadNavAgentConfig(*asset); });
+    }
+
+    Result<std::unique_ptr<vke_navmesh::NavMeshData>> loadNavMesh(const std::filesystem::path &fullPath)
+    {
+        auto tiles = vke_navmesh::ReadNavMeshFile(fullPath);
+        if (!tiles)
+            return std::unexpected(tiles.error());
+        auto data = std::make_unique<vke_navmesh::NavMeshData>();
+        data->tiles = std::move(*tiles);
+        return data;
+    }
+
+    Result<std::unique_ptr<vke_navmesh::NavMeshData>> AssetManager::LoadNavMeshUnique(const AssetHandle hdl)
+    {
+        const std::string context = "navmesh " + std::to_string(hdl) + ": ";
+        auto result = GetNavMeshAssetReadOnly(hdl);
+        if (!result)
+            return std::unexpected(context + result.error());
+        auto *asset = *result;
+        if (!asset)
+            return std::unexpected(context + "asset not found");
+        return loadNavMesh(resolveAssetPath(hdl, asset->path));
+    }
+
+    Result<std::shared_ptr<vke_navmesh::NavMeshData>> AssetManager::LoadNavMesh(const AssetHandle hdl)
+    {
+        const std::string context = "navmesh " + std::to_string(hdl) + ": ";
+        auto result = getAssetForLoad(getNavMeshAsset(hdl));
+        if (!result)
+            return std::unexpected(context + result.error());
+        auto *asset = *result;
+        if (!asset)
+            return std::unexpected(context + "asset not found");
+        return loadFromCacheOrUpdate(*asset, [&]
+                                     { return loadNavMesh(resolveAssetPath(hdl, asset->path)); });
     }
 }

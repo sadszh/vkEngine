@@ -1,4 +1,5 @@
 #include <tools/texture_conversion.hpp>
+#include <binary_io.hpp>
 #include <tools/svg.hpp>
 #include <stb/stb_image.h>
 #include <bc7enc/bc7enc.h>
@@ -217,7 +218,7 @@ namespace vke_tools
         for (const auto &region : layout->regions)
         {
             const char padding[16]{};
-            output.write(padding, static_cast<std::streamsize>(region.bufferOffset - written));
+            WriteBytes(output, padding, region.bufferOffset - written);
             std::vector<unsigned char> encoded(size_t(width) * height * texelSize);
             for (size_t i = 0; i < size_t(width) * height; ++i)
                 for (uint32_t c = 0; c < channels; ++c)
@@ -238,7 +239,7 @@ namespace vke_tools
                 }
             if (bc7)
                 encoded = compressBC7(encoded, width, height, srgbOutput);
-            output.write(reinterpret_cast<const char *>(encoded.data()), static_cast<std::streamsize>(encoded.size()));
+            WriteBytes(output, encoded.data(), encoded.size());
             written = region.bufferOffset + encoded.size();
             if (region.imageSubresource.mipLevel + 1 < metadata.mipCount)
             {

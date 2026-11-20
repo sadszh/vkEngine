@@ -131,6 +131,20 @@ namespace vke_editor
                 return true;
             }
             break;
+        case vke_common::ASSET_NAV_AGENT:
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetNavAgentConfigAssetReadOnly(handle)))
+            {
+                entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
+                return true;
+            }
+            break;
+        case vke_common::ASSET_NAV_MESH:
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetNavMeshAssetReadOnly(handle)))
+            {
+                entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
+                return true;
+            }
+            break;
         default:
             break;
         }
@@ -243,6 +257,10 @@ namespace vke_editor
                        { return vke_common::AssetManager::IterateAnimationAsset(op); });
         showAssetGroup("Audio Clips", vke_common::ASSET_AUDIO_CLIP, [](auto &&op)
                        { return vke_common::AssetManager::IterateAudioClipAsset(op); });
+        showAssetGroup("Nav Agent Configs", vke_common::ASSET_NAV_AGENT, [](auto &&op)
+                       { return vke_common::AssetManager::IterateNavAgentConfigAsset(op); });
+        showAssetGroup("Nav Meshes", vke_common::ASSET_NAV_MESH, [](auto &&op)
+                       { return vke_common::AssetManager::IterateNavMeshAsset(op); });
     }
 
     void Editor::showAssetsByDirectory(vke_common::AssetManager *assetManager)
@@ -500,6 +518,71 @@ namespace vke_editor
                 ImGui::Text("Character Count: %u", asset->characterCount);
             }
             break;
+        case vke_common::ASSET_NAV_AGENT:
+        {
+            auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetNavAgentConfigAsset(entry.id));
+            if (asset == nullptr)
+                break;
+            vke_navmesh::NavAgentConfig config = asset->config;
+            bool changed = false;
+            bool editFinished = false;
+            changed |= ImGui::DragFloat("Radius", &config.radius, 0.05f, 0.01f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            editFinished |= ImGui::IsItemDeactivatedAfterEdit();
+            changed |= ImGui::DragFloat("Height", &config.height, 0.05f, 0.1f, 20.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            editFinished |= ImGui::IsItemDeactivatedAfterEdit();
+            changed |= ImGui::DragFloat("Max Slope Angle", &config.maxSlopeAngle, 0.5f, 0.0f, 89.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+            editFinished |= ImGui::IsItemDeactivatedAfterEdit();
+            changed |= ImGui::DragFloat("Max Climb", &config.maxClimb, 0.05f, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            editFinished |= ImGui::IsItemDeactivatedAfterEdit();
+            if (changed)
+            {
+                if (auto valid = config.Validate(); valid)
+                    asset->SetConfig(config);
+                else
+                    VKE_LOG_ERROR("Invalid nav agent config: {}", valid.error());
+            }
+            if (editFinished)
+            {
+                vke_common::AssetDBBase *database = vke_common::AssetManager::GetAssetDB();
+                database->MarkDirtyNavAgentConfigAsset(entry.id);
+                if (auto saved = database->SyncAll(); !saved)
+                    VKE_LOG_ERROR("Cannot save nav agent config: {}", saved.error());
+            }
+            break;
+        }
+        case vke_common::ASSET_NAV_MESH:
+        {
+            const auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetNavMeshAssetReadOnly(entry.id));
+            if (asset == nullptr)
+                break;
+            const vke_navmesh::NavMeshBuildSettings &settings = asset->settings;
+            ImGui::Text("Agent Config: %llu", static_cast<unsigned long long>(asset->agentConfig));
+            ImGui::Text("Bounds Min: %.2f %.2f %.2f", settings.boundsMin.x, settings.boundsMin.y, settings.boundsMin.z);
+            ImGui::Text("Bounds Max: %.2f %.2f %.2f", settings.boundsMax.x, settings.boundsMax.y, settings.boundsMax.z);
+            ImGui::Text("Cell Size: %.3f  Cell Height: %.3f  Tile Size: %d",
+                        settings.cellSize, settings.cellHeight, settings.tileSize);
+            if (asset->val)
+                ImGui::Text("Tiles: %zu", asset->val->tiles.size());
+            else
+            {
+                auto error = navMeshErrors.find(entry.id);
+                if (error == navMeshErrors.end())
+                {
+                    if (auto navMesh = vke_common::AssetManager::LoadNavMesh(entry.id); navMesh)
+                        ImGui::Text("Tiles: %zu", (*navMesh)->tiles.size());
+                    else
+                        error = navMeshErrors.emplace(entry.id, navMesh.error()).first;
+                }
+                if (error != navMeshErrors.end())
+                {
+                    ImGui::TextWrapped("Navmesh load failed: %s", error->second.c_str());
+                    const std::string retryID = "Retry##navmesh" + std::to_string(entry.id);
+                    if (ImGui::Button(retryID.c_str()))
+                        navMeshErrors.erase(error);
+                }
+            }
+            break;
+        }
         default:
             break;
         }

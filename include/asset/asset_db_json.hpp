@@ -93,6 +93,8 @@ public:
         DBJSON_ASSET_OP_FUNCS(SceneAsset, sceneCache)
         DBJSON_ASSET_OP_FUNCS(FontAsset, fontCache)
         DBJSON_ASSET_OP_FUNCS(AudioClipAsset, audioCache)
+        DBJSON_ASSET_OP_FUNCS(NavAgentConfigAsset, navAgentConfigCache)
+        DBJSON_ASSET_OP_FUNCS(NavMeshAsset, navMeshCache)
 
     private:
         AssetHandle ids[ASSET_CNT_FLAG] = {};
@@ -106,6 +108,8 @@ public:
         std::map<AssetHandle, SceneAsset> sceneCache;
         std::map<AssetHandle, FontAsset> fontCache;
         std::map<AssetHandle, AudioClipAsset> audioCache;
+        std::map<AssetHandle, NavAgentConfigAsset> navAgentConfigCache;
+        std::map<AssetHandle, NavMeshAsset> navMeshCache;
 
         Result<void> bulkLoad(const std::filesystem::path &pth);
         Result<void> saveAll(const std::filesystem::path &pth);

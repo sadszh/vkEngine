@@ -65,9 +65,11 @@ namespace vke_render
     public:
         void *data;
 
-        HostCoherentBuffer(VkDeviceSize size, VkBufferUsageFlags usage)
+        HostCoherentBuffer(VkDeviceSize size, VkBufferUsageFlags usage, bool hostRead = false)
             : Buffer(size, usage,
-                     VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+                     VMA_ALLOCATION_CREATE_MAPPED_BIT |
+                         (hostRead ? VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT
+                                   : VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT),
                      VMA_MEMORY_USAGE_AUTO_PREFER_HOST)
         {
             data = vmaAllocationInfo.pMappedData;
@@ -107,8 +109,11 @@ namespace vke_render
 
         void FromBuffer(size_t srcOffset, void *dst, size_t size)
         {
-            HostCoherentBuffer stagingBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+            HostCoherentBuffer stagingBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, true);
             VulkanResourceManager::CopyBuffer(buffer, stagingBuffer.buffer, size, srcOffset, 0);
+            VKE_VK_CHECK(vmaInvalidateAllocation(RenderEnvironment::GetInstance()->vmaAllocator,
+                                                 stagingBuffer.vmaAllocation, 0, size),
+                         "Failed to invalidate buffer readback!")
             memcpy(dst, (char *)stagingBuffer.data, size);
         }
     };

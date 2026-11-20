@@ -236,6 +236,7 @@ namespace vke_common
             fillComponentData.operator()<vke_component::CharacterController, vke_component::CharacterControllerData>();
             fillComponentData.operator()<vke_component::AudioSource, vke_component::AudioSourceData>();
             fillComponentData.operator()<vke_component::AudioListener, vke_component::AudioListenerData>();
+            fillComponentData.operator()<vke_component::NavMeshRegion, vke_component::NavMeshRegionData>();
             fillComponentData.operator()<vke_component::DirectionalLight, vke_component::DirectionalLightData>();
             fillComponentData.operator()<vke_component::PointLight, vke_component::PointLightData>();
             fillComponentData.operator()<vke_component::SpotLight, vke_component::SpotLightData>();
@@ -335,6 +336,7 @@ namespace vke_common
         construct.operator()<vke_component::CanvasData, vke_component::Canvas>();
         construct.operator()<vke_component::AudioSourceData, vke_component::AudioSource>();
         construct.operator()<vke_component::AudioListenerData, vke_component::AudioListener>();
+        construct.operator()<vke_component::NavMeshRegionData, vke_component::NavMeshRegion>();
 
         return dataToRuntime;
     }
@@ -424,6 +426,8 @@ namespace vke_common
             removeNativeComponent(entity, ComponentType::AudioSource);
         if (HasComponent(entity, ComponentType::AudioListener))
             removeNativeComponent(entity, ComponentType::AudioListener);
+        if (HasComponent(entity, ComponentType::NavMeshRegion))
+            removeNativeComponent(entity, ComponentType::NavMeshRegion);
         if (HasComponent(entity, ComponentType::DirectionalLight))
             removeNativeComponent(entity, ComponentType::DirectionalLight);
         if (HasComponent(entity, ComponentType::PointLight))

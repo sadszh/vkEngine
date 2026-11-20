@@ -79,6 +79,8 @@ namespace vke_common
             return load.operator()<vke_component::AudioSourceData>();
         if (type == "audioListener")
             return load.operator()<vke_component::AudioListenerData>();
+        if (type == "navMeshRegion")
+            return load.operator()<vke_component::NavMeshRegionData>();
         if (type == "directionalLight")
             return load.operator()<vke_component::DirectionalLightData>();
         if (type == "pointLight")
@@ -125,6 +127,9 @@ namespace vke_common
 
         if (registry.all_of<vke_component::AudioListenerData>(entity))
             components.push_back(registry.get<vke_component::AudioListenerData>(entity).ToJSON());
+
+        if (registry.all_of<vke_component::NavMeshRegionData>(entity))
+            components.push_back(registry.get<vke_component::NavMeshRegionData>(entity).ToJSON());
 
         if (registry.all_of<vke_component::DirectionalLightData>(entity))
             components.push_back(registry.get<vke_component::DirectionalLightData>(entity).ToJSON());
@@ -242,6 +247,11 @@ namespace vke_common
         return addComponent<vke_component::AudioListener>(entity, data);
     }
 
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::NavMeshRegionData &data)
+    {
+        return addComponent<vke_component::NavMeshRegion>(entity, data);
+    }
+
     Result<void> SceneManager::AddComponent(entt::entity entity, ComponentType componentType)
     {
         if (auto valid = validateComponentMutation(entity); !valid)
@@ -273,6 +283,8 @@ namespace vke_common
             return AddComponent(entity, AudioSourceData{});
         case ComponentType::AudioListener:
             return AddComponent(entity, AudioListenerData{});
+        case ComponentType::NavMeshRegion:
+            return AddComponent(entity, NavMeshRegionData{});
         case ComponentType::SkeletonAnimator:
             return std::unexpected("SkeletonAnimator requires explicit material, mesh and skeleton data");
         case ComponentType::Transform:
@@ -363,6 +375,9 @@ namespace vke_common
         case ComponentType::AudioListener:
             remove.operator()<vke_component::AudioListener>();
             break;
+        case ComponentType::NavMeshRegion:
+            remove.operator()<vke_component::NavMeshRegion>();
+            break;
         default:
             break;
         }
@@ -403,6 +418,8 @@ namespace vke_common
             return registry.all_of<vke_component::AudioSource>(entity);
         case ComponentType::AudioListener:
             return registry.all_of<vke_component::AudioListener>(entity);
+        case ComponentType::NavMeshRegion:
+            return registry.all_of<vke_component::NavMeshRegion>(entity);
         default:
             return false;
         }

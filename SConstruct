@@ -127,6 +127,10 @@ cpppath = [
     "./third_party/imgui/backends",
 ]
 cpppath.append("./third_party/freetype/include")
+cpppath.append("./third_party/recast/Recast/Include")
+cpppath.append("./third_party/recast/Detour/Include")
+cpppath.append("./third_party/recast/DetourCrowd/Include")
+cpppath.append("./third_party/recast/DetourTileCache/Include")
 cppdefines = ["JSON_NOEXCEPTION", "SPDLOG_NO_EXCEPTIONS", "LUNASVG_BUILD_STATIC"]
 if ENABLE_FRAME_GRAPH_PROFILING:
     cppdefines.append("VKE_ENABLE_FRAME_GRAPH_PROFILING")
@@ -204,6 +208,8 @@ commonsrc = (
         "./src/interop/physics.cpp",
         "./src/audio/audio_manager.cpp",
         "./src/interop/audio.cpp",
+        "./src/navigation/navmesh.cpp",
+        "./src/navigation/navmesh_bake.cpp",
     ]
     + generated_files
 )
@@ -299,6 +305,7 @@ editorsrc = [
     "./src/editor/component/canvas.cpp",
     "./src/editor/component/audio.cpp",
     "./src/editor/component/script.cpp",
+    "./src/editor/component/navmesh_region.cpp",
 ]
 
 ### tests
