@@ -212,6 +212,8 @@ namespace vke_common
                 if (!(result = visitComponent.operator()<RenderableObjectData>()) ||
                     !(result = visitComponent.operator()<SkeletonAnimatorData>()) ||
                     !(result = visitComponent.operator()<CanvasData>()) ||
+                    !(result = visitComponent.operator()<NavMeshTileData>()) ||
+                    !(result = visitComponent.operator()<NavMeshAgentData>()) ||
                     !(result = visitComponent.operator()<AudioSourceData>()))
                     return std::unexpected("entity " + std::to_string(id) + ": " + result.error());
             }
@@ -242,6 +244,8 @@ namespace vke_common
             !(result = checkResults(loaded.vertFragShaders)) || !(result = checkResults(loaded.computeShaders)) ||
             !(result = checkResults(loaded.materials)) || !(result = checkResults(loaded.skeletons)) ||
             !(result = checkResults(loaded.animations)) || !(result = checkResults(loaded.fonts)) ||
+            !(result = checkResults(loaded.navMeshes)) ||
+            !(result = checkResults(loaded.navAgentConfigs)) ||
             !(result = checkResults(loaded.audioClips)))
             return result;
         if (auto result = visitComponents([&loaded](auto &component)

@@ -157,6 +157,7 @@ namespace vke_interop
     using GetPhysicsObjectVsBroadPhaseLayerCollisionFn = int32_t(VKE_INTEROP_CDECL *)(uint32_t, uint32_t);
     using GetPhysicsContactEventCountFn = uint32_t(VKE_INTEROP_CDECL *)();
     using GetPhysicsContactEventsFn = uint32_t(VKE_INTEROP_CDECL *)(ContactEvent *, uint32_t);
+    using GetMouseRayFn = int32_t(VKE_INTEROP_CDECL *)(Vector3<float> *, Vector3<float> *);
     using PhysicsRaycastFn = int32_t(VKE_INTEROP_CDECL *)(const Vector3<float> *, const Vector3<float> *, float, uint32_t, uint32_t, RaycastHit *);
     using PhysicsRaycastAllFn = uint32_t(VKE_INTEROP_CDECL *)(const Vector3<float> *, const Vector3<float> *, float, uint32_t, uint32_t, RaycastHit *, uint32_t);
     using PhysicsCollidePointFn = uint32_t(VKE_INTEROP_CDECL *)(const Vector3<float> *, uint32_t, uint32_t, CollidePointHit *, uint32_t);
@@ -208,6 +209,7 @@ namespace vke_interop
     int32_t VKE_INTEROP_CDECL GetPhysicsObjectVsBroadPhaseLayerCollision(uint32_t objectLayer, uint32_t broadPhaseLayer);
     uint32_t VKE_INTEROP_CDECL GetPhysicsContactEventCount();
     uint32_t VKE_INTEROP_CDECL GetPhysicsContactEvents(ContactEvent *events, uint32_t maxEvents);
+    int32_t VKE_INTEROP_CDECL GetMouseRay(Vector3<float> *origin, Vector3<float> *direction);
     int32_t VKE_INTEROP_CDECL PhysicsRaycast(const Vector3<float> *origin, const Vector3<float> *direction, float maxDistance, uint32_t broadPhaseLayerMask, uint32_t objectLayerMask, RaycastHit *hit);
     uint32_t VKE_INTEROP_CDECL PhysicsRaycastAll(const Vector3<float> *origin, const Vector3<float> *direction, float maxDistance, uint32_t broadPhaseLayerMask, uint32_t objectLayerMask, RaycastHit *hits, uint32_t maxHits);
     uint32_t VKE_INTEROP_CDECL PhysicsCollidePoint(const Vector3<float> *point, uint32_t broadPhaseLayerMask, uint32_t objectLayerMask, CollidePointHit *hits, uint32_t maxHits);

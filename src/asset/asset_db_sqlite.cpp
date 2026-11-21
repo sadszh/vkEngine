@@ -261,7 +261,7 @@ namespace vke_common
                 CACHE_IMPORTED_ASSET(ASSET_FONT, FontAsset, fontCache, dirtyFont, deletedFont)
                 CACHE_IMPORTED_ASSET(ASSET_AUDIO_CLIP, AudioClipAsset, audioCache, dirtyAudio, deletedAudio)
                 CACHE_IMPORTED_ASSET(ASSET_NAV_AGENT, NavAgentConfigAsset, navAgentConfigCache, dirtyNavAgentConfig, deletedNavAgentConfig)
-                CACHE_IMPORTED_ASSET(ASSET_NAV_MESH, NavMeshAsset, navMeshCache, dirtyNavMesh, deletedNavMesh)
+                CACHE_IMPORTED_ASSET(ASSET_NAV_MESH_TILES, NavMeshTilesAsset, navMeshCache, dirtyNavMesh, deletedNavMesh)
             }
             ids[type] = std::max(ids[type], id + 1);
         }
@@ -424,7 +424,7 @@ namespace vke_common
     template Result<bool> AssetDBSQLite::loadAssetFromDB<FontAsset>(const std::string &, AssetHandle, FontAsset &);
     template Result<bool> AssetDBSQLite::loadAssetFromDB<AudioClipAsset>(const std::string &, AssetHandle, AudioClipAsset &);
     template Result<bool> AssetDBSQLite::loadAssetFromDB<NavAgentConfigAsset>(const std::string &, AssetHandle, NavAgentConfigAsset &);
-    template Result<bool> AssetDBSQLite::loadAssetFromDB<NavMeshAsset>(const std::string &, AssetHandle, NavMeshAsset &);
+    template Result<bool> AssetDBSQLite::loadAssetFromDB<NavMeshTilesAsset>(const std::string &, AssetHandle, NavMeshTilesAsset &);
 
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<TextureAsset>(const std::string &, std::map<AssetHandle, TextureAsset> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<MeshAsset>(const std::string &, std::map<AssetHandle, MeshAsset> &, const std::set<AssetHandle> &);
@@ -437,7 +437,7 @@ namespace vke_common
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<FontAsset>(const std::string &, std::map<AssetHandle, FontAsset> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<AudioClipAsset>(const std::string &, std::map<AssetHandle, AudioClipAsset> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<NavAgentConfigAsset>(const std::string &, std::map<AssetHandle, NavAgentConfigAsset> &, const std::set<AssetHandle> &);
-    template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<NavMeshAsset>(const std::string &, std::map<AssetHandle, NavMeshAsset> &, const std::set<AssetHandle> &);
+    template Result<void> AssetDBSQLite::loadCleanAssetsFromDB<NavMeshTilesAsset>(const std::string &, std::map<AssetHandle, NavMeshTilesAsset> &, const std::set<AssetHandle> &);
 
     template Result<void> AssetDBSQLite::flushChanges<TextureAsset>(const std::string &, std::map<AssetHandle, TextureAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::flushChanges<MeshAsset>(const std::string &, std::map<AssetHandle, MeshAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
@@ -450,6 +450,6 @@ namespace vke_common
     template Result<void> AssetDBSQLite::flushChanges<FontAsset>(const std::string &, std::map<AssetHandle, FontAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::flushChanges<AudioClipAsset>(const std::string &, std::map<AssetHandle, AudioClipAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
     template Result<void> AssetDBSQLite::flushChanges<NavAgentConfigAsset>(const std::string &, std::map<AssetHandle, NavAgentConfigAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
-    template Result<void> AssetDBSQLite::flushChanges<NavMeshAsset>(const std::string &, std::map<AssetHandle, NavMeshAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
+    template Result<void> AssetDBSQLite::flushChanges<NavMeshTilesAsset>(const std::string &, std::map<AssetHandle, NavMeshTilesAsset> &, const std::set<AssetHandle> &, const std::set<AssetHandle> &);
 
 }

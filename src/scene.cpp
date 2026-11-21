@@ -236,6 +236,8 @@ namespace vke_common
             fillComponentData.operator()<vke_component::CharacterController, vke_component::CharacterControllerData>();
             fillComponentData.operator()<vke_component::AudioSource, vke_component::AudioSourceData>();
             fillComponentData.operator()<vke_component::AudioListener, vke_component::AudioListenerData>();
+            fillComponentData.operator()<vke_component::NavMeshTile, vke_component::NavMeshTileData>();
+            fillComponentData.operator()<vke_component::NavMeshAgent, vke_component::NavMeshAgentData>();
             fillComponentData.operator()<vke_component::NavMeshRegion, vke_component::NavMeshRegionData>();
             fillComponentData.operator()<vke_component::DirectionalLight, vke_component::DirectionalLightData>();
             fillComponentData.operator()<vke_component::PointLight, vke_component::PointLightData>();
@@ -336,6 +338,8 @@ namespace vke_common
         construct.operator()<vke_component::CanvasData, vke_component::Canvas>();
         construct.operator()<vke_component::AudioSourceData, vke_component::AudioSource>();
         construct.operator()<vke_component::AudioListenerData, vke_component::AudioListener>();
+        construct.operator()<vke_component::NavMeshTileData, vke_component::NavMeshTile>();
+        construct.operator()<vke_component::NavMeshAgentData, vke_component::NavMeshAgent>();
         construct.operator()<vke_component::NavMeshRegionData, vke_component::NavMeshRegion>();
 
         return dataToRuntime;
@@ -426,6 +430,10 @@ namespace vke_common
             removeNativeComponent(entity, ComponentType::AudioSource);
         if (HasComponent(entity, ComponentType::AudioListener))
             removeNativeComponent(entity, ComponentType::AudioListener);
+        if (HasComponent(entity, ComponentType::NavMeshTile))
+            removeNativeComponent(entity, ComponentType::NavMeshTile);
+        if (HasComponent(entity, ComponentType::NavMeshAgent))
+            removeNativeComponent(entity, ComponentType::NavMeshAgent);
         if (HasComponent(entity, ComponentType::NavMeshRegion))
             removeNativeComponent(entity, ComponentType::NavMeshRegion);
         if (HasComponent(entity, ComponentType::DirectionalLight))
@@ -453,6 +461,7 @@ namespace vke_common
         // Plain C++ destruction releases owned resources, without lifecycle dispatch.
         // CharacterVirtual must die while its inner body and PhysicsSystem still exist.
         scene.registry.clear();
+        vke_navmesh::NavMeshManager::GetInstance()->Clear();
         vke_audio::AudioManager::Reset();
         vke_physics::PhysicsManager::Reset();
         scene.physicsUpdateListenerID = vke_physics::PhysicsManager::RegisterUpdateListener(

@@ -196,6 +196,26 @@ namespace vke_common
         return RequireInstance().mousePosition;
     }
 
+    void InputManager::SetMouseViewportPosition(std::optional<glm::vec2> position)
+    {
+        auto &input = RequireInstance();
+        input.embeddedMouseViewport = true;
+        input.mouseViewportPosition = position;
+    }
+
+    std::optional<glm::vec2> InputManager::GetMouseViewportPosition()
+    {
+        const auto &input = RequireInstance();
+        if (input.embeddedMouseViewport)
+            return input.mouseViewportPosition;
+        int width, height;
+        glfwGetWindowSize(input.window, &width, &height);
+        const auto mouse = input.mousePosition;
+        if (width <= 0 || height <= 0 || mouse.x < 0 || mouse.y < 0 || mouse.x >= width || mouse.y >= height)
+            return std::nullopt;
+        return mouse / glm::vec2(width, height);
+    }
+
     glm::vec2 InputManager::GetMouseDelta()
     {
         return RequireInstance().mouseDelta;
@@ -234,6 +254,7 @@ namespace vke_common
     void InputManager::ClearTransientState()
     {
         lostFocus = false;
+        mouseViewportPosition.reset();
         keyPressed.fill(0);
         keyReleased.fill(0);
         mouseButtonPressed.fill(0);

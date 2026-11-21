@@ -209,6 +209,7 @@ commonsrc = (
         "./src/audio/audio_manager.cpp",
         "./src/interop/audio.cpp",
         "./src/navigation/navmesh.cpp",
+        "./src/navigation/navmesh_manager.cpp",
         "./src/navigation/navmesh_bake.cpp",
     ]
     + generated_files

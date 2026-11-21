@@ -1,0 +1,42 @@
+[
+  {
+    "height": 2.0,
+    "id": 2001,
+    "maxClimb": 0.8999999761581421,
+    "maxSlopeAngle": 45.0,
+    "name": "Test navigation agent",
+    "path": "",
+    "radius": 0.5,
+    "type": 10
+  },
+  {
+    "agentConfig": 2001,
+    "id": 2010,
+    "name": "Navigation mesh",
+    "navMeshId": 7,
+    "path": "tests/navigation/test_navi.navmesh",
+    "settings": {
+      "boundsMax": [
+        16.0,
+        4.0,
+        8.0
+      ],
+      "boundsMin": [
+        -16.0,
+        -2.0,
+        -8.0
+      ],
+      "cellHeight": 0.20000000298023224,
+      "cellSize": 0.25,
+      "detailSampleDistance": 1.7999999523162842,
+      "detailSampleMaxError": 0.20000000298023224,
+      "maxEdgeLength": 12.0,
+      "maxSimplificationError": 0.38999998569488525,
+      "maxVertsPerPoly": 6,
+      "mergeRegionArea": 0.0,
+      "minRegionArea": 0.0,
+      "tileSize": 32
+    },
+    "type": 11
+  }
+]

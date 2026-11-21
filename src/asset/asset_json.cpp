@@ -42,9 +42,9 @@ namespace vke_common
                 .Strings({"characters"}).Result();
         case ASSET_NAV_AGENT:
             return vke_navmesh::NavAgentConfig::ValidateJSON(json);
-        case ASSET_NAV_MESH:
+        case ASSET_NAV_MESH_TILES:
         {
-            auto settings = Object(json).Require({"agentConfig", "settings"}).Unsigneds({"agentConfig"}).Result();
+            auto settings = Object(json).Require({"navMeshId", "agentConfig", "settings"}).Unsigneds({"navMeshId"}, UINT32_MAX).Unsigneds({"agentConfig"}).Result();
             if (!settings)
                 return settings;
             if (json["agentConfig"].get<AssetHandle>() == 0)

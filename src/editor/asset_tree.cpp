@@ -155,8 +155,8 @@ namespace vke_editor
                                                    { return projectDB->IterateNavAgentConfigAsset(op); });
             !result)
             return result;
-        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_NAV_MESH, [&](auto &&op)
-                                                   { return projectDB->IterateNavMeshAsset(op); });
+        if (auto result = AddAssetsToDirectoryTree(projectRoot, vke_common::ASSET_NAV_MESH_TILES, [&](auto &&op)
+                                                   { return projectDB->IterateNavMeshTilesAsset(op); });
             !result)
             return result;
         assetDirectoryTree = std::move(tree);

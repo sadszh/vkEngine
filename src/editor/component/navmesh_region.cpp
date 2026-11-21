@@ -50,8 +50,8 @@ namespace vke_editor
         vke_common::Result<std::filesystem::path> MakeUniqueNavMeshPath(const std::string &entityName)
         {
             std::unordered_set<std::string> usedPaths;
-            if (auto listed = vke_common::AssetManager::IterateNavMeshAsset(
-                    [&usedPaths](const vke_common::NavMeshAsset &asset)
+            if (auto listed = vke_common::AssetManager::IterateNavMeshTilesAsset(
+                    [&usedPaths](const vke_common::NavMeshTilesAsset &asset)
                     { usedPaths.insert(vke_common::PathToUTF8(asset.path)); });
                 !listed)
                 return std::unexpected("cannot list navmesh assets: " + listed.error());
@@ -72,7 +72,7 @@ namespace vke_editor
             }
         }
 
-        vke_common::Result<vke_common::AssetHandle> CreateNavMeshAsset(
+        vke_common::Result<vke_common::AssetHandle> CreateNavMeshTilesAsset(
             const std::string &entityName, const vke_navmesh::NavMeshBakeResult &baked)
         {
             auto uniquePath = MakeUniqueNavMeshPath(entityName);
@@ -87,17 +87,18 @@ namespace vke_editor
             if (auto written = vke_navmesh::WriteNavMeshFile(fullPath, baked.tiles); !written)
                 return std::unexpected(written.error());
 
-            vke_common::NavMeshAsset asset;
+            vke_common::NavMeshTilesAsset asset;
             asset.name = vke_common::PathToUTF8(relativePath.stem());
             asset.path = relativePath;
+            asset.navMeshId = baked.navMeshId;
             asset.agentConfig = baked.agentConfig;
             asset.settings = baked.settings;
 
             vke_common::AssetDBBase *database = vke_common::AssetManager::GetAssetDB();
-            const vke_common::AssetHandle id = database->CreateNavMeshAsset(std::move(asset));
+            const vke_common::AssetHandle id = database->CreateNavMeshTilesAsset(std::move(asset));
             if (auto synced = database->SyncAll(); !synced)
             {
-                database->RemoveNavMeshAsset(id);
+                database->RemoveNavMeshTilesAsset(id);
                 std::error_code removeError;
                 std::filesystem::remove(fullPath, removeError);
                 return std::unexpected(synced.error());
@@ -116,6 +117,7 @@ namespace vke_editor
 
         vke_component::NavMeshRegion &region =
             sceneManager->registry.get<vke_component::NavMeshRegion>(selectedEntity);
+        ImGui::InputScalar("NavMesh ID", ImGuiDataType_U32, &region.navMeshId);
         ImGui::InputFloat3("Center", glm::value_ptr(region.center));
         glm::vec3 halfExtent = region.halfExtent;
         if (ImGui::InputFloat3("Half Extent", glm::value_ptr(halfExtent)))
@@ -154,7 +156,7 @@ namespace vke_editor
             {
                 const std::string &entityName =
                     sceneManager->registry.get<vke_common::GameObject>(selectedEntity).name;
-                auto created = CreateNavMeshAsset(entityName, *baked);
+                auto created = CreateNavMeshTilesAsset(entityName, *baked);
                 if (!created)
                 {
                     VKE_LOG_ERROR("NavMesh bake failed: {}", created.error())
@@ -163,12 +165,78 @@ namespace vke_editor
                 {
                     VKE_LOG_INFO("Baked navmesh asset {} with {} tiles", *created, baked->tiles.size());
                     assetDirectoryTree = {};
-                    selectAsset(vke_common::ASSET_NAV_MESH, *created);
+                    selectAsset(vke_common::ASSET_NAV_MESH_TILES, *created);
                 }
             }
         }
 
         ImGui::TreePop();
+    }
+
+    void Editor::drawNavMeshTileComponent()
+    {
+        using namespace vke_component;
+        using namespace vke_common;
+        auto &registry = sceneManager->registry;
+        if (auto *tile = registry.try_get<NavMeshTile>(selectedEntity))
+        {
+            NavMeshTileData data;
+            tile->FillData(data);
+            ImGui::Text("NavMeshTile resource: %llu", static_cast<unsigned long long>(data.tiles.Handle()));
+        }
+        else if (ImGui::BeginCombo("Add NavMeshTile", "Select tiles resource"))
+        {
+            AssetHandle selected = 0;
+            ShowAssetIterationResult(AssetManager::IterateNavMeshTilesAsset([&](const NavMeshTilesAsset &asset)
+            {
+                const std::string label = std::to_string(asset.id) + " " + asset.name + " (mesh " + std::to_string(asset.navMeshId) + ")";
+                if (ImGui::Selectable(label.c_str())) selected = asset.id;
+            }));
+            ImGui::EndCombo();
+            if (selected)
+            {
+                NavMeshTileData data;
+                data.tiles.SetHandle(selected);
+                if (auto added = sceneManager->AddComponent(selectedEntity, data); !added)
+                    VKE_LOG_ERROR("Cannot add NavMeshTile: {}", added.error());
+            }
+        }
+    }
+
+    void Editor::drawNavMeshAgentComponent()
+    {
+        using namespace vke_component;
+        using namespace vke_common;
+        auto &registry = sceneManager->registry;
+        if (auto *agent = registry.try_get<NavMeshAgent>(selectedEntity))
+        {
+            NavMeshAgentData data;
+            agent->FillData(data);
+            ImGui::Text("NavMeshAgent: mesh %u, config %llu", data.navMeshId, static_cast<unsigned long long>(data.agentConfig.Handle()));
+        }
+        else
+        {
+            static uint32_t meshId = 1;
+            ImGui::InputScalar("Agent NavMesh ID", ImGuiDataType_U32, &meshId);
+            if (ImGui::BeginCombo("Add NavMeshAgent", "Select agent config"))
+            {
+                AssetHandle selected = 0;
+                ShowAssetIterationResult(AssetManager::IterateNavAgentConfigAsset([&](const NavAgentConfigAsset &asset)
+                {
+                    const std::string label = std::to_string(asset.id) + " " + asset.name;
+                    if (ImGui::Selectable(label.c_str())) selected = asset.id;
+                }));
+                ImGui::EndCombo();
+                if (selected)
+                {
+                    NavMeshAgentData data;
+                    data.navMeshId = meshId;
+                    data.agentConfig.SetHandle(selected);
+                    if (auto added = sceneManager->AddComponent(selectedEntity, data); !added)
+                        VKE_LOG_ERROR("Cannot add NavMeshAgent: {}", added.error());
+                }
+            }
+        }
     }
 
     void Editor::createNavAgentConfig()

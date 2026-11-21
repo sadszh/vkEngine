@@ -54,6 +54,7 @@ namespace vke_common
                 ctx = &(vke_render::RenderEnvironment::GetInstance()->rootRenderContext);
             vke_render::Renderer::Init(ctx, passes, customPasses, gameConfig.renderConfig);
             ScriptManager::Init();
+            vke_navmesh::NavMeshManager::Init();
             SceneManager::Init();
             vke_ui::UIManager::Init(SceneManager::GetInstance()->registry);
             return instance;
@@ -82,6 +83,7 @@ namespace vke_common
         {
             vke_ui::UIManager::Dispose();
             SceneManager::Dispose();
+            vke_navmesh::NavMeshManager::Dispose();
             ScriptManager::Dispose();
             vke_render::Renderer::Dispose();
             vke_physics::PhysicsManager::Dispose();

@@ -1,0 +1,209 @@
+{
+  "maxid": 10,
+  "objects": [
+    {
+      "id": 1,
+      "name": "Overview camera",
+      "parent": 0,
+      "static": true,
+      "transform": {
+        "pos": [
+          0,
+          26,
+          23
+        ],
+        "scl": [
+          1,
+          1,
+          1
+        ],
+        "rot": [
+          -0.4,
+          0,
+          0,
+          0.916515
+        ]
+      },
+      "components": [
+        {
+          "type": "camera",
+          "id": 1,
+          "fov": 60,
+          "width": 1920,
+          "height": 1080,
+          "near": 0.1,
+          "far": 200
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Main floor",
+      "parent": 0,
+      "static": true,
+      "transform": {
+        "pos": [
+          0,
+          -0.2,
+          0
+        ],
+        "scl": [
+          16,
+          0.2,
+          8
+        ],
+        "rot": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "components": [
+        {
+          "type": "renderableObject",
+          "material": 1,
+          "mesh": 2
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Obstacle",
+      "parent": 0,
+      "static": true,
+      "transform": {
+        "pos": [
+          0,
+          1,
+          0
+        ],
+        "scl": [
+          1,
+          1,
+          3
+        ],
+        "rot": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "components": [
+        {
+          "type": "renderableObject",
+          "material": 1,
+          "mesh": 2
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Agent",
+      "parent": 0,
+      "static": false,
+      "transform": {
+        "pos": [
+          -12,
+          0,
+          0
+        ],
+        "scl": [
+          0.35,
+          0.6,
+          0.35
+        ],
+        "rot": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "components": [
+        {
+          "type": "renderableObject",
+          "material": 1,
+          "mesh": 2
+        },
+        {
+          "type": "navMeshAgent",
+          "agentConfig": 2001,
+          "navMeshId": 7
+        },
+        {
+          "type": "script",
+          "className": "TestProj.TestNaviScript",
+          "data": {}
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Navigation mesh",
+      "parent": 0,
+      "static": true,
+      "transform": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "scl": [
+          1,
+          1,
+          1
+        ],
+        "rot": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "components": [
+        {
+          "type": "navMeshTile",
+          "tiles": 2010
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "static": true,
+      "name": "sun_directional_light",
+      "parent": 0,
+      "transform": {
+        "pos": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scl": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "rot": [
+          -0.6324555,
+          0.3162278,
+          0.0,
+          0.7071068
+        ]
+      },
+      "components": [
+        {
+          "type": "directionalLight",
+          "color": [
+            1.0,
+            0.96,
+            0.9
+          ],
+          "intensity": 2.5
+        }
+      ],
+      "children": []
+    }
+  ]
+}

@@ -8,17 +8,19 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <utility>
 #include <vector>
 
 namespace vke_navmesh
 {
     inline constexpr uint32_t NavMeshFileMagic = 0x4E4D4B56; // "VKMN"
-    inline constexpr uint32_t NavMeshFileVersion = 1;
+    inline constexpr uint32_t NavMeshFileVersion = 2;
     inline constexpr uint32_t MaxNavMeshTiles = 1u << 16;
     inline constexpr uint32_t MaxNavMeshTileBytes = 64u << 20;
 
     struct NavAgentConfig
     {
+        vke_common::AssetHandle handle = 0;
         float radius = 0.6f;
         float height = 2.0f;
         float maxSlopeAngle = 45.0f;
@@ -48,6 +50,9 @@ namespace vke_navmesh
         }
 
         NavAgentConfig() = default;
+        NavAgentConfig(vke_common::AssetHandle handle, const NavAgentConfig &config)
+            : handle(handle), radius(config.radius), height(config.height),
+              maxSlopeAngle(config.maxSlopeAngle), maxClimb(config.maxClimb) {}
         NavAgentConfig(const nlohmann::json &json)
             : radius(json["radius"].get<float>()), height(json["height"].get<float>()),
               maxSlopeAngle(json["maxSlopeAngle"].get<float>()), maxClimb(json["maxClimb"].get<float>()) {}
@@ -78,6 +83,13 @@ namespace vke_navmesh
 
         vke_common::Result<void> Validate() const
         {
+            for (int axis = 0; axis < 3; ++axis)
+                if (!std::isfinite(boundsMin[axis]) || !std::isfinite(boundsMax[axis]))
+                    return std::unexpected("navmesh bounds must be finite");
+            for (float value : {cellSize, cellHeight, maxEdgeLength, maxSimplificationError,
+                                minRegionArea, mergeRegionArea, detailSampleDistance, detailSampleMaxError})
+                if (!std::isfinite(value))
+                    return std::unexpected("navmesh build settings must be finite");
             if (!(cellSize > 0.0f) || !(cellHeight > 0.0f))
                 return std::unexpected("navmesh cell size and cell height must be positive");
             if (boundsMax.x <= boundsMin.x || boundsMax.y <= boundsMin.y || boundsMax.z <= boundsMin.z)
@@ -111,6 +123,8 @@ namespace vke_navmesh
                 return result;
             return NavMeshBuildSettings(json).Validate();
         }
+
+        bool operator==(const NavMeshBuildSettings &) const = default;
 
         NavMeshBuildSettings() = default;
         NavMeshBuildSettings(const nlohmann::json &json)
@@ -156,9 +170,19 @@ namespace vke_navmesh
         std::vector<unsigned char> data;
     };
 
-    struct NavMeshData
+    struct NavMeshTilesData
     {
+        vke_common::AssetHandle handle;
+        uint32_t navMeshId;
+        vke_common::AssetHandle agentConfig;
+        NavMeshBuildSettings settings;
         std::vector<NavMeshTile> tiles;
+
+        NavMeshTilesData(vke_common::AssetHandle handle, uint32_t navMeshId,
+                         vke_common::AssetHandle agentConfig, const NavMeshBuildSettings &settings,
+                         std::vector<NavMeshTile> tiles)
+            : handle(handle), navMeshId(navMeshId), agentConfig(agentConfig),
+              settings(settings), tiles(std::move(tiles)) {}
     };
 
     vke_common::Result<std::vector<NavMeshTile>> BuildNavMeshTiles(

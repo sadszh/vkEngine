@@ -13,6 +13,70 @@
 
 namespace vke_interop
 {
+    static int32_t CopyNavPath(const vke_common::Result<vke_navmesh::NavPath> &path, Vector3<float> *points, int32_t capacity, int32_t *count)
+    {
+        *count = 0;
+        if (!path || path->points.size() > static_cast<size_t>(capacity))
+            return 0;
+        for (const auto &p : path->points)
+            points[(*count)++] = {p.x, p.y, p.z};
+        return static_cast<int32_t>(path->status);
+    }
+    static int32_t VKE_INTEROP_CDECL NavFindPath(uint32_t id, const Vector3<float> *start, const Vector3<float> *end,
+                                                 const Vector3<float> *extent, Vector3<float> *points, int32_t capacity, int32_t *count)
+    {
+        if (!count)
+            return 0;
+        *count = 0;
+        if (!start || !end || !extent || !points || capacity <= 0)
+            return 0;
+        return CopyNavPath(vke_navmesh::NavMeshManager::GetInstance()->FindPath(id,
+                                                                                            {start->x, start->y, start->z}, {end->x, end->y, end->z}, {extent->x, extent->y, extent->z}),
+                           points, capacity, count);
+    }
+    static int32_t VKE_INTEROP_CDECL NavAgentFindPath(uint32_t entity, const Vector3<float> *end,
+                                                      const Vector3<float> *extent, Vector3<float> *points, int32_t capacity, int32_t *count)
+    {
+        if (!count)
+            return 0;
+        *count = 0;
+        if (!IsEntityValid(entity) || !end || !extent || !points || capacity <= 0)
+            return 0;
+        auto *agent = vke_common::SceneManager::GetInstance()->registry.try_get<vke_component::NavMeshAgent>(static_cast<entt::entity>(entity));
+        if (!agent)
+            return 0;
+        return CopyNavPath(agent->FindPath({end->x, end->y, end->z}, {extent->x, extent->y, extent->z}), points, capacity, count);
+    }
+    static int32_t VKE_INTEROP_CDECL NavSamplePosition(uint32_t id, const Vector3<float> *position, const Vector3<float> *extent, Vector3<float> *point)
+    {
+        if (!position || !extent || !point)
+            return 0;
+        *point = {};
+        auto result = vke_navmesh::NavMeshManager::GetInstance()->SamplePosition(id,
+                                                                                             {position->x, position->y, position->z}, {extent->x, extent->y, extent->z});
+        if (!result)
+            return 0;
+        *point = {result->x, result->y, result->z};
+        return 1;
+    }
+    static int32_t VKE_INTEROP_CDECL NavRaycast(uint32_t id, const Vector3<float> *start, const Vector3<float> *end,
+                                                const Vector3<float> *extent, Vector3<float> *point, Vector3<float> *normal, int32_t *blocked)
+    {
+        if (!start || !end || !extent || !point || !normal || !blocked)
+            return 0;
+        *point = {};
+        *normal = {};
+        *blocked = 0;
+        auto result = vke_navmesh::NavMeshManager::GetInstance()->Raycast(id,
+                                                                                      {start->x, start->y, start->z}, {end->x, end->y, end->z}, {extent->x, extent->y, extent->z});
+        if (!result)
+            return 0;
+        *point = {result->position.x, result->position.y, result->position.z};
+        *normal = {result->normal.x, result->normal.y, result->normal.z};
+        *blocked = result->blocked;
+        return 1;
+    }
+
     static inline entt::entity GetEntity(uint32_t entity)
     {
         entt::entity ent = static_cast<entt::entity>(entity);
@@ -379,10 +443,11 @@ namespace vke_interop
         return controller != nullptr && controller->IsGrounded() ? 1 : 0;
     }
     static int32_t VKE_INTEROP_CDECL InstantiatePrefab(uint64_t prefab,
-        const Vector3<float> *position, const Quaternion<float> *rotation,
-        const Vector3<float> *scale, uint32_t parent)
+                                                       const Vector3<float> *position, const Quaternion<float> *rotation,
+                                                       const Vector3<float> *scale, uint32_t parent)
     {
-        if (!position || !rotation || !scale) return 0;
+        if (!position || !rotation || !scale)
+            return 0;
         vke_common::InstantiateOptions options;
         options.parent = static_cast<entt::entity>(parent);
         options.rootTransform = vke_common::TransformData{};
@@ -390,7 +455,8 @@ namespace vke_interop
         options.rootTransform->localRotation = ToGlm(*rotation);
         options.rootTransform->localScale = ToGlm(*scale);
         auto result = vke_common::SceneManager::RequestInstantiate(prefab, options);
-        if (!result) VKE_LOG_ERROR("Prefab request rejected: {}", result.error());
+        if (!result)
+            VKE_LOG_ERROR("Prefab request rejected: {}", result.error());
         return result ? 1 : 0;
     }
 
@@ -521,6 +587,7 @@ namespace vke_common
             &vke_interop::GetPhysicsObjectVsBroadPhaseLayerCollision,
             &vke_interop::GetPhysicsContactEventCount,
             &vke_interop::GetPhysicsContactEvents,
+            &vke_interop::GetMouseRay,
             &vke_interop::PhysicsRaycast,
             &vke_interop::PhysicsRaycastAll,
             &vke_interop::PhysicsCollidePoint,
@@ -595,7 +662,11 @@ namespace vke_common
             &vke_interop::GetUISelfLayout,
             &vke_interop::SetUISelfLayout,
             &vke_interop::GetUIGroupLayout,
-            &vke_interop::SetUIGroupLayout};
+            &vke_interop::SetUIGroupLayout,
+            &vke_interop::NavFindPath,
+            &vke_interop::NavAgentFindPath,
+            &vke_interop::NavSamplePosition,
+            &vke_interop::NavRaycast};
         csharpExports.registerNativeFunctions(&nativeFunctions);
     }
 }

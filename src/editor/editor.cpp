@@ -63,6 +63,7 @@ namespace vke_editor
         vke_common::EventSystem::Init();
         vke_common::TimeManager::Init();
         vke_common::InputManager::Init(window);
+        vke_common::InputManager::SetMouseViewportPosition(std::nullopt);
         vke_common::EngineStateManager::Init();
         vke_common::EngineStateManager::SetState(vke_common::EngineState::Paused);
         vke_audio::AudioManager::Init();
@@ -83,6 +84,7 @@ namespace vke_editor
         vke_render::Renderer::Init(EditorRenderer::GetInstance()->GetSceneRenderContext(),
                                    passes, customPasses, editorConfig.gameConfig->renderConfig);
         vke_common::ScriptManager::Init();
+        vke_navmesh::NavMeshManager::Init();
         instance->sceneManager = vke_common::SceneManager::Init();
         vke_ui::UIManager::Init(instance->sceneManager->registry);
         vke_editor::EditorStateManager::SetState(vke_editor::EditorState::Edit);
@@ -108,6 +110,7 @@ namespace vke_editor
         instance->editSnapshot.reset();
         vke_ui::UIManager::Dispose();
         vke_common::SceneManager::Dispose();
+        vke_navmesh::NavMeshManager::Dispose();
         vke_common::ScriptManager::Dispose();
         vke_render::Renderer::Dispose();
         vke_physics::PhysicsManager::Dispose();
@@ -189,6 +192,19 @@ namespace vke_editor
         vke_common::TimeManager::Update();
         sceneManager->ProcessDestroyRequests();
 
+        auto *editorRenderer = EditorRenderer::GetInstance();
+        vke_ui::UIPointerInput pointer;
+        editorRenderer->BeginFrame();
+        drawGUI(pointer);
+        // Prepare this frame's viewport input before scripts issue mouse ray queries.
+        if (pointer.inside)
+        {
+            const auto &context = *editorRenderer->GetSceneRenderContext();
+            vke_common::InputManager::SetMouseViewportPosition(pointer.position / glm::vec2(context.width, context.height));
+        }
+        else
+            vke_common::InputManager::SetMouseViewportPosition(std::nullopt);
+
         if (vke_editor::EditorStateManager::GetState() == vke_editor::EditorState::Run &&
             engineState == vke_common::EngineState::Running)
         {
@@ -196,10 +212,6 @@ namespace vke_editor
                 vke_common::TimeManager::GetDeltaTime(), fixedUpdateAccumulator);
         }
 
-        auto *editorRenderer = EditorRenderer::GetInstance();
-        vke_ui::UIPointerInput pointer;
-        editorRenderer->BeginFrame();
-        drawGUI(pointer);
         using vke_common::InputManager;
         auto *window = vke_render::RenderEnvironment::GetInstance()->window;
         pointer.active = EditorStateManager::GetState() == EditorState::Run &&
@@ -540,6 +552,8 @@ namespace vke_editor
         drawAudioSourceComponent();
         drawAudioListenerComponent();
         drawNavMeshRegionComponent();
+        drawNavMeshTileComponent();
+        drawNavMeshAgentComponent();
         showComponentMenu();
         ImGui::EndDisabled();
         // Script trees remain navigable while their values are read-only.
@@ -568,6 +582,8 @@ namespace vke_editor
             {"Canvas", vke_common::ComponentType::Canvas},
             {"AudioSource", vke_common::ComponentType::AudioSource},
             {"AudioListener", vke_common::ComponentType::AudioListener},
+            {"NavMeshTile", vke_common::ComponentType::NavMeshTile},
+            {"NavMeshAgent", vke_common::ComponentType::NavMeshAgent},
             {"NavMeshRegion", vke_common::ComponentType::NavMeshRegion}};
 
         ImGui::BeginDisabled(sceneManager->IsPendingDestroy(selectedEntity));
@@ -579,7 +595,8 @@ namespace vke_editor
                 if (sceneManager->HasComponent(selectedEntity, item.type))
                     continue;
                 available = true;
-                const bool needsAssets = item.type == vke_common::ComponentType::SkeletonAnimator;
+                const bool needsAssets = item.type == vke_common::ComponentType::SkeletonAnimator ||
+                    item.type == vke_common::ComponentType::NavMeshTile || item.type == vke_common::ComponentType::NavMeshAgent;
                 ImGui::BeginDisabled(needsAssets);
                 if (ImGui::Selectable(item.name))
                 {
@@ -588,7 +605,7 @@ namespace vke_editor
                 }
                 ImGui::EndDisabled();
                 if (needsAssets && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                    ImGui::SetTooltip("Requires material, mesh and skeleton; use the SceneManager data overload.");
+                    ImGui::SetTooltip("Requires asset data; use the component resource controls or SceneManager data overload.");
             }
             if (!available)
                 ImGui::TextDisabled("No components available");

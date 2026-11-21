@@ -133,7 +133,7 @@ public:
         DBSQLITE_ASSET_OP_FUNCS(FontAsset, fontCache, dirtyFont, deletedFont, "font_assets")
         DBSQLITE_ASSET_OP_FUNCS(AudioClipAsset, audioCache, dirtyAudio, deletedAudio, "audio_clip_assets")
         DBSQLITE_ASSET_OP_FUNCS(NavAgentConfigAsset, navAgentConfigCache, dirtyNavAgentConfig, deletedNavAgentConfig, "nav_agent_config_assets")
-        DBSQLITE_ASSET_OP_FUNCS(NavMeshAsset, navMeshCache, dirtyNavMesh, deletedNavMesh, "nav_mesh_assets")
+        DBSQLITE_ASSET_OP_FUNCS(NavMeshTilesAsset, navMeshCache, dirtyNavMesh, deletedNavMesh, "nav_mesh_assets")
 
     private:
         void clearCaches();
@@ -151,7 +151,7 @@ public:
         std::map<AssetHandle, FontAsset> fontCache;
         std::map<AssetHandle, AudioClipAsset> audioCache;
         std::map<AssetHandle, NavAgentConfigAsset> navAgentConfigCache;
-        std::map<AssetHandle, NavMeshAsset> navMeshCache;
+        std::map<AssetHandle, NavMeshTilesAsset> navMeshCache;
 
         std::set<AssetHandle> dirtyTexture;
         std::set<AssetHandle> dirtyMesh;

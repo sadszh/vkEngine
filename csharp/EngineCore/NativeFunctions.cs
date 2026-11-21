@@ -114,6 +114,7 @@ namespace vkEngine.EngineCore
         public delegate* unmanaged[Cdecl]<UInt32, UInt32, Int32> GetPhysicsObjectVsBroadPhaseLayerCollision;
         public delegate* unmanaged[Cdecl]<UInt32> GetPhysicsContactEventCount;
         public delegate* unmanaged[Cdecl]<NativeContactEvent*, UInt32, UInt32> GetPhysicsContactEvents;
+        public delegate* unmanaged[Cdecl]<NVec3*, NVec3*, Int32> GetMouseRay;
         public delegate* unmanaged[Cdecl]<NVec3*, NVec3*, float, UInt32, UInt32, RaycastHit*, Int32> PhysicsRaycast;
         public delegate* unmanaged[Cdecl]<NVec3*, NVec3*, float, UInt32, UInt32, RaycastHit*, UInt32, UInt32> PhysicsRaycastAll;
         public delegate* unmanaged[Cdecl]<NVec3*, UInt32, UInt32, CollidePointHit*, UInt32, UInt32> PhysicsCollidePoint;
@@ -189,6 +190,10 @@ namespace vkEngine.EngineCore
         public delegate* unmanaged[Cdecl]<UInt32, UInt64, UISelfLayoutOptions*, Int32> SetUISelfLayout;
         public delegate* unmanaged[Cdecl]<UInt32, UInt64, UIGroupLayoutOptions*, Int32> GetUIGroupLayout;
         public delegate* unmanaged[Cdecl]<UInt32, UInt64, UIGroupLayoutOptions*, Int32> SetUIGroupLayout;
+        public delegate* unmanaged[Cdecl]<UInt32, NVec3*, NVec3*, NVec3*, NVec3*, Int32, Int32*, Int32> NavFindPath;
+        public delegate* unmanaged[Cdecl]<UInt32, NVec3*, NVec3*, NVec3*, Int32, Int32*, Int32> NavAgentFindPath;
+        public delegate* unmanaged[Cdecl]<UInt32, NVec3*, NVec3*, NVec3*, Int32> NavSamplePosition;
+        public delegate* unmanaged[Cdecl]<UInt32, NVec3*, NVec3*, NVec3*, NVec3*, NVec3*, Int32*, Int32> NavRaycast;
     }
 
     public static class NativeFunctionRegistry

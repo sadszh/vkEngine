@@ -97,6 +97,8 @@ namespace vke_editor
         void drawAudioSourceComponent();
         void drawAudioListenerComponent();
         void drawNavMeshRegionComponent();
+        void drawNavMeshTileComponent();
+        void drawNavMeshAgentComponent();
         void createNavAgentConfig();
         void drawScriptComponents();
         void showComponentMenu();

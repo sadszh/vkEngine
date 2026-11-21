@@ -19,7 +19,10 @@ namespace vkEngine.EngineCore
         Script = 10,
         AudioSource = 12,
         AudioListener = 13,
-        Canvas = 14
+        Canvas = 14,
+        NavMeshRegion = 15,
+        NavMeshTile = 16,
+        NavMeshAgent = 17
     }
 
     public interface IScriptLifecycle
@@ -86,6 +89,7 @@ namespace vkEngine.EngineCore
             [typeof(SkeletonAnimator)] = ComponentType.SkeletonAnimator,
             [typeof(RigidBody)] = ComponentType.RigidBody,
             [typeof(Sensor)] = ComponentType.Sensor,
+            [typeof(NavMeshAgent)] = ComponentType.NavMeshAgent,
             [typeof(CharacterController)] = ComponentType.CharacterController,
             [typeof(DirectionalLight)] = ComponentType.DirectionalLight,
             [typeof(PointLight)] = ComponentType.PointLight,
@@ -101,6 +105,7 @@ namespace vkEngine.EngineCore
             [ComponentType.SkeletonAnimator] = typeof(SkeletonAnimator),
             [ComponentType.RigidBody] = typeof(RigidBody),
             [ComponentType.Sensor] = typeof(Sensor),
+            [ComponentType.NavMeshAgent] = typeof(NavMeshAgent),
             [ComponentType.CharacterController] = typeof(CharacterController),
             [ComponentType.DirectionalLight] = typeof(DirectionalLight),
             [ComponentType.PointLight] = typeof(PointLight),

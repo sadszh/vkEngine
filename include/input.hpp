@@ -2,6 +2,7 @@
 #define INPUT_HANDLER_H
 
 #include <array>
+#include <optional>
 
 #include <render/render_common.hpp>
 #include <glm/vec2.hpp>
@@ -60,6 +61,12 @@ namespace vke_common
 
         static glm::vec2 GetMousePosition();
 
+        // Coordinates are normalized to the scene viewport; nullopt means outside or unavailable.
+        // The window client area is used until an embedded viewport is configured.
+        // Embedded viewport positions expire at EndFrame/Reset and must be supplied before scripts update.
+        static void SetMouseViewportPosition(std::optional<glm::vec2> position);
+        static std::optional<glm::vec2> GetMouseViewportPosition();
+
         static glm::vec2 GetMouseDelta();
 
         static glm::vec2 GetScrollDelta();
@@ -81,6 +88,8 @@ namespace vke_common
         glm::vec2 scrollDelta;
         bool hasMousePosition;
         bool lostFocus = false;
+        bool embeddedMouseViewport = false;
+        std::optional<glm::vec2> mouseViewportPosition;
 
         static InputManager &RequireInstance();
 

@@ -1,6 +1,7 @@
 #include <component/rigidbody.hpp>
 #include <component/sensor.hpp>
 #include <interop/physics.hpp>
+#include <input.hpp>
 #include <physics/physics.hpp>
 #include <physics/shape.hpp>
 #include <scene.hpp>
@@ -412,6 +413,22 @@ namespace vke_interop
             hit.fraction,
             hit.isBackFaceHit ? 1 : 0,
             hit.isSensor ? 1 : 0};
+    }
+
+    int32_t VKE_INTEROP_CDECL GetMouseRay(Vector3<float> *origin, Vector3<float> *direction)
+    {
+        *origin = {};
+        *direction = {};
+        const auto mouse = vke_common::InputManager::GetMouseViewportPosition();
+        if (!mouse)
+            return 0;
+        const auto &camera = vke_render::Renderer::GetCameraInfo();
+        auto point = camera.invProjection * glm::vec4(2 * mouse->x - 1, 2 * mouse->y - 1, 0, 1);
+        point /= point.w;
+        const auto ray = glm::normalize(glm::vec3(camera.invView * glm::vec4(glm::vec3(point), 0)));
+        *origin = {camera.viewPos.x, camera.viewPos.y, camera.viewPos.z};
+        *direction = {ray.x, ray.y, ray.z};
+        return 1;
     }
 
     int32_t VKE_INTEROP_CDECL PhysicsRaycast(const Vector3<float> *origin, const Vector3<float> *direction, float maxDistance, uint32_t broadPhaseLayerMask, uint32_t objectLayerMask, RaycastHit *hit)

@@ -79,6 +79,10 @@ namespace vke_common
             return load.operator()<vke_component::AudioSourceData>();
         if (type == "audioListener")
             return load.operator()<vke_component::AudioListenerData>();
+        if (type == "navMeshTile")
+            return load.operator()<vke_component::NavMeshTileData>();
+        if (type == "navMeshAgent")
+            return load.operator()<vke_component::NavMeshAgentData>();
         if (type == "navMeshRegion")
             return load.operator()<vke_component::NavMeshRegionData>();
         if (type == "directionalLight")
@@ -127,6 +131,12 @@ namespace vke_common
 
         if (registry.all_of<vke_component::AudioListenerData>(entity))
             components.push_back(registry.get<vke_component::AudioListenerData>(entity).ToJSON());
+
+        if (registry.all_of<vke_component::NavMeshTileData>(entity))
+            components.push_back(registry.get<vke_component::NavMeshTileData>(entity).ToJSON());
+
+        if (registry.all_of<vke_component::NavMeshAgentData>(entity))
+            components.push_back(registry.get<vke_component::NavMeshAgentData>(entity).ToJSON());
 
         if (registry.all_of<vke_component::NavMeshRegionData>(entity))
             components.push_back(registry.get<vke_component::NavMeshRegionData>(entity).ToJSON());
@@ -252,6 +262,12 @@ namespace vke_common
         return addComponent<vke_component::NavMeshRegion>(entity, data);
     }
 
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::NavMeshTileData &data)
+    { return addComponent<vke_component::NavMeshTile>(entity, data); }
+
+    Result<void> SceneManager::AddComponent(entt::entity entity, const vke_component::NavMeshAgentData &data)
+    { return addComponent<vke_component::NavMeshAgent>(entity, data); }
+
     Result<void> SceneManager::AddComponent(entt::entity entity, ComponentType componentType)
     {
         if (auto valid = validateComponentMutation(entity); !valid)
@@ -283,6 +299,10 @@ namespace vke_common
             return AddComponent(entity, AudioSourceData{});
         case ComponentType::AudioListener:
             return AddComponent(entity, AudioListenerData{});
+        case ComponentType::NavMeshTile:
+            return std::unexpected("NavMeshTile requires explicit resource data");
+        case ComponentType::NavMeshAgent:
+            return std::unexpected("NavMeshAgent requires explicit resource data");
         case ComponentType::NavMeshRegion:
             return AddComponent(entity, NavMeshRegionData{});
         case ComponentType::SkeletonAnimator:
@@ -375,6 +395,12 @@ namespace vke_common
         case ComponentType::AudioListener:
             remove.operator()<vke_component::AudioListener>();
             break;
+        case ComponentType::NavMeshTile:
+            remove.operator()<vke_component::NavMeshTile>();
+            break;
+        case ComponentType::NavMeshAgent:
+            remove.operator()<vke_component::NavMeshAgent>();
+            break;
         case ComponentType::NavMeshRegion:
             remove.operator()<vke_component::NavMeshRegion>();
             break;
@@ -418,6 +444,10 @@ namespace vke_common
             return registry.all_of<vke_component::AudioSource>(entity);
         case ComponentType::AudioListener:
             return registry.all_of<vke_component::AudioListener>(entity);
+        case ComponentType::NavMeshTile:
+            return registry.all_of<vke_component::NavMeshTile>(entity);
+        case ComponentType::NavMeshAgent:
+            return registry.all_of<vke_component::NavMeshAgent>(entity);
         case ComponentType::NavMeshRegion:
             return registry.all_of<vke_component::NavMeshRegion>(entity);
         default:

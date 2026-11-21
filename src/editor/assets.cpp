@@ -138,8 +138,8 @@ namespace vke_editor
                 return true;
             }
             break;
-        case vke_common::ASSET_NAV_MESH:
-            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetNavMeshAssetReadOnly(handle)))
+        case vke_common::ASSET_NAV_MESH_TILES:
+            if (auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetNavMeshTilesAssetReadOnly(handle)))
             {
                 entry = {type, handle, asset->name, vke_common::PathToUTF8(asset->path)};
                 return true;
@@ -259,8 +259,8 @@ namespace vke_editor
                        { return vke_common::AssetManager::IterateAudioClipAsset(op); });
         showAssetGroup("Nav Agent Configs", vke_common::ASSET_NAV_AGENT, [](auto &&op)
                        { return vke_common::AssetManager::IterateNavAgentConfigAsset(op); });
-        showAssetGroup("Nav Meshes", vke_common::ASSET_NAV_MESH, [](auto &&op)
-                       { return vke_common::AssetManager::IterateNavMeshAsset(op); });
+        showAssetGroup("Nav Meshes", vke_common::ASSET_NAV_MESH_TILES, [](auto &&op)
+                       { return vke_common::AssetManager::IterateNavMeshTilesAsset(op); });
     }
 
     void Editor::showAssetsByDirectory(vke_common::AssetManager *assetManager)
@@ -550,12 +550,13 @@ namespace vke_editor
             }
             break;
         }
-        case vke_common::ASSET_NAV_MESH:
+        case vke_common::ASSET_NAV_MESH_TILES:
         {
-            const auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetNavMeshAssetReadOnly(entry.id));
+            const auto *asset = ShowAssetReadResult(vke_common::AssetManager::GetNavMeshTilesAssetReadOnly(entry.id));
             if (asset == nullptr)
                 break;
             const vke_navmesh::NavMeshBuildSettings &settings = asset->settings;
+            ImGui::Text("NavMesh ID: %u", asset->navMeshId);
             ImGui::Text("Agent Config: %llu", static_cast<unsigned long long>(asset->agentConfig));
             ImGui::Text("Bounds Min: %.2f %.2f %.2f", settings.boundsMin.x, settings.boundsMin.y, settings.boundsMin.z);
             ImGui::Text("Bounds Max: %.2f %.2f %.2f", settings.boundsMax.x, settings.boundsMax.y, settings.boundsMax.z);
@@ -568,7 +569,7 @@ namespace vke_editor
                 auto error = navMeshErrors.find(entry.id);
                 if (error == navMeshErrors.end())
                 {
-                    if (auto navMesh = vke_common::AssetManager::LoadNavMesh(entry.id); navMesh)
+                    if (auto navMesh = vke_common::AssetManager::LoadNavMeshTiles(entry.id); navMesh)
                         ImGui::Text("Tiles: %zu", (*navMesh)->tiles.size());
                     else
                         error = navMeshErrors.emplace(entry.id, navMesh.error()).first;

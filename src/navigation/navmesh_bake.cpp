@@ -162,11 +162,20 @@ namespace vke_navmesh
         const vke_render::AABB worldBounds = localBounds.TransformBounds(transform->model);
 
         NavMeshBakeResult result;
+        result.navMeshId = region->navMeshId;
         result.agentConfig = agentConfigHandle;
         result.settings.boundsMin = worldBounds.min;
         result.settings.boundsMax = worldBounds.max;
 
-        auto triangles = CollectNavMeshGeometry(*scene, regionEntity, worldBounds);
+        const float width = result.settings.cellSize * result.settings.tileSize;
+        const float border = (std::ceil((*agentConfig)->radius / result.settings.cellSize) + 3) * result.settings.cellSize;
+        auto sampleBounds = worldBounds;
+        for (int axis : {0, 2})
+        {
+            sampleBounds.min[axis] = std::floor(worldBounds.min[axis] / width) * width - border;
+            sampleBounds.max[axis] = std::ceil(worldBounds.max[axis] / width) * width + border;
+        }
+        auto triangles = CollectNavMeshGeometry(*scene, regionEntity, sampleBounds);
         if (!triangles)
             return std::unexpected(triangles.error());
 

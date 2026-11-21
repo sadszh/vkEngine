@@ -167,6 +167,7 @@ namespace vke_interop
         GetPhysicsObjectVsBroadPhaseLayerCollisionFn GetPhysicsObjectVsBroadPhaseLayerCollision;
         GetPhysicsContactEventCountFn GetPhysicsContactEventCount;
         GetPhysicsContactEventsFn GetPhysicsContactEvents;
+        GetMouseRayFn GetMouseRay;
         PhysicsRaycastFn PhysicsRaycast;
         PhysicsRaycastAllFn PhysicsRaycastAll;
         PhysicsCollidePointFn PhysicsCollidePoint;
@@ -242,6 +243,10 @@ namespace vke_interop
         SetUISelfLayoutFn SetUISelfLayout;
         GetUIGroupLayoutFn GetUIGroupLayout;
         SetUIGroupLayoutFn SetUIGroupLayout;
+        int32_t(VKE_INTEROP_CDECL *NavFindPath)(uint32_t, const Vector3<float> *, const Vector3<float> *, const Vector3<float> *, Vector3<float> *, int32_t, int32_t *);
+        int32_t(VKE_INTEROP_CDECL *NavAgentFindPath)(uint32_t, const Vector3<float> *, const Vector3<float> *, Vector3<float> *, int32_t, int32_t *);
+        int32_t(VKE_INTEROP_CDECL *NavSamplePosition)(uint32_t, const Vector3<float> *, const Vector3<float> *, Vector3<float> *);
+        int32_t(VKE_INTEROP_CDECL *NavRaycast)(uint32_t, const Vector3<float> *, const Vector3<float> *, const Vector3<float> *, Vector3<float> *, Vector3<float> *, int32_t *);
     };
 }
 

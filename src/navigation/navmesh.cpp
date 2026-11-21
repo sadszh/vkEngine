@@ -3,6 +3,8 @@
 #include <logger.hpp>
 #include <Recast.h>
 #include <DetourNavMeshBuilder.h>
+#include <DetourNavMesh.h>
+#include <cstring>
 #include <algorithm>
 #include <fstream>
 #include <limits>
@@ -62,20 +64,21 @@ namespace vke_navmesh
         if (walkableHeight < 3)
             return std::unexpected("agent height must span at least three cell heights");
 
-        float bmin[3] = {settings.boundsMin.x, settings.boundsMin.y, settings.boundsMin.z};
-        float bmax[3] = {settings.boundsMax.x, settings.boundsMax.y, settings.boundsMax.z};
-        int gridWidth = 0;
-        int gridHeight = 0;
-        rcCalcGridSize(bmin, bmax, cs, &gridWidth, &gridHeight);
-        if (gridWidth <= 0 || gridHeight <= 0)
-            return std::unexpected("navmesh build bounds are smaller than one cell");
-        constexpr int64_t MaxGridCells = 1 << 24;
-        if (static_cast<int64_t>(gridWidth) * gridHeight > MaxGridCells)
-            return std::unexpected("navmesh build area exceeds the supported grid size; increase the cell size");
-
+        const float tileWorldSize = settings.tileSize * cs;
+        const double minX = std::floor(double(settings.boundsMin.x) / tileWorldSize);
+        const double minY = std::floor(double(settings.boundsMin.z) / tileWorldSize);
+        const double maxX = std::ceil(double(settings.boundsMax.x) / tileWorldSize);
+        const double maxY = std::ceil(double(settings.boundsMax.z) / tileWorldSize);
+        if (!std::isfinite(tileWorldSize) || tileWorldSize <= 0 ||
+            minX < INT32_MIN || minY < INT32_MIN || maxX >= INT32_MAX || maxY >= INT32_MAX ||
+            (maxX - minX) * (maxY - minY) > MaxNavMeshTiles)
+            return std::unexpected("navmesh grid exceeds supported bounds");
+        const int firstX = static_cast<int>(minX), firstY = static_cast<int>(minY);
+        const int tileCountX = static_cast<int>(maxX - minX), tileCountY = static_cast<int>(maxY - minY);
         const int tileSize = settings.tileSize;
-        const int tileCountX = (gridWidth + tileSize - 1) / tileSize;
-        const int tileCountY = (gridHeight + tileSize - 1) / tileSize;
+        if (double(tileCountX) * tileCountY * tileSize * tileSize > (1 << 24))
+            return std::unexpected("navmesh build area exceeds supported cell count");
+
         const int borderSize = walkableRadius + 3;
         const int maxEdgeLen = static_cast<int>(settings.maxEdgeLength / cs);
         const float maxSimplificationError = settings.maxSimplificationError / cs;
@@ -106,10 +109,10 @@ namespace vke_navmesh
         {
             for (int tileX = 0; tileX < tileCountX; ++tileX)
             {
-                const int tileWidth = std::min(tileSize, gridWidth - tileX * tileSize);
-                const int tileHeight = std::min(tileSize, gridHeight - tileY * tileSize);
-                float tileBmin[3] = {bmin[0] + tileX * tileSize * cs, bmin[1], bmin[2] + tileY * tileSize * cs};
-                float tileBmax[3] = {tileBmin[0] + tileWidth * cs, bmax[1], tileBmin[2] + tileHeight * cs};
+                const int tileWidth = tileSize;
+                const int tileHeight = tileSize;
+                float tileBmin[3] = {(firstX + tileX) * tileWorldSize, settings.boundsMin.y, (firstY + tileY) * tileWorldSize};
+                float tileBmax[3] = {tileBmin[0] + tileWidth * cs, settings.boundsMax.y, tileBmin[2] + tileHeight * cs};
                 float hfBmin[3] = {tileBmin[0] - borderSize * cs, tileBmin[1], tileBmin[2] - borderSize * cs};
                 float hfBmax[3] = {tileBmax[0] + borderSize * cs, tileBmax[1], tileBmax[2] + borderSize * cs};
                 const int hfWidth = tileWidth + 2 * borderSize;
@@ -189,8 +192,8 @@ namespace vke_navmesh
                 params.walkableHeight = agent.height;
                 params.walkableRadius = agent.radius;
                 params.walkableClimb = agent.maxClimb;
-                params.tileX = tileX;
-                params.tileY = tileY;
+                params.tileX = firstX + tileX;
+                params.tileY = firstY + tileY;
                 params.tileLayer = 0;
                 rcVcopy(params.bmin, polyMesh->bmin);
                 rcVcopy(params.bmax, polyMesh->bmax);
@@ -205,8 +208,8 @@ namespace vke_navmesh
                                            ": cannot create Detour tile data");
 
                 NavMeshTile tile;
-                tile.x = tileX;
-                tile.y = tileY;
+                tile.x = firstX + tileX;
+                tile.y = firstY + tileY;
                 tile.layer = 0;
                 tile.data.assign(navData, navData + navDataSize);
                 dtFree(navData);
@@ -307,7 +310,7 @@ namespace vke_navmesh
             if (!ReadBytes(in, &x, sizeof(x)) || !ReadBytes(in, &y, sizeof(y)) ||
                 !ReadBytes(in, &layer, sizeof(layer)) || !ReadBytes(in, &dataSize, sizeof(dataSize)))
                 return std::unexpected(PathToUTF8(path) + ": truncated navmesh tile header");
-            if (x < 0 || y < 0 || layer < 0 || dataSize == 0 || dataSize > MaxNavMeshTileBytes)
+            if (layer < 0 || dataSize == 0 || dataSize > MaxNavMeshTileBytes)
                 return std::unexpected(PathToUTF8(path) + ": invalid navmesh tile");
 
             NavMeshTile tile;
@@ -317,6 +320,24 @@ namespace vke_navmesh
             tile.data.resize(dataSize);
             if (!ReadBytes(in, tile.data.data(), tile.data.size()))
                 return std::unexpected(PathToUTF8(path) + ": truncated navmesh tile data");
+            dtMeshHeader header{};
+            if (tile.data.size() < sizeof(header))
+                return std::unexpected("truncated Detour tile header");
+            std::memcpy(&header, tile.data.data(), sizeof(header));
+            if (header.magic != DT_NAVMESH_MAGIC || header.version != DT_NAVMESH_VERSION ||
+                header.x != x || header.y != y || header.layer != layer || header.polyCount <= 0 ||
+                header.vertCount <= 0 || header.maxLinkCount < 0 ||
+                header.detailVertCount < 0 || header.detailTriCount < 0 || header.bvNodeCount < 0 ||
+                header.offMeshConCount != 0 || header.detailMeshCount != header.polyCount)
+                return std::unexpected("invalid Detour tile header");
+            auto aligned = [](uint64_t bytes)
+            { return (bytes + 3) & ~uint64_t(3); };
+            const uint64_t size = aligned(sizeof(header)) + aligned(uint64_t(header.vertCount) * 3 * sizeof(float)) +
+                                  aligned(uint64_t(header.polyCount) * sizeof(dtPoly)) + aligned(uint64_t(header.maxLinkCount) * sizeof(dtLink)) +
+                                  aligned(uint64_t(header.detailMeshCount) * sizeof(dtPolyDetail)) + aligned(uint64_t(header.detailVertCount) * 3 * sizeof(float)) +
+                                  aligned(uint64_t(header.detailTriCount) * 4) + aligned(uint64_t(header.bvNodeCount) * sizeof(dtBVNode));
+            if (size != tile.data.size())
+                return std::unexpected("invalid Detour tile data size");
             tiles.push_back(std::move(tile));
         }
         if (in.peek() != std::char_traits<char>::eof())

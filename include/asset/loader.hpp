@@ -15,5 +15,5 @@ namespace vke_common
     Result<std::unique_ptr<Font>> loadFont(const FontAsset &asset, const std::filesystem::path &fullPath, AssetUploadContext *upload = nullptr);
     Result<std::unique_ptr<vke_audio::AudioClip>> loadAudioClip(const AudioClipAsset &asset, const std::filesystem::path &fullPath);
     Result<std::unique_ptr<vke_navmesh::NavAgentConfig>> loadNavAgentConfig(const NavAgentConfigAsset &asset);
-    Result<std::unique_ptr<vke_navmesh::NavMeshData>> loadNavMesh(const std::filesystem::path &fullPath);
+    Result<std::unique_ptr<vke_navmesh::NavMeshTilesData>> loadNavMeshTiles(const NavMeshTilesAsset &asset, const std::filesystem::path &fullPath);
 }

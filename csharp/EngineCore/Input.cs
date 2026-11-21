@@ -179,6 +179,15 @@ namespace vkEngine.EngineCore
             }
         }
 
+        public static bool TryGetMouseRay(out NVec3 origin, out NVec3 direction)
+        {
+            NVec3 rayOrigin = default, rayDirection = default;
+            bool success = NativeFunctionRegistry.Functions.GetMouseRay(&rayOrigin, &rayDirection) != 0;
+            origin = rayOrigin;
+            direction = rayDirection;
+            return success;
+        }
+
         public static NVec2 MouseDelta
         {
             get

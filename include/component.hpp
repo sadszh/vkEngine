@@ -21,7 +21,9 @@ namespace vke_common
         AudioSource = 12,
         AudioListener = 13,
         Canvas = 14,
-        NavMeshRegion = 15
+        NavMeshRegion = 15,
+        NavMeshTile = 16,
+        NavMeshAgent = 17
     };
 }
 

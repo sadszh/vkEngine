@@ -87,7 +87,7 @@ namespace vke_common
     AM_GET_IMPL(FontAsset)
     AM_GET_IMPL(AudioClipAsset)
     AM_GET_IMPL(NavAgentConfigAsset)
-    AM_GET_IMPL(NavMeshAsset)
+    AM_GET_IMPL(NavMeshTilesAsset)
 
 #undef AM_GET_IMPL
 
@@ -110,7 +110,7 @@ namespace vke_common
     AM_ITERATE_IMPL(FontAsset)
     AM_ITERATE_IMPL(AudioClipAsset)
     AM_ITERATE_IMPL(NavAgentConfigAsset)
-    AM_ITERATE_IMPL(NavMeshAsset)
+    AM_ITERATE_IMPL(NavMeshTilesAsset)
 
 #undef AM_ITERATE_IMPL
 };

@@ -17,6 +17,7 @@ namespace vke_navmesh
 {
     struct NavMeshBakeResult
     {
+        uint32_t navMeshId = 1;
         vke_common::AssetHandle agentConfig = 0;
         NavMeshBuildSettings settings;
         std::vector<NavMeshTile> tiles;

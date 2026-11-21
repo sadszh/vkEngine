@@ -1,3 +1,4 @@
+#include <component/navmesh_agent.hpp>
 #include <scene_transform_system.hpp>
 #include <component/camera.hpp>
 #include <component/renderable_object.hpp>
@@ -168,6 +169,9 @@ namespace vke_common
 
         if (updatePhysicsComponents && registry.all_of<vke_component::CharacterController>(entity))
             registry.get<vke_component::CharacterController>(entity).OnTransformed(transform);
+
+        if (auto *agent = registry.try_get<vke_component::NavMeshAgent>(entity))
+            agent->OnTransformed(transform);
 
         auto *lightManager = vke_render::Renderer::GetInstance()->lightManager.get();
 

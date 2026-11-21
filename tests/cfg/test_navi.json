@@ -1,0 +1,52 @@
+{
+  "projectRoot": "../..",
+  "windowWidth": 1920,
+  "windowHeight": 1080,
+  "enableVulkanValidationLayers": false,
+  "assetLUTPath": "./tests/scene/test_navi_desc.json",
+  "defaultScenePath": "./tests/scene/test_navi_scene.json",
+  "gameScriptPath": "./tests/csharp/Game.dll",
+  "gameScriptTypeInfoPath": "./tests/csharp/Game.entityscripts.json",
+  "renderConfig": {
+    "directionalShadow": {
+      "mapSize": 4096,
+      "cascadeCnt": 4,
+      "maxDistance": 180.0,
+      "splitLambda": 0.75,
+      "depthMargin": 60.0
+    },
+    "atmosphere": {
+      "seaLevel": 0.0,
+      "planetRadius": 6360000.0,
+      "atmosphereHeight": 60000.0,
+      "sunDiskAngle": 2.0,
+      "sunLightIntensityFactor": 1.0,
+      "rayleighScatteringScale": 1.0,
+      "rayleighScatteringScalarHeight": 8000.0,
+      "mieScatteringScale": 1.0,
+      "mieAnisotropy": 0.8,
+      "mieScatteringScalarHeight": 1200.0,
+      "ozoneAbsorptionScale": 1.0,
+      "ozoneLevelCenterHeight": 25000.0,
+      "ozoneLevelWidth": 15000.0,
+      "aerialPerspectiveDistance": 32000.0,
+      "aerialPerspectiveScale": 1.0
+    },
+    "bloom": {
+      "threshold": 1.0,
+      "intensity": 0.35,
+      "radius": 1.0,
+      "knee": 0.25
+    },
+    "ssao": {
+      "radius": 0.1,
+      "bias": 0.025,
+      "intensity": 0.6,
+      "power": 1.0
+    },
+    "toneMapping": {
+      "exposure": 1.0,
+      "toneMappingMode": 0
+    }
+  }
+}

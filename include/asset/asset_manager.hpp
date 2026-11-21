@@ -80,7 +80,7 @@ namespace vke_common
         AM_OP_FUNCS(FontAsset)
         AM_OP_FUNCS(AudioClipAsset)
         AM_OP_FUNCS(NavAgentConfigAsset)
-        AM_OP_FUNCS(NavMeshAsset)
+        AM_OP_FUNCS(NavMeshTilesAsset)
 
         static Result<std::unique_ptr<vke_render::Texture2D>> LoadTexture2DUnique(const AssetHandle hdl);
         static Result<std::unique_ptr<vke_render::Mesh>> LoadMeshUnique(const AssetHandle hdl);
@@ -92,7 +92,7 @@ namespace vke_common
         static Result<std::unique_ptr<vke_common::Font>> LoadFontUnique(const AssetHandle hdl);
         static Result<std::unique_ptr<vke_audio::AudioClip>> LoadAudioClipUnique(const AssetHandle hdl);
         static Result<std::unique_ptr<vke_navmesh::NavAgentConfig>> LoadNavAgentConfigUnique(const AssetHandle hdl);
-        static Result<std::unique_ptr<vke_navmesh::NavMeshData>> LoadNavMeshUnique(const AssetHandle hdl);
+        static Result<std::unique_ptr<vke_navmesh::NavMeshTilesData>> LoadNavMeshTilesUnique(const AssetHandle hdl);
 
         static Result<std::shared_ptr<vke_render::Texture2D>> LoadTexture2D(const AssetHandle hdl);
         static Result<std::shared_ptr<vke_render::Mesh>> LoadMesh(const AssetHandle hdl);
@@ -104,7 +104,7 @@ namespace vke_common
         static Result<std::shared_ptr<vke_common::Font>> LoadFont(const AssetHandle hdl);
         static Result<std::shared_ptr<vke_audio::AudioClip>> LoadAudioClip(const AssetHandle hdl);
         static Result<std::shared_ptr<vke_navmesh::NavAgentConfig>> LoadNavAgentConfig(const AssetHandle hdl);
-        static Result<std::shared_ptr<vke_navmesh::NavMeshData>> LoadNavMesh(const AssetHandle hdl);
+        static Result<std::shared_ptr<vke_navmesh::NavMeshTilesData>> LoadNavMeshTiles(const AssetHandle hdl);
 
         static Result<void> AsyncLoadTexture2D(AssetHandle handle);
         static Result<std::shared_ptr<vke_render::Texture2D>> WaitAsyncLoadTexture2D(AssetHandle handle);
@@ -137,9 +137,9 @@ namespace vke_common
         static Result<void> AsyncLoadNavAgentConfig(AssetHandle handle);
         static Result<std::shared_ptr<vke_navmesh::NavAgentConfig>> WaitAsyncLoadNavAgentConfig(AssetHandle handle);
         static Result<void> CancelAsyncLoadNavAgentConfig(AssetHandle handle, bool wait = false);
-        static Result<void> AsyncLoadNavMesh(AssetHandle handle);
-        static Result<std::shared_ptr<vke_navmesh::NavMeshData>> WaitAsyncLoadNavMesh(AssetHandle handle);
-        static Result<void> CancelAsyncLoadNavMesh(AssetHandle handle, bool wait = false);
+        static Result<void> AsyncLoadNavMeshTiles(AssetHandle handle);
+        static Result<std::shared_ptr<vke_navmesh::NavMeshTilesData>> WaitAsyncLoadNavMeshTiles(AssetHandle handle);
+        static Result<void> CancelAsyncLoadNavMeshTiles(AssetHandle handle, bool wait = false);
 
         static Result<void> AsyncBatchLoad(LoadBatch &batch);
         static BatchResult WaitAsyncBatchLoad(const LoadBatch &batch);
@@ -156,7 +156,7 @@ namespace vke_common
         static Result<void> ValidateFont(AssetHandle handle);
         static Result<void> ValidateAudioClip(AssetHandle handle);
         static Result<void> ValidateNavAgentConfig(AssetHandle handle);
-        static Result<void> ValidateNavMesh(AssetHandle handle);
+        static Result<void> ValidateNavMeshTiles(AssetHandle handle);
 
         static Result<std::shared_ptr<const SceneData>> LoadSceneData(AssetHandle handle);
         static Result<std::shared_ptr<const SceneData>> ReloadSceneData(AssetHandle handle);
@@ -176,7 +176,7 @@ namespace vke_common
         static Result<FontAsset *> getFontAsset(AssetHandle id);
         static Result<AudioClipAsset *> getAudioClipAsset(AssetHandle id);
         static Result<NavAgentConfigAsset *> getNavAgentConfigAsset(AssetHandle id);
-        static Result<NavMeshAsset *> getNavMeshAsset(AssetHandle id);
+        static Result<NavMeshTilesAsset *> getNavMeshTilesAsset(AssetHandle id);
 
         template <typename A>
         static Result<A *> getAssetForLoad(Result<A *> found)

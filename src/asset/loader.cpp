@@ -65,9 +65,9 @@ namespace vke_common
         return validateAsset(handle, GetNavAgentConfigAssetReadOnly);
     }
 
-    Result<void> AssetManager::ValidateNavMesh(AssetHandle handle)
+    Result<void> AssetManager::ValidateNavMeshTiles(AssetHandle handle)
     {
-        return validateAsset(handle, GetNavMeshAssetReadOnly);
+        return validateAsset(handle, GetNavMeshTilesAssetReadOnly);
     }
 
     Result<void> AssetManager::checkPath(AssetHandle handle, const std::filesystem::path &path) const
@@ -744,7 +744,7 @@ namespace vke_common
         const std::string context = "nav agent config " + std::to_string(asset.id) + ": ";
         if (auto valid = asset.config.Validate(); !valid)
             return std::unexpected(context + valid.error());
-        return std::make_unique<vke_navmesh::NavAgentConfig>(asset.config);
+        return std::make_unique<vke_navmesh::NavAgentConfig>(asset.id, asset.config);
     }
 
     Result<std::unique_ptr<vke_navmesh::NavAgentConfig>> AssetManager::LoadNavAgentConfigUnique(const AssetHandle hdl)
@@ -772,38 +772,37 @@ namespace vke_common
                                      { return loadNavAgentConfig(*asset); });
     }
 
-    Result<std::unique_ptr<vke_navmesh::NavMeshData>> loadNavMesh(const std::filesystem::path &fullPath)
+    Result<std::unique_ptr<vke_navmesh::NavMeshTilesData>> loadNavMeshTiles(const NavMeshTilesAsset &asset, const std::filesystem::path &fullPath)
     {
         auto tiles = vke_navmesh::ReadNavMeshFile(fullPath);
         if (!tiles)
             return std::unexpected(tiles.error());
-        auto data = std::make_unique<vke_navmesh::NavMeshData>();
-        data->tiles = std::move(*tiles);
-        return data;
+        return std::make_unique<vke_navmesh::NavMeshTilesData>(
+            asset.id, asset.navMeshId, asset.agentConfig, asset.settings, std::move(*tiles));
     }
 
-    Result<std::unique_ptr<vke_navmesh::NavMeshData>> AssetManager::LoadNavMeshUnique(const AssetHandle hdl)
+    Result<std::unique_ptr<vke_navmesh::NavMeshTilesData>> AssetManager::LoadNavMeshTilesUnique(const AssetHandle hdl)
     {
         const std::string context = "navmesh " + std::to_string(hdl) + ": ";
-        auto result = GetNavMeshAssetReadOnly(hdl);
+        auto result = GetNavMeshTilesAssetReadOnly(hdl);
         if (!result)
             return std::unexpected(context + result.error());
         auto *asset = *result;
         if (!asset)
             return std::unexpected(context + "asset not found");
-        return loadNavMesh(resolveAssetPath(hdl, asset->path));
+        return loadNavMeshTiles(*asset, resolveAssetPath(hdl, asset->path));
     }
 
-    Result<std::shared_ptr<vke_navmesh::NavMeshData>> AssetManager::LoadNavMesh(const AssetHandle hdl)
+    Result<std::shared_ptr<vke_navmesh::NavMeshTilesData>> AssetManager::LoadNavMeshTiles(const AssetHandle hdl)
     {
         const std::string context = "navmesh " + std::to_string(hdl) + ": ";
-        auto result = getAssetForLoad(getNavMeshAsset(hdl));
+        auto result = getAssetForLoad(getNavMeshTilesAsset(hdl));
         if (!result)
             return std::unexpected(context + result.error());
         auto *asset = *result;
         if (!asset)
             return std::unexpected(context + "asset not found");
         return loadFromCacheOrUpdate(*asset, [&]
-                                     { return loadNavMesh(resolveAssetPath(hdl, asset->path)); });
+                                     { return loadNavMeshTiles(*asset, resolveAssetPath(hdl, asset->path)); });
     }
 }

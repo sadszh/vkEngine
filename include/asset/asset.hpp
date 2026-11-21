@@ -77,7 +77,7 @@ namespace vke_common
         ASSET_FONT,
         ASSET_AUDIO_CLIP,
         ASSET_NAV_AGENT,
-        ASSET_NAV_MESH,
+        ASSET_NAV_MESH_TILES,
         ASSET_CNT_FLAG
     };
 
@@ -95,12 +95,12 @@ namespace vke_common
         std::unordered_map<AssetHandle, Result<std::shared_ptr<Font>>> fonts;
         std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_audio::AudioClip>>> audioClips;
         std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_navmesh::NavAgentConfig>>> navAgentConfigs;
-        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_navmesh::NavMeshData>>> navMeshes;
+        std::unordered_map<AssetHandle, Result<std::shared_ptr<vke_navmesh::NavMeshTilesData>>> navMeshes;
     };
 
     const std::string AssetTypeToName[] = {"Texture", "Mesh", "VFShader", "ComputeShader",
                                            "Material", "Skeleton", "Animation", "Scene", "Font", "AudioClip",
-                                           "NavAgent", "NavMesh"};
+                                           "NavAgent", "NavMeshTiles"};
 
     Result<void> ReadFile(const std::filesystem::path &filename, std::vector<char> &buffer);
 
@@ -272,20 +272,22 @@ namespace vke_common
         }
     };
 
-    class NavMeshAsset : public Asset<ASSET_NAV_MESH, NavMeshAsset, vke_navmesh::NavMeshData>
+    class NavMeshTilesAsset : public Asset<ASSET_NAV_MESH_TILES, NavMeshTilesAsset, vke_navmesh::NavMeshTilesData>
     {
     public:
+        uint32_t navMeshId = 1;
         AssetHandle agentConfig;
         vke_navmesh::NavMeshBuildSettings settings;
 
-        NavMeshAsset() : agentConfig(0) {}
+        NavMeshTilesAsset() : agentConfig(0) {}
 
-        NavMeshAsset(AssetHandle id, const nlohmann::json &json)
+        NavMeshTilesAsset(AssetHandle id, const nlohmann::json &json)
             : Asset(id, json), agentConfig(json["agentConfig"]),
-              settings(json["settings"]) {}
+              settings(json["settings"]) { navMeshId = json["navMeshId"]; }
 
         void writeJSON(nlohmann::json &json) const
         {
+            json["navMeshId"] = navMeshId;
             json["agentConfig"] = agentConfig;
             json["settings"] = settings.ToJSON();
         }

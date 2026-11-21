@@ -387,21 +387,21 @@ namespace vke_common
         return {};
     }
 
-    Result<void> AssetManager::AsyncLoadNavMesh(AssetHandle handle)
+    Result<void> AssetManager::AsyncLoadNavMeshTiles(AssetHandle handle)
     {
-        auto found = getNavMeshAsset(handle);
+        auto found = getNavMeshTilesAsset(handle);
         if (!found)
             return std::unexpected(found.error());
         auto *asset = *found;
         if (!asset)
             return std::unexpected("NavMesh " + std::to_string(handle) + ": asset not found");
-        return asyncLoad(*asset, [path = resolveAssetPath(handle, asset->path)](AssetUploadContext &)
-                         { return loadNavMesh(path); });
+        return asyncLoad(*asset, [asset, path = resolveAssetPath(handle, asset->path)](AssetUploadContext &)
+                         { return loadNavMeshTiles(*asset, path); });
     }
 
-    Result<std::shared_ptr<vke_navmesh::NavMeshData>> AssetManager::WaitAsyncLoadNavMesh(AssetHandle handle)
+    Result<std::shared_ptr<vke_navmesh::NavMeshTilesData>> AssetManager::WaitAsyncLoadNavMeshTiles(AssetHandle handle)
     {
-        auto found = getNavMeshAsset(handle);
+        auto found = getNavMeshTilesAsset(handle);
         if (!found)
             return std::unexpected(found.error());
         if (!*found)
@@ -409,9 +409,9 @@ namespace vke_common
         return waitAsyncLoad(**found);
     }
 
-    Result<void> AssetManager::CancelAsyncLoadNavMesh(AssetHandle handle, bool wait)
+    Result<void> AssetManager::CancelAsyncLoadNavMeshTiles(AssetHandle handle, bool wait)
     {
-        auto found = getNavMeshAsset(handle);
+        auto found = getNavMeshTilesAsset(handle);
         if (!found)
             return std::unexpected(found.error());
         if (!*found)
@@ -575,8 +575,8 @@ namespace vke_common
             return CancelAsyncLoadAudioClip(handle, wait);
         case ASSET_NAV_AGENT:
             return CancelAsyncLoadNavAgentConfig(handle, wait);
-        case ASSET_NAV_MESH:
-            return CancelAsyncLoadNavMesh(handle, wait);
+        case ASSET_NAV_MESH_TILES:
+            return CancelAsyncLoadNavMeshTiles(handle, wait);
         case ASSET_MATERIAL:
         {
             auto found = getMaterialAsset(handle);
@@ -634,8 +634,8 @@ namespace vke_common
                 case ASSET_NAV_AGENT:
                     requested = AsyncLoadNavAgentConfig(handle);
                     break;
-                case ASSET_NAV_MESH:
-                    requested = AsyncLoadNavMesh(handle);
+                case ASSET_NAV_MESH_TILES:
+                    requested = AsyncLoadNavMeshTiles(handle);
                     break;
                 }
                 if (!requested)
@@ -682,9 +682,9 @@ namespace vke_common
         if (auto entries = batch.find(ASSET_NAV_AGENT); entries != batch.end())
             for (auto handle : entries->second)
                 result.navAgentConfigs.emplace(handle, WaitAsyncLoadNavAgentConfig(handle));
-        if (auto entries = batch.find(ASSET_NAV_MESH); entries != batch.end())
+        if (auto entries = batch.find(ASSET_NAV_MESH_TILES); entries != batch.end())
             for (auto handle : entries->second)
-                result.navMeshes.emplace(handle, WaitAsyncLoadNavMesh(handle));
+                result.navMeshes.emplace(handle, WaitAsyncLoadNavMeshTiles(handle));
         if (auto entries = batch.find(ASSET_MATERIAL); entries != batch.end())
             for (auto handle : entries->second)
                 result.materials.emplace(handle, WaitAsyncLoadMaterial(handle));

@@ -179,7 +179,7 @@ namespace vke_common
         };
         copy(static_cast<std::tuple<TransformData, CameraData, RenderableObjectData, CanvasData,
             SkeletonAnimatorData, RigidBodyData, SensorData, CharacterControllerData, AudioSourceData,
-            AudioListenerData, NavMeshRegionData, DirectionalLightData, PointLightData, SpotLightData,
+            AudioListenerData, NavMeshTileData, NavMeshAgentData, NavMeshRegionData, DirectionalLightData, PointLightData, SpotLightData,
             ScriptDataList, PrefabReference> *>(nullptr));
     }
 

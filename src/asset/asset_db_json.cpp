@@ -52,7 +52,7 @@ namespace vke_common
                 LOAD_LUT_CASE(ASSET_FONT, FontAsset, fontCache)
                 LOAD_LUT_CASE(ASSET_AUDIO_CLIP, AudioClipAsset, audioCache)
                 LOAD_LUT_CASE(ASSET_NAV_AGENT, NavAgentConfigAsset, navAgentConfigCache)
-                LOAD_LUT_CASE(ASSET_NAV_MESH, NavMeshAsset, navMeshCache)
+                LOAD_LUT_CASE(ASSET_NAV_MESH_TILES, NavMeshTilesAsset, navMeshCache)
             default:
                 break;
             }

@@ -52,6 +52,7 @@ The engine expects a single game config JSON. The examples below use commands re
 ./out/engine.exe ./tests/cfg/test_audio.json
 ./out/engine.exe ./tests/cfg/test_prefab.json
 ./out/engine.exe ./tests/cfg/test_ui.json
+./out/engine.exe ./tests/cfg/test_navi.json
 ```
 
 Some examples, including Sponza, require external assets not included in the repository.
@@ -156,8 +157,11 @@ Or launch the editor with your project's config:
   - [ ] asset streaming
 - **Path Finding**:
   - [x] navmesh generation and serialization
-  - [ ] nearest navigable point and path queries
-  - [ ] agent path following
+  - [x] nearest navigable point and path queries
+  - [x] runtime tile registration and C# navigation queries
+  - [ ] dynamic obstacles
+  - [ ] off-mesh links
+  - [ ] navigation areas and traversal costs
 - **Particles**
   - [ ] particle simulation & rendering
 - **Editor**:

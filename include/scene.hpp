@@ -19,6 +19,8 @@
 #include <component/audio_source.hpp>
 #include <component/audio_listener.hpp>
 #include <component/navmesh_region.hpp>
+#include <component/navmesh_tile.hpp>
+#include <component/navmesh_agent.hpp>
 #include <component/light.hpp>
 #include <scene_transform_system.hpp>
 #include <unordered_map>
@@ -166,6 +168,8 @@ namespace vke_common
         Result<void> AddComponent(entt::entity entity, const vke_component::AudioSourceData &data);
         Result<void> AddComponent(entt::entity entity, const vke_component::AudioListenerData &data);
         Result<void> AddComponent(entt::entity entity, const vke_component::NavMeshRegionData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::NavMeshTileData &data);
+        Result<void> AddComponent(entt::entity entity, const vke_component::NavMeshAgentData &data);
         Result<void> RemoveComponent(entt::entity entity, ComponentType componentType);
 
         entt::entity CreateEntity(std::string &name, glm::vec3 pos, glm::vec3 scl, glm::quat rot, bool isStatic)
@@ -204,6 +208,8 @@ namespace vke_common
             visit.template operator()<vke_component::Canvas>();
             visit.template operator()<vke_component::AudioSource>();
             visit.template operator()<vke_component::AudioListener>();
+            visit.template operator()<vke_component::NavMeshTile>();
+            visit.template operator()<vke_component::NavMeshAgent>();
             visit.template operator()<vke_component::NavMeshRegion>();
         }
 
